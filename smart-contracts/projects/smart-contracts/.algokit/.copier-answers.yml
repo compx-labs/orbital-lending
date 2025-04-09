@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 0.3.2
+_src_path: gh:algorandfoundation/algokit-typescript-template
+author_email: 93330009+xxiled-plastic-cat@users.noreply.github.com
+author_name: Xxiled
+contract_name: we_lend
+preset_name: production
+project_name: smart-contracts
+
