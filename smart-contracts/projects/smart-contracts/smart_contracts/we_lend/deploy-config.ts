@@ -1,5 +1,5 @@
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
-import { WeLendFactory } from '../artifacts/we_lend/WeLendClient'
+import { WeLendFactory } from '../artifacts/we_lend/weLendClient'
 
 // Below is a showcase of various deployment options you can use in TypeScript Client
 export async function deploy() {

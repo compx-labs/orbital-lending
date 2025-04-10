@@ -1,6 +1,6 @@
 import { TestExecutionContext } from '@algorandfoundation/algorand-typescript-testing'
 import { describe, expect, it } from 'vitest'
-import { WeLend } from './contract.algo'
+import { WeLend } from './weLendContract.algo'
 
 describe('WeLend contract', () => {
   const ctx = new TestExecutionContext()

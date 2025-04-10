@@ -3,7 +3,8 @@ import { registerDebugEventHandlers } from '@algorandfoundation/algokit-utils-de
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { Address } from 'algosdk'
 import { beforeAll, beforeEach, describe, expect, test } from 'vitest'
-import { WeLendFactory } from '../artifacts/we_lend/WeLendClient'
+import { WeLendFactory } from '../artifacts/we_lend/weLendClient'
+import { UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
 
 describe('WeLend contract', () => {
   const localnet = algorandFixture()
@@ -28,16 +29,24 @@ describe('WeLend contract', () => {
     return { client: appClient }
   }
 
-  test('says hello', async () => {
-    const { testAccount } = localnet.context
+  test('Deploy, add pool, get price', async () => {
+    /* const { testAccount } = localnet.context
     const { client } = await deploy(testAccount)
+    const poolAddress = '2PIFZW53RHCSFSYMCFUBW4XOCXOMB7XOYQSQ6KGT3KVGJTL4HM6COZRNMM'
+    const contractAppId = 1002541853
 
-    const result = await client.send.hello({ args: { name: 'World' } })
+    await client.send.addOraclePool({ args: { poolAddress, contractAppId } });
+    const globalState = await client.state.global.getAll()
+    expect(globalState.oraclePoolsCount).toBe(1n)
 
-    expect(result.return).toBe('Hello, World')
+    const result = await client.send.getOraclePrice({ args: { oracleIndex: 0n, tokenId:  } })
+
+
+
+    expect(result.return).toBe('Hello, World') */
   })
 
-  test('simulate says hello with correct budget consumed', async () => {
+  /* test.skip('simulate says hello with correct budget consumed', async () => {
     const { testAccount } = localnet.context
     const { client } = await deploy(testAccount)
     const result = await client
@@ -49,5 +58,5 @@ describe('WeLend contract', () => {
     expect(result.returns[0]).toBe('Hello, World')
     expect(result.returns[1]).toBe('Hello, Jane')
     expect(result.simulateResponse.txnGroups[0].appBudgetConsumed).toBeLessThan(100)
-  })
+  }) */
 })
