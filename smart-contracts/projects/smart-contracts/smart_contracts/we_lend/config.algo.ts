@@ -14,3 +14,13 @@ export class AcceptedCollateral extends arc4.Struct<{
   baseAssetId: arc4.UintN64
 }> {}
 
+export class LoanRecord extends arc4.Struct<{
+  borrowerAddress: arc4.Address
+  collateralTokenId: arc4.UintN64
+  collateralAmount: arc4.UintN64
+  disbursement: arc4.UintN64
+  scaledDownDisbursement: arc4.UintN64
+  borrowedTokenId: arc4.UintN64
+  loanRecordASAId: arc4.UintN64
+}> {}
+

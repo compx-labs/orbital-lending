@@ -21,14 +21,15 @@ import {
 } from '@algorandfoundation/algorand-typescript'
 import { abiCall, Address, Str, UintN128, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
 import { appOptedIn, divw, mulw } from '@algorandfoundation/algorand-typescript/op'
-import { AcceptedCollateral, Oracle } from './config.algo'
+import { AcceptedCollateral, LoanRecord, Oracle } from './config.algo'
+
 @contract({ name: 'weLend', avmVersion: 11 })
 export class WeLend extends Contract {
   // The main lending token of this contract - used for deposit and borrowing
-  base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+  base_token_id = GlobalState<UintN64>()
 
   // LST token of this contract - used for borrowing - generated in the contract at creation time
-  lst_token_id = GlobalState<Asset>({ initialValue: Asset() })
+  lst_token_id = GlobalState<UintN64>()
 
   //Total LST currently circulating from this contract
   circulating_lst = GlobalState<uint64>()
@@ -57,6 +58,10 @@ export class WeLend extends Contract {
   //List of accepted collateral types
   accepted_collaterals = BoxMap<UintN64, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
 
+  loan_records = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_records' })
+
+  active_loan_records = GlobalState<uint64>()
+
   //Number of oracle pools
   oracle_pools_count = GlobalState<uint64>()
 
@@ -64,9 +69,9 @@ export class WeLend extends Contract {
   accepted_collaterals_count = GlobalState<uint64>()
 
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
-  public createApplication(admin: Account, baseTokenId: Asset): void {
+  public createApplication(admin: Account, baseTokenId: uint64): void {
     this.admin_account.value = admin
-    this.base_token_id.value = baseTokenId
+    this.base_token_id.value = new UintN64(baseTokenId)
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -95,23 +100,25 @@ export class WeLend extends Contract {
     itxn
       .assetTransfer({
         assetReceiver: Global.currentApplicationAddress,
-        xferAsset: this.base_token_id.value,
+        xferAsset: this.base_token_id.value.native,
         assetAmount: 0,
       })
       .submit()
 
     //Create LST token
+    const baseToken = Asset(this.base_token_id.value.native)
     const result = itxn
       .assetConfig({
         sender: Global.currentApplicationAddress,
-        total: this.base_token_id.value.total,
-        decimals: this.base_token_id.value.decimals,
+        total: baseToken.total,
+        decimals: baseToken.decimals,
         defaultFrozen: false,
         manager: Global.currentApplicationAddress,
-        unitName: 'c' + String(this.base_token_id.value.unitName),
+        unitName: 'c' + String(baseToken.unitName),
+        assetName: 'c' + String(this.base_token_id.value.bytes),
       })
       .submit()
-    this.lst_token_id.value = result.configAsset
+    this.lst_token_id.value = new UintN64(result.configAsset.id)
   }
 
   getCirculatingLST(): uint64 {
@@ -132,9 +139,21 @@ export class WeLend extends Contract {
 
   addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
     assert(op.Txn.sender === this.admin_account.value)
-    const [token_1_cumulative_price, token_1_cumulative_price_exists] = op.AppLocal.getExUint64(poolAddress.native, contractAppId.native, Bytes('asset_1_cumulative_price'))
-    const [token_2_cumulative_price, token_2_cumulative_price_exists] = op.AppLocal.getExUint64(poolAddress.native, contractAppId.native, Bytes('asset_2_cumulative_price'))
-    const [cumulativePriceLastTimestamp, cumulativePriceLastTimestampExists] = op.AppLocal.getExUint64(poolAddress.native, contractAppId.native, Bytes('cumulative_price_update_timestamp'))
+    const [token_1_cumulative_price, token_1_cumulative_price_exists] = op.AppLocal.getExUint64(
+      poolAddress.native,
+      contractAppId.native,
+      Bytes('asset_1_cumulative_price'),
+    )
+    const [token_2_cumulative_price, token_2_cumulative_price_exists] = op.AppLocal.getExUint64(
+      poolAddress.native,
+      contractAppId.native,
+      Bytes('asset_2_cumulative_price'),
+    )
+    const [cumulativePriceLastTimestamp, cumulativePriceLastTimestampExists] = op.AppLocal.getExUint64(
+      poolAddress.native,
+      contractAppId.native,
+      Bytes('cumulative_price_update_timestamp'),
+    )
     const newOracle: Oracle = new Oracle({
       address: poolAddress,
       contractAppId: contractAppId,
@@ -154,7 +173,11 @@ export class WeLend extends Contract {
     const contractAppIdObj = Application(contractAppId.native)
 
     const [token_1_id, token_1_exists] = op.AppLocal.getExUint64(address.native, contractAppIdObj, Bytes('asset_1_id'))
-    const [new_cumulative_timestamp, new_cumulative_timestamp_exists] = op.AppLocal.getExUint64(address.native, contractAppIdObj, Bytes('cumulative_price_update_timestamp'))
+    const [new_cumulative_timestamp, new_cumulative_timestamp_exists] = op.AppLocal.getExUint64(
+      address.native,
+      contractAppIdObj,
+      Bytes('cumulative_price_update_timestamp'),
+    )
     let newCummulativePrice: uint64 = 0
     if (token_1_id === tokenId) {
       const [price, priceExists] = op.AppLocal.getExUint64(
@@ -171,11 +194,10 @@ export class WeLend extends Contract {
       )
       newCummulativePrice = price
     }
-    const previousTimestamp = oracle.cumulativePriceLastTimestamp.native;
-    const deltaTime = new_cumulative_timestamp - previousTimestamp;
-    const deltaPrice = newCummulativePrice - oracle.asset1LastCumulativePrice.native;
-    const scaling_factor = 2 ** 64
-    const instantaneous_price = (deltaPrice / deltaTime) / scaling_factor
+    const previousTimestamp = oracle.cumulativePriceLastTimestamp.native
+    const deltaTime: uint64 = new_cumulative_timestamp - previousTimestamp
+    const deltaPrice: uint64 = newCummulativePrice - oracle.asset1LastCumulativePrice.native
+    const instantaneous_price: uint64 = deltaPrice / deltaTime
     return instantaneous_price
   }
 
@@ -214,9 +236,10 @@ export class WeLend extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   addNewCollateralType(collateralTokenId: UintN64, baseTokenId: UintN64): void {
+    const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value)
-    assert(collateralTokenId.native !== this.base_token_id.value.id)
-    assert(baseTokenId.native !== this.base_token_id.value.id)
+    assert(collateralTokenId.native !== baseToken.id)
+    assert(baseTokenId.native !== baseToken.id)
     assert(!this.collateralExists(collateralTokenId))
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
@@ -257,14 +280,15 @@ export class WeLend extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
+    const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
-      xferAsset: this.base_token_id.value,
+      xferAsset: baseToken,
       assetAmount: amount,
     })
 
     let lstDue: uint64 = 0
-    const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)
+    const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)
     if (depositBalance[0] === 0) {
       lstDue = amount
     } else {
@@ -273,7 +297,7 @@ export class WeLend extends Contract {
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
-        xferAsset: this.lst_token_id.value,
+        xferAsset: this.lst_token_id.value.native,
         assetAmount: lstDue,
       })
       .submit()
@@ -281,20 +305,21 @@ export class WeLend extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
+    const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
-      xferAsset: this.lst_token_id.value,
+      xferAsset: baseToken,
       assetAmount: amount,
     })
 
     //Calculate the return amount of ASA
     const asaDue = this.calculateASADue(amount)
 
-    assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)[0] >= asaDue)
+    assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
-        xferAsset: this.base_token_id.value,
+        xferAsset: this.base_token_id.value.native,
         assetAmount: asaDue,
       })
       .submit()
@@ -321,7 +346,6 @@ export class WeLend extends Contract {
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
     // ─── 3. Convert the collateral deposit (LST) into its underlying base asset ─
-    // Use the external LST contract to get conversion factors.
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
     }).returnValue
@@ -329,45 +353,89 @@ export class WeLend extends Contract {
       appId: lstApp,
     }).returnValue
     // Calculate underlying collateral:
-    //    underlyingCollateral = collateralDeposit * totalDepositsExternal / circulatingExternalLST
     const [hiCollateral, loCollateral] = mulw(totalDepositsExternal, collateralDeposit)
     const underlyingCollateral: uint64 = divw(hiCollateral, loCollateral, circulatingExternalLST)
 
     // ─── 4. Price the underlying collateral in USD via the oracle ────────
-    // Query the oracles to fetch an average price for the base asset of the collateral.
     const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
-    // Assume oraclePrice is expressed in fixed-point (e.g. 6 decimals, meaning price is scaled by 1e6)
-    // Compute USD value of the collateral deposit:
-    //    collateralUSD = (underlyingCollateral * oraclePrice) / 1e6
-    // Use safe arithmetic (you can use mulw/divw if required):
-    const [hiUSD, loUSD] = mulw(underlyingCollateral, oraclePrice)
-    // Hardcoding scaling factor of 1e6—adjust if your oracle uses a different scaling.
-    const collateralUSD: uint64 = divw(hiUSD, loUSD, 1000000)
 
-    // ─── 5. Calculate Maximum Borrowable Amount ───────────────────────────
-    // Apply LTV: maxBorrowUSD = collateralUSD * ltv_bps / 10000
+    const [hiUSD, loUSD] = mulw(underlyingCollateral, oraclePrice)
+    const collateralUSD: uint64 = divw(hiUSD, loUSD, 1)
+
     const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10000
 
-    // ─── 6. Check that the requested loan does not exceed this amount ───────
     assert(requestedLoanAmount <= maxBorrowUSD)
 
-    // ─── 7. Compute origination fee and actual disbursement ───────────────
     const fee: uint64 = (requestedLoanAmount * this.origination_fee_bps.value) / 10000
     const disbursement: uint64 = requestedLoanAmount - fee
+    const [decimals, decimalsExists] = op.AssetParams.assetDecimals(this.base_token_id.value.native)
+    const assetScale: uint64 = 10 ** decimals
+    const [assetHi, assetLo] = mulw(disbursement, assetScale)
+    const DIVISOR_1: uint64 = 2 ** 32
+    const DIVISOR_2: uint64 = 2 ** 32
 
-    // ─── 8. Disburse the loan ─────────────────────────────────────────────
-    // This transfers the lending contract’s base token (e.g. a stablecoin) to the borrower.
+    // First divide the 128-bit product by 2^32 using wide division:
+    const interim: uint64 = divw(assetHi, assetLo, DIVISOR_1)
+
+    // Then complete the division by performing an integer division by 2^32:
+    const scaledDownDisbursement: uint64 = interim / DIVISOR_2
+
+    this.mintLoanRecord(scaledDownDisbursement, disbursement, collateralTokenId, op.Txn.sender, collateralDeposit)
+
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
-        xferAsset: this.base_token_id.value,
-        assetAmount: disbursement,
+        xferAsset: this.base_token_id.value.native,
+        assetAmount: scaledDownDisbursement,
+      })
+      .submit()
+  }
+
+  private mintLoanRecord(
+    scaledDownDisbursement: uint64,
+    disbursement: uint64,
+    collateralTokenId: UintN64,
+    borrowerAddress: Account,
+    collateralAmount: uint64,
+  ): void {
+    const asset = itxn
+      .assetConfig({
+        assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+        url:
+          String(borrowerAddress.bytes) +
+          ':' +
+          String(collateralTokenId.bytes) +
+          ':' +
+          String(new UintN64(scaledDownDisbursement).bytes) +
+          ':' +
+          String(new UintN64(Global.latestTimestamp).bytes),
+        manager: Global.currentApplicationAddress,
+        decimals: 0,
+        total: disbursement,
+        sender: Global.currentApplicationAddress,
+        unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
+        reserve: borrowerAddress,
       })
       .submit()
 
-    // ─── 9. (Optional) Record the borrowing position ─────────────────────
-    // You might want to update state variables here to track outstanding debt,
-    // collateral locked, etc., for future repayment and liquidation logic.
+    const loanRecord: LoanRecord = new LoanRecord({
+      borrowerAddress: new Address(borrowerAddress.bytes),
+      collateralTokenId: collateralTokenId,
+      collateralAmount: new UintN64(collateralAmount),
+      disbursement: new UintN64(disbursement),
+      scaledDownDisbursement: new UintN64(scaledDownDisbursement),
+      borrowedTokenId: this.base_token_id.value,
+      loanRecordASAId: new UintN64(asset.createdAsset.id),
+    })
+    this.loan_records(borrowerAddress).value = loanRecord.copy()
+  }
+
+  getLoanRecord(borrowerAddress: Account): LoanRecord {
+    return this.loan_records(borrowerAddress).value
+  }
+
+  getLoanRecordASAId(borrowerAddress: Account): uint64 {
+    return this.loan_records(borrowerAddress).value.loanRecordASAId.native
   }
 }
 

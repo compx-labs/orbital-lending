@@ -3,50 +3,85 @@
 
 // @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
 main:
-    intcblock 0 1 4 10000
-    bytecblock "base_token_id" 0x151f7c75 "oracle_pools_count" "admin_account" "accepted_collaterals_count" "lst_token_id" "circulating_lst" "total_deposits" "oracle_pools" "accepted_collaterals" 0x09ef525f 0xae859f3b "ltv_bps" "origination_fee_bps"
-    txn ApplicationID
-    bnz main_after_if_else@2
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    bytec_0 // "base_token_id"
-    intc_0 // 0
-    app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:31
-    // lst_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    bytec 5 // "lst_token_id"
-    intc_0 // 0
-    app_global_put
-
-main_after_if_else@2:
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    intcblock 0 1 4 10000 4294967296
+    bytecblock "base_token_id" 0x151f7c75 "accepted_collaterals_count" "oracle_pools_count" "admin_account" "circulating_lst" "total_deposits" "oracle_pools" "accepted_collaterals" ":" "loan_records" 0x09ef525f 0xae859f3b "ltv_bps" "origination_fee_bps" "lst_token_id" "asset_1_cumulative_price" "asset_2_cumulative_price" "cumulative_price_update_timestamp"
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txn NumAppArgs
-    bz main_after_if_else@20
-    pushbytess 0x17e5f6d3 0x6e01402e // method "createApplication(account,asset)void", method "initApplication(pay,uint64,uint64,uint64,uint64)void"
-    bytec 10 // method "getCirculatingLST()uint64"
-    bytec 11 // method "getTotalDeposits()uint64"
-    pushbytess 0x8925c50f 0x31274359 0x8bbde2aa 0xd4bfb233 0xb014f687 0x3acbfb6f 0xf445489b 0xd501c95d // method "getOraclePoolsCount()uint64", method "addOraclePool(address,uint64)void", method "getOraclePrice(uint64,uint64)uint64", method "getPricesFromOracles(uint64)uint64", method "addNewCollateralType(uint64,uint64)void", method "depositASA(axfer,uint64)void", method "withdrawDeposit(axfer,uint64)void", method "borrow(axfer,uint64,uint64,uint64)void"
+    bz main_after_if_else@21
+    pushbytess 0x3b01665e 0x6e01402e // method "createApplication(account,uint64)void", method "initApplication(pay,uint64,uint64,uint64,uint64)void"
+    bytec 11 // method "getCirculatingLST()uint64"
+    bytec 12 // method "getTotalDeposits()uint64"
+    pushbytess 0x8925c50f 0x6c6337c0 0x31274359 0x8bbde2aa 0xd4bfb233 0xb014f687 0x3acbfb6f 0xf445489b 0xd501c95d 0x00ff161e 0xabaf9805 // method "getOraclePoolsCount()uint64", method "getAcceptedCollateralsCount()uint64", method "addOraclePool(address,uint64)void", method "getOraclePrice(uint64,uint64)uint64", method "getPricesFromOracles(uint64)uint64", method "addNewCollateralType(uint64,uint64)void", method "depositASA(axfer,uint64)void", method "withdrawDeposit(axfer,uint64)void", method "borrow(axfer,uint64,uint64,uint64)void", method "getLoanRecord(account)(address,uint64,uint64,uint64,uint64,uint64,uint64)", method "getLoanRecordASAId(account)uint64"
     txna ApplicationArgs 0
-    match main_createApplication_route@5 main_initApplication_route@6 main_getCirculatingLST_route@7 main_getTotalDeposits_route@8 main_getOraclePoolsCount_route@9 main_addOraclePool_route@10 main_getOraclePrice_route@11 main_getPricesFromOracles_route@12 main_addNewCollateralType_route@13 main_depositASA_route@14 main_withdrawDeposit_route@15 main_borrow_route@16
+    match main_createApplication_route@3 main_initApplication_route@4 main_getCirculatingLST_route@5 main_getTotalDeposits_route@6 main_getOraclePoolsCount_route@7 main_getAcceptedCollateralsCount_route@8 main_addOraclePool_route@9 main_getOraclePrice_route@10 main_getPricesFromOracles_route@11 main_addNewCollateralType_route@12 main_depositASA_route@13 main_withdrawDeposit_route@14 main_borrow_route@15 main_getLoanRecord_route@16 main_getLoanRecordASAId_route@17
 
-main_after_if_else@20:
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+main_after_if_else@21:
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     intc_0 // 0
     return
 
-main_borrow_route@16:
-    // smart_contracts/we_lend/contract.algo.ts:273
+main_getLoanRecordASAId_route@17:
+    // smart_contracts/we_lend/weLendContract.algo.ts:437
+    // getLoanRecordASAId(borrowerAddress: Account): uint64 {
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
+    // @contract({ name: 'weLend', avmVersion: 11 })
+    // export class WeLend extends Contract {
+    txna ApplicationArgs 1
+    btoi
+    txnas Accounts
+    // smart_contracts/we_lend/weLendContract.algo.ts:437
+    // getLoanRecordASAId(borrowerAddress: Account): uint64 {
+    callsub getLoanRecordASAId
+    itob
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_getLoanRecord_route@16:
+    // smart_contracts/we_lend/weLendContract.algo.ts:433
+    // getLoanRecord(borrowerAddress: Account): LoanRecord {
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
+    // @contract({ name: 'weLend', avmVersion: 11 })
+    // export class WeLend extends Contract {
+    txna ApplicationArgs 1
+    btoi
+    txnas Accounts
+    // smart_contracts/we_lend/weLendContract.algo.ts:433
+    // getLoanRecord(borrowerAddress: Account): LoanRecord {
+    callsub getLoanRecord
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_borrow_route@15:
+    // smart_contracts/we_lend/weLendContract.algo.ts:328
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txn GroupIndex
@@ -62,21 +97,21 @@ main_borrow_route@16:
     txna ApplicationArgs 2
     btoi
     txna ApplicationArgs 3
-    // smart_contracts/we_lend/contract.algo.ts:273
+    // smart_contracts/we_lend/weLendContract.algo.ts:328
     // @abimethod({ allowActions: 'NoOp' })
     callsub borrow
     intc_1 // 1
     return
 
-main_withdrawDeposit_route@15:
-    // smart_contracts/we_lend/contract.algo.ts:252
+main_withdrawDeposit_route@14:
+    // smart_contracts/we_lend/weLendContract.algo.ts:306
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txn GroupIndex
@@ -89,21 +124,21 @@ main_withdrawDeposit_route@15:
     assert // transaction type is axfer
     txna ApplicationArgs 1
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:252
+    // smart_contracts/we_lend/weLendContract.algo.ts:306
     // @abimethod({ allowActions: 'NoOp' })
     callsub withdrawDeposit
     intc_1 // 1
     return
 
-main_depositASA_route@14:
-    // smart_contracts/we_lend/contract.algo.ts:228
+main_depositASA_route@13:
+    // smart_contracts/we_lend/weLendContract.algo.ts:281
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txn GroupIndex
@@ -116,45 +151,45 @@ main_depositASA_route@14:
     assert // transaction type is axfer
     txna ApplicationArgs 1
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:228
+    // smart_contracts/we_lend/weLendContract.algo.ts:281
     // @abimethod({ allowActions: 'NoOp' })
     callsub depositASA
     intc_1 // 1
     return
 
-main_addNewCollateralType_route@13:
-    // smart_contracts/we_lend/contract.algo.ts:186
+main_addNewCollateralType_route@12:
+    // smart_contracts/we_lend/weLendContract.algo.ts:237
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txna ApplicationArgs 1
     txna ApplicationArgs 2
-    // smart_contracts/we_lend/contract.algo.ts:186
+    // smart_contracts/we_lend/weLendContract.algo.ts:237
     // @abimethod({ allowActions: 'NoOp' })
     callsub addNewCollateralType
     intc_1 // 1
     return
 
-main_getPricesFromOracles_route@12:
-    // smart_contracts/we_lend/contract.algo.ts:153
+main_getPricesFromOracles_route@11:
+    // smart_contracts/we_lend/weLendContract.algo.ts:204
     // getPricesFromOracles(tokenId: uint64): uint64 {
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txna ApplicationArgs 1
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:153
+    // smart_contracts/we_lend/weLendContract.algo.ts:204
     // getPricesFromOracles(tokenId: uint64): uint64 {
     callsub getPricesFromOracles
     itob
@@ -165,22 +200,22 @@ main_getPricesFromOracles_route@12:
     intc_1 // 1
     return
 
-main_getOraclePrice_route@11:
-    // smart_contracts/we_lend/contract.algo.ts:127
+main_getOraclePrice_route@10:
+    // smart_contracts/we_lend/weLendContract.algo.ts:168
     // getOraclePrice(tokenId: uint64, oracleIndex: uint64): uint64 {
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txna ApplicationArgs 1
     btoi
     txna ApplicationArgs 2
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:127
+    // smart_contracts/we_lend/weLendContract.algo.ts:168
     // getOraclePrice(tokenId: uint64, oracleIndex: uint64): uint64 {
     callsub getOraclePrice
     itob
@@ -191,27 +226,44 @@ main_getOraclePrice_route@11:
     intc_1 // 1
     return
 
-main_addOraclePool_route@10:
-    // smart_contracts/we_lend/contract.algo.ts:117
+main_addOraclePool_route@9:
+    // smart_contracts/we_lend/weLendContract.algo.ts:140
     // addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txna ApplicationArgs 1
     txna ApplicationArgs 2
-    // smart_contracts/we_lend/contract.algo.ts:117
+    // smart_contracts/we_lend/weLendContract.algo.ts:140
     // addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
     callsub addOraclePool
     intc_1 // 1
     return
 
-main_getOraclePoolsCount_route@9:
-    // smart_contracts/we_lend/contract.algo.ts:113
+main_getAcceptedCollateralsCount_route@8:
+    // smart_contracts/we_lend/weLendContract.algo.ts:136
+    // getAcceptedCollateralsCount(): uint64 {
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    callsub getAcceptedCollateralsCount
+    itob
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_getOraclePoolsCount_route@7:
+    // smart_contracts/we_lend/weLendContract.algo.ts:132
     // getOraclePoolsCount(): uint64 {
     txn OnCompletion
     !
@@ -227,8 +279,8 @@ main_getOraclePoolsCount_route@9:
     intc_1 // 1
     return
 
-main_getTotalDeposits_route@8:
-    // smart_contracts/we_lend/contract.algo.ts:109
+main_getTotalDeposits_route@6:
+    // smart_contracts/we_lend/weLendContract.algo.ts:128
     // getTotalDeposits(): uint64 {
     txn OnCompletion
     !
@@ -244,8 +296,8 @@ main_getTotalDeposits_route@8:
     intc_1 // 1
     return
 
-main_getCirculatingLST_route@7:
-    // smart_contracts/we_lend/contract.algo.ts:105
+main_getCirculatingLST_route@5:
+    // smart_contracts/we_lend/weLendContract.algo.ts:124
     // getCirculatingLST(): uint64 {
     txn OnCompletion
     !
@@ -261,15 +313,15 @@ main_getCirculatingLST_route@7:
     intc_1 // 1
     return
 
-main_initApplication_route@6:
-    // smart_contracts/we_lend/contract.algo.ts:62
+main_initApplication_route@4:
+    // smart_contracts/we_lend/weLendContract.algo.ts:77
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
     assert // OnCompletion is not NoOp
     txn ApplicationID
     assert // can only call when not creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txn GroupIndex
@@ -288,14 +340,14 @@ main_initApplication_route@6:
     btoi
     txna ApplicationArgs 4
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:62
+    // smart_contracts/we_lend/weLendContract.algo.ts:77
     // @abimethod({ allowActions: 'NoOp' })
     callsub initApplication
     intc_1 // 1
     return
 
-main_createApplication_route@5:
-    // smart_contracts/we_lend/contract.algo.ts:56
+main_createApplication_route@3:
+    // smart_contracts/we_lend/weLendContract.algo.ts:71
     // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
     txn OnCompletion
     !
@@ -303,7 +355,7 @@ main_createApplication_route@5:
     txn ApplicationID
     !
     assert // can only call when creating
-    // smart_contracts/we_lend/contract.algo.ts:25-26
+    // smart_contracts/we_lend/weLendContract.algo.ts:26-27
     // @contract({ name: 'weLend', avmVersion: 11 })
     // export class WeLend extends Contract {
     txna ApplicationArgs 1
@@ -311,40 +363,43 @@ main_createApplication_route@5:
     txnas Accounts
     txna ApplicationArgs 2
     btoi
-    txnas Assets
-    // smart_contracts/we_lend/contract.algo.ts:56
+    // smart_contracts/we_lend/weLendContract.algo.ts:71
     // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
     callsub createApplication
     intc_1 // 1
     return
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.createApplication(admin: bytes, baseTokenId: uint64) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.createApplication(admin: bytes, baseTokenId: uint64) -> void:
 createApplication:
-    // smart_contracts/we_lend/contract.algo.ts:56-57
+    // smart_contracts/we_lend/weLendContract.algo.ts:71-72
     // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
-    // public createApplication(admin: Account, baseTokenId: Asset): void {
+    // public createApplication(admin: Account, baseTokenId: uint64): void {
     proto 2 0
-    // smart_contracts/we_lend/contract.algo.ts:38
+    // smart_contracts/we_lend/weLendContract.algo.ts:41
     // admin_account = GlobalState<Account>()
-    bytec_3 // "admin_account"
-    // smart_contracts/we_lend/contract.algo.ts:58
+    bytec 4 // "admin_account"
+    // smart_contracts/we_lend/weLendContract.algo.ts:73
     // this.admin_account.value = admin
     frame_dig -2
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    bytec_0 // "base_token_id"
-    // smart_contracts/we_lend/contract.algo.ts:59
-    // this.base_token_id.value = baseTokenId
+    // smart_contracts/we_lend/weLendContract.algo.ts:74
+    // this.base_token_id.value = new UintN64(baseTokenId)
     frame_dig -1
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    bytec_0 // "base_token_id"
+    // smart_contracts/we_lend/weLendContract.algo.ts:74
+    // this.base_token_id.value = new UintN64(baseTokenId)
+    swap
     app_global_put
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.initApplication(mbrTxn: uint64, ltv_bps: uint64, liq_threshold_bps: uint64, interest_bps: uint64, origination_fee_bps: uint64) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.initApplication(mbrTxn: uint64, ltv_bps: uint64, liq_threshold_bps: uint64, interest_bps: uint64, origination_fee_bps: uint64) -> void:
 initApplication:
-    // smart_contracts/we_lend/contract.algo.ts:62-69
+    // smart_contracts/we_lend/weLendContract.algo.ts:77-84
     // @abimethod({ allowActions: 'NoOp' })
     // public initApplication(
     //   mbrTxn: gtxn.PaymentTxn,
@@ -354,33 +409,33 @@ initApplication:
     //   origination_fee_bps: uint64,
     // ): void {
     proto 5 0
-    // smart_contracts/we_lend/contract.algo.ts:70
+    // smart_contracts/we_lend/weLendContract.algo.ts:85
     // assert(op.Txn.sender === this.admin_account.value)
     txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:38
+    // smart_contracts/we_lend/weLendContract.algo.ts:41
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:70
+    // smart_contracts/we_lend/weLendContract.algo.ts:85
     // assert(op.Txn.sender === this.admin_account.value)
     ==
     assert
-    // smart_contracts/we_lend/contract.algo.ts:72-75
+    // smart_contracts/we_lend/weLendContract.algo.ts:87-90
     // assertMatch(mbrTxn, {
     //   sender: this.admin_account.value,
     //   amount: 34000,
     // })
     frame_dig -5
     gtxns Sender
-    // smart_contracts/we_lend/contract.algo.ts:38
+    // smart_contracts/we_lend/weLendContract.algo.ts:41
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:72-75
+    // smart_contracts/we_lend/weLendContract.algo.ts:87-90
     // assertMatch(mbrTxn, {
     //   sender: this.admin_account.value,
     //   amount: 34000,
@@ -389,10 +444,10 @@ initApplication:
     bz initApplication_bool_false@3
     frame_dig -5
     gtxns Amount
-    // smart_contracts/we_lend/contract.algo.ts:74
+    // smart_contracts/we_lend/weLendContract.algo.ts:89
     // amount: 34000,
     pushint 34000 // 34000
-    // smart_contracts/we_lend/contract.algo.ts:72-75
+    // smart_contracts/we_lend/weLendContract.algo.ts:87-90
     // assertMatch(mbrTxn, {
     //   sender: this.admin_account.value,
     //   amount: 34000,
@@ -402,183 +457,206 @@ initApplication:
     intc_1 // 1
 
 initApplication_bool_merge@4:
-    // smart_contracts/we_lend/contract.algo.ts:72-75
+    // smart_contracts/we_lend/weLendContract.algo.ts:87-90
     // assertMatch(mbrTxn, {
     //   sender: this.admin_account.value,
     //   amount: 34000,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/we_lend/contract.algo.ts:40
+    // smart_contracts/we_lend/weLendContract.algo.ts:44
     // ltv_bps = GlobalState<uint64>()
-    bytec 12 // "ltv_bps"
-    // smart_contracts/we_lend/contract.algo.ts:77
+    bytec 13 // "ltv_bps"
+    // smart_contracts/we_lend/weLendContract.algo.ts:92
     // this.ltv_bps.value = ltv_bps
     frame_dig -4
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:42
+    // smart_contracts/we_lend/weLendContract.algo.ts:47
     // liq_threshold_bps = GlobalState<uint64>()
     pushbytes "liq_threshold_bps"
-    // smart_contracts/we_lend/contract.algo.ts:78
+    // smart_contracts/we_lend/weLendContract.algo.ts:93
     // this.liq_threshold_bps.value = liq_threshold_bps
     frame_dig -3
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:44
+    // smart_contracts/we_lend/weLendContract.algo.ts:50
     // interest_bps = GlobalState<uint64>()
     pushbytes "interest_bps"
-    // smart_contracts/we_lend/contract.algo.ts:79
+    // smart_contracts/we_lend/weLendContract.algo.ts:94
     // this.interest_bps.value = interest_bps
     frame_dig -2
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:46
+    // smart_contracts/we_lend/weLendContract.algo.ts:53
     // origination_fee_bps = GlobalState<uint64>()
-    bytec 13 // "origination_fee_bps"
-    // smart_contracts/we_lend/contract.algo.ts:80
+    bytec 14 // "origination_fee_bps"
+    // smart_contracts/we_lend/weLendContract.algo.ts:95
     // this.origination_fee_bps.value = origination_fee_bps
     frame_dig -1
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:52
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
-    bytec_2 // "oracle_pools_count"
-    // smart_contracts/we_lend/contract.algo.ts:81
+    bytec_3 // "oracle_pools_count"
+    // smart_contracts/we_lend/weLendContract.algo.ts:96
     // this.oracle_pools_count.value = 0
     intc_0 // 0
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:84-90
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
+    // accepted_collaterals_count = GlobalState<uint64>()
+    bytec_2 // "accepted_collaterals_count"
+    // smart_contracts/we_lend/weLendContract.algo.ts:97
+    // this.accepted_collaterals_count.value = 0
+    intc_0 // 0
+    app_global_put
+    // smart_contracts/we_lend/weLendContract.algo.ts:100-106
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: 0,
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:86
+    // smart_contracts/we_lend/weLendContract.algo.ts:102
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:88
+    // smart_contracts/we_lend/weLendContract.algo.ts:103
+    // xferAsset: this.base_token_id.value.native,
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:104
     // assetAmount: 0,
     intc_0 // 0
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:84-89
+    // smart_contracts/we_lend/weLendContract.algo.ts:100-105
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: 0,
     //   })
     intc_2 // 4
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:84-90
+    // smart_contracts/we_lend/weLendContract.algo.ts:100-106
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: 0,
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/we_lend/contract.algo.ts:92-101
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:109
+    // const baseToken = Asset(this.base_token_id.value.native)
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:110-120
     // const result = itxn
     //   .assetConfig({
     //     sender: Global.currentApplicationAddress,
-    //     total: this.base_token_id.value.total,
-    //     decimals: this.base_token_id.value.decimals,
+    //     total: baseToken.total,
+    //     decimals: baseToken.decimals,
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
-    //     unitName: 'c' + String(this.base_token_id.value.unitName),
+    //     unitName: 'c' + String(baseToken.unitName),
+    //     assetName: 'c' + String(this.base_token_id.value.bytes),
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:94
+    // smart_contracts/we_lend/weLendContract.algo.ts:112
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:95
-    // total: this.base_token_id.value.total,
+    // smart_contracts/we_lend/weLendContract.algo.ts:113
+    // total: baseToken.total,
+    dig 1
     asset_params_get AssetTotal
     assert // asset exists
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:96
-    // decimals: this.base_token_id.value.decimals,
+    // smart_contracts/we_lend/weLendContract.algo.ts:114
+    // decimals: baseToken.decimals,
+    dig 2
     asset_params_get AssetDecimals
     assert // asset exists
-    // smart_contracts/we_lend/contract.algo.ts:98
+    // smart_contracts/we_lend/weLendContract.algo.ts:116
     // manager: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:99
-    // unitName: 'c' + String(this.base_token_id.value.unitName),
+    // smart_contracts/we_lend/weLendContract.algo.ts:117
+    // unitName: 'c' + String(baseToken.unitName),
+    uncover 4
     asset_params_get AssetUnitName
     assert // asset exists
     pushbytes "c"
     swap
     concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:118
+    // assetName: 'c' + String(this.base_token_id.value.bytes),
+    pushbytes "c"
+    swap
+    concat
+    itxn_field ConfigAssetName
     itxn_field ConfigAssetUnitName
     itxn_field ConfigAssetManager
-    // smart_contracts/we_lend/contract.algo.ts:97
+    // smart_contracts/we_lend/weLendContract.algo.ts:115
     // defaultFrozen: false,
     intc_0 // 0
     itxn_field ConfigAssetDefaultFrozen
     itxn_field ConfigAssetDecimals
     itxn_field ConfigAssetTotal
     itxn_field Sender
-    // smart_contracts/we_lend/contract.algo.ts:92-100
+    // smart_contracts/we_lend/weLendContract.algo.ts:110-119
     // const result = itxn
     //   .assetConfig({
     //     sender: Global.currentApplicationAddress,
-    //     total: this.base_token_id.value.total,
-    //     decimals: this.base_token_id.value.decimals,
+    //     total: baseToken.total,
+    //     decimals: baseToken.decimals,
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
-    //     unitName: 'c' + String(this.base_token_id.value.unitName),
+    //     unitName: 'c' + String(baseToken.unitName),
+    //     assetName: 'c' + String(this.base_token_id.value.bytes),
     //   })
     pushint 3 // 3
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:92-101
+    // smart_contracts/we_lend/weLendContract.algo.ts:110-120
     // const result = itxn
     //   .assetConfig({
     //     sender: Global.currentApplicationAddress,
-    //     total: this.base_token_id.value.total,
-    //     decimals: this.base_token_id.value.decimals,
+    //     total: baseToken.total,
+    //     decimals: baseToken.decimals,
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
-    //     unitName: 'c' + String(this.base_token_id.value.unitName),
+    //     unitName: 'c' + String(baseToken.unitName),
+    //     assetName: 'c' + String(this.base_token_id.value.bytes),
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/we_lend/contract.algo.ts:31
-    // lst_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    bytec 5 // "lst_token_id"
     itxn ConfigAsset
-    // smart_contracts/we_lend/contract.algo.ts:102
-    // this.lst_token_id.value = result.configAsset
+    // smart_contracts/we_lend/weLendContract.algo.ts:121
+    // this.lst_token_id.value = new UintN64(result.configAsset.id)
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:32
+    // lst_token_id = GlobalState<UintN64>()
+    bytec 15 // "lst_token_id"
+    // smart_contracts/we_lend/weLendContract.algo.ts:121
+    // this.lst_token_id.value = new UintN64(result.configAsset.id)
+    swap
     app_global_put
     retsub
 
@@ -587,165 +665,279 @@ initApplication_bool_false@3:
     b initApplication_bool_merge@4
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.getCirculatingLST() -> uint64:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getCirculatingLST() -> uint64:
 getCirculatingLST:
-    // smart_contracts/we_lend/contract.algo.ts:33
+    // smart_contracts/we_lend/weLendContract.algo.ts:35
     // circulating_lst = GlobalState<uint64>()
     intc_0 // 0
-    bytec 6 // "circulating_lst"
+    bytec 5 // "circulating_lst"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:106
+    // smart_contracts/we_lend/weLendContract.algo.ts:125
     // return this.circulating_lst.value
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.getTotalDeposits() -> uint64:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getTotalDeposits() -> uint64:
 getTotalDeposits:
-    // smart_contracts/we_lend/contract.algo.ts:35
+    // smart_contracts/we_lend/weLendContract.algo.ts:38
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 7 // "total_deposits"
+    bytec 6 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:110
+    // smart_contracts/we_lend/weLendContract.algo.ts:129
     // return this.total_deposits.value
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.getOraclePoolsCount() -> uint64:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getOraclePoolsCount() -> uint64:
 getOraclePoolsCount:
-    // smart_contracts/we_lend/contract.algo.ts:52
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec_2 // "oracle_pools_count"
+    bytec_3 // "oracle_pools_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:114
+    // smart_contracts/we_lend/weLendContract.algo.ts:133
     // return this.oracle_pools_count.value
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.addOraclePool(poolAddress: bytes, contractAppId: bytes) -> void:
-addOraclePool:
-    // smart_contracts/we_lend/contract.algo.ts:117
-    // addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
-    proto 2 0
-    // smart_contracts/we_lend/contract.algo.ts:118
-    // assert(op.Txn.sender === this.admin_account.value)
-    txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:38
-    // admin_account = GlobalState<Account>()
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getAcceptedCollateralsCount() -> uint64:
+getAcceptedCollateralsCount:
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
+    // accepted_collaterals_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec_2 // "accepted_collaterals_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:118
+    // smart_contracts/we_lend/weLendContract.algo.ts:137
+    // return this.accepted_collaterals_count.value
+    retsub
+
+
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.addOraclePool(poolAddress: bytes, contractAppId: bytes) -> void:
+addOraclePool:
+    // smart_contracts/we_lend/weLendContract.algo.ts:140
+    // addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
+    proto 2 0
+    // smart_contracts/we_lend/weLendContract.algo.ts:141
+    // assert(op.Txn.sender === this.admin_account.value)
+    txn Sender
+    // smart_contracts/we_lend/weLendContract.algo.ts:41
+    // admin_account = GlobalState<Account>()
+    intc_0 // 0
+    bytec 4 // "admin_account"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:141
     // assert(op.Txn.sender === this.admin_account.value)
     ==
     assert
-    // smart_contracts/we_lend/contract.algo.ts:119-122
+    // smart_contracts/we_lend/weLendContract.algo.ts:144
+    // contractAppId.native,
+    frame_dig -1
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:142-146
+    // const [token_1_cumulative_price, token_1_cumulative_price_exists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('asset_1_cumulative_price'),
+    // )
+    frame_dig -2
+    dig 1
+    // smart_contracts/we_lend/weLendContract.algo.ts:145
+    // Bytes('asset_1_cumulative_price'),
+    bytec 16 // "asset_1_cumulative_price"
+    // smart_contracts/we_lend/weLendContract.algo.ts:142-146
+    // const [token_1_cumulative_price, token_1_cumulative_price_exists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('asset_1_cumulative_price'),
+    // )
+    app_local_get_ex
+    pop
+    swap
+    // smart_contracts/we_lend/weLendContract.algo.ts:147-151
+    // const [token_2_cumulative_price, token_2_cumulative_price_exists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('asset_2_cumulative_price'),
+    // )
+    frame_dig -2
+    dig 1
+    // smart_contracts/we_lend/weLendContract.algo.ts:150
+    // Bytes('asset_2_cumulative_price'),
+    bytec 17 // "asset_2_cumulative_price"
+    // smart_contracts/we_lend/weLendContract.algo.ts:147-151
+    // const [token_2_cumulative_price, token_2_cumulative_price_exists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('asset_2_cumulative_price'),
+    // )
+    app_local_get_ex
+    pop
+    swap
+    // smart_contracts/we_lend/weLendContract.algo.ts:152-156
+    // const [cumulativePriceLastTimestamp, cumulativePriceLastTimestampExists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('cumulative_price_update_timestamp'),
+    // )
+    frame_dig -2
+    swap
+    // smart_contracts/we_lend/weLendContract.algo.ts:155
+    // Bytes('cumulative_price_update_timestamp'),
+    bytec 18 // "cumulative_price_update_timestamp"
+    // smart_contracts/we_lend/weLendContract.algo.ts:152-156
+    // const [cumulativePriceLastTimestamp, cumulativePriceLastTimestampExists] = op.AppLocal.getExUint64(
+    //   poolAddress.native,
+    //   contractAppId.native,
+    //   Bytes('cumulative_price_update_timestamp'),
+    // )
+    app_local_get_ex
+    pop
+    // smart_contracts/we_lend/weLendContract.algo.ts:160
+    // asset1LastCumulativePrice: new UintN64(token_1_cumulative_price),
+    uncover 2
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:161
+    // asset2LastCumulativePrice: new UintN64(token_2_cumulative_price),
+    uncover 2
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:162
+    // cumulativePriceLastTimestamp: new UintN64(cumulativePriceLastTimestamp),
+    uncover 2
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:157-163
     // const newOracle: Oracle = new Oracle({
     //   address: poolAddress,
     //   contractAppId: contractAppId,
+    //   asset1LastCumulativePrice: new UintN64(token_1_cumulative_price),
+    //   asset2LastCumulativePrice: new UintN64(token_2_cumulative_price),
+    //   cumulativePriceLastTimestamp: new UintN64(cumulativePriceLastTimestamp),
     // })
     frame_dig -2
     frame_dig -1
     concat
-    // smart_contracts/we_lend/contract.algo.ts:52
+    uncover 3
+    concat
+    uncover 2
+    concat
+    swap
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec_2 // "oracle_pools_count"
+    bytec_3 // "oracle_pools_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:123
+    // smart_contracts/we_lend/weLendContract.algo.ts:164
     // this.oracle_pools(new arc4.UintN64(this.oracle_pools_count.value + 1)).value = newOracle.copy()
     intc_1 // 1
     +
     itob
-    // smart_contracts/we_lend/contract.algo.ts:48
+    // smart_contracts/we_lend/weLendContract.algo.ts:56
     // oracle_pools = BoxMap<UintN64, Oracle>({ keyPrefix: 'oracle_pools' })
-    bytec 8 // "oracle_pools"
+    bytec 7 // "oracle_pools"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:123
+    // smart_contracts/we_lend/weLendContract.algo.ts:164
     // this.oracle_pools(new arc4.UintN64(this.oracle_pools_count.value + 1)).value = newOracle.copy()
     swap
     box_put
-    // smart_contracts/we_lend/contract.algo.ts:52
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec_2 // "oracle_pools_count"
+    bytec_3 // "oracle_pools_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:124
+    // smart_contracts/we_lend/weLendContract.algo.ts:165
     // this.oracle_pools_count.value = this.oracle_pools_count.value + 1
     intc_1 // 1
     +
-    // smart_contracts/we_lend/contract.algo.ts:52
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
-    bytec_2 // "oracle_pools_count"
-    // smart_contracts/we_lend/contract.algo.ts:124
+    bytec_3 // "oracle_pools_count"
+    // smart_contracts/we_lend/weLendContract.algo.ts:165
     // this.oracle_pools_count.value = this.oracle_pools_count.value + 1
     swap
     app_global_put
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.getOraclePrice(tokenId: uint64, oracleIndex: uint64) -> uint64:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getOraclePrice(tokenId: uint64, oracleIndex: uint64) -> uint64:
 getOraclePrice:
-    // smart_contracts/we_lend/contract.algo.ts:127
+    // smart_contracts/we_lend/weLendContract.algo.ts:168
     // getOraclePrice(tokenId: uint64, oracleIndex: uint64): uint64 {
     proto 2 1
-    // smart_contracts/we_lend/contract.algo.ts:128
+    // smart_contracts/we_lend/weLendContract.algo.ts:169
     // const oracle = this.oracle_pools(new arc4.UintN64(oracleIndex)).value.copy()
     frame_dig -1
     itob
-    // smart_contracts/we_lend/contract.algo.ts:48
+    // smart_contracts/we_lend/weLendContract.algo.ts:56
     // oracle_pools = BoxMap<UintN64, Oracle>({ keyPrefix: 'oracle_pools' })
-    bytec 8 // "oracle_pools"
+    bytec 7 // "oracle_pools"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:128
+    // smart_contracts/we_lend/weLendContract.algo.ts:169
     // const oracle = this.oracle_pools(new arc4.UintN64(oracleIndex)).value.copy()
     box_get
+    swap
+    dup
+    uncover 2
     assert // Box must have value
-    // smart_contracts/we_lend/contract.algo.ts:129
+    // smart_contracts/we_lend/weLendContract.algo.ts:170
     // const address = oracle.address
     dup
     extract 0 32 // on error: Index access is out of bounds
     dup
     uncover 2
-    // smart_contracts/we_lend/contract.algo.ts:130
+    // smart_contracts/we_lend/weLendContract.algo.ts:171
     // const contractAppId = oracle.contractAppId
     pushint 32 // 32
-    // smart_contracts/we_lend/contract.algo.ts:132
+    // smart_contracts/we_lend/weLendContract.algo.ts:173
     // const contractAppIdObj = Application(contractAppId.native)
     extract_uint64
     dup
     cover 2
-    // smart_contracts/we_lend/contract.algo.ts:134
+    // smart_contracts/we_lend/weLendContract.algo.ts:175
     // const [token_1_id, token_1_exists] = op.AppLocal.getExUint64(address.native, contractAppIdObj, Bytes('asset_1_id'))
+    dup2
     pushbytes "asset_1_id"
     app_local_get_ex
     pop
-    // smart_contracts/we_lend/contract.algo.ts:136
+    cover 2
+    // smart_contracts/we_lend/weLendContract.algo.ts:179
+    // Bytes('cumulative_price_update_timestamp'),
+    bytec 18 // "cumulative_price_update_timestamp"
+    // smart_contracts/we_lend/weLendContract.algo.ts:176-180
+    // const [new_cumulative_timestamp, new_cumulative_timestamp_exists] = op.AppLocal.getExUint64(
+    //   address.native,
+    //   contractAppIdObj,
+    //   Bytes('cumulative_price_update_timestamp'),
+    // )
+    app_local_get_ex
+    pop
+    cover 2
+    // smart_contracts/we_lend/weLendContract.algo.ts:182
     // if (token_1_id === tokenId) {
     frame_dig -2
     ==
     bz getOraclePrice_else_body@2
-    // smart_contracts/we_lend/contract.algo.ts:137-141
+    // smart_contracts/we_lend/weLendContract.algo.ts:183-187
     // const [price, priceExists] = op.AppLocal.getExUint64(
     //   address.native,
     //   contractAppIdObj,
     //   Bytes('asset_1_cumulative_price'),
     // )
-    frame_dig 0
+    frame_dig 1
     swap
-    // smart_contracts/we_lend/contract.algo.ts:140
+    // smart_contracts/we_lend/weLendContract.algo.ts:186
     // Bytes('asset_1_cumulative_price'),
-    pushbytes "asset_1_cumulative_price"
-    // smart_contracts/we_lend/contract.algo.ts:137-141
+    bytec 16 // "asset_1_cumulative_price"
+    // smart_contracts/we_lend/weLendContract.algo.ts:183-187
     // const [price, priceExists] = op.AppLocal.getExUint64(
     //   address.native,
     //   contractAppIdObj,
@@ -753,24 +945,49 @@ getOraclePrice:
     // )
     app_local_get_ex
     pop
-    // smart_contracts/we_lend/contract.algo.ts:142
-    // return price
+
+getOraclePrice_after_if_else@3:
+    // smart_contracts/we_lend/weLendContract.algo.ts:197
+    // const previousTimestamp = oracle.cumulativePriceLastTimestamp.native
+    frame_dig 0
+    dup
+    pushint 56 // 56
+    extract_uint64
+    // smart_contracts/we_lend/weLendContract.algo.ts:198
+    // const deltaTime: uint64 = new_cumulative_timestamp - previousTimestamp
+    frame_dig 2
     swap
+    -
+    // smart_contracts/we_lend/weLendContract.algo.ts:199
+    // const deltaPrice: uint64 = newCummulativePrice - oracle.asset1LastCumulativePrice.native
+    swap
+    pushint 40 // 40
+    extract_uint64
+    uncover 2
+    swap
+    -
+    // smart_contracts/we_lend/weLendContract.algo.ts:200
+    // const instantaneous_price: uint64 = deltaPrice / deltaTime
+    swap
+    /
+    // smart_contracts/we_lend/weLendContract.algo.ts:201
+    // return instantaneous_price
+    frame_bury 0
     retsub
 
 getOraclePrice_else_body@2:
-    // smart_contracts/we_lend/contract.algo.ts:144-148
+    // smart_contracts/we_lend/weLendContract.algo.ts:190-194
     // const [price, priceExists] = op.AppLocal.getExUint64(
     //   address.native,
     //   contractAppIdObj,
     //   Bytes('asset_2_cumulative_price'),
     // )
-    frame_dig 0
+    frame_dig 1
     swap
-    // smart_contracts/we_lend/contract.algo.ts:147
+    // smart_contracts/we_lend/weLendContract.algo.ts:193
     // Bytes('asset_2_cumulative_price'),
-    pushbytes "asset_2_cumulative_price"
-    // smart_contracts/we_lend/contract.algo.ts:144-148
+    bytec 17 // "asset_2_cumulative_price"
+    // smart_contracts/we_lend/weLendContract.algo.ts:190-194
     // const [price, priceExists] = op.AppLocal.getExUint64(
     //   address.native,
     //   contractAppIdObj,
@@ -778,63 +995,60 @@ getOraclePrice_else_body@2:
     // )
     app_local_get_ex
     pop
-    // smart_contracts/we_lend/contract.algo.ts:149
-    // return price
-    swap
-    retsub
+    b getOraclePrice_after_if_else@3
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.getPricesFromOracles(tokenId: uint64) -> uint64:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getPricesFromOracles(tokenId: uint64) -> uint64:
 getPricesFromOracles:
-    // smart_contracts/we_lend/contract.algo.ts:153
+    // smart_contracts/we_lend/weLendContract.algo.ts:204
     // getPricesFromOracles(tokenId: uint64): uint64 {
     proto 1 1
-    // smart_contracts/we_lend/contract.algo.ts:52
+    // smart_contracts/we_lend/weLendContract.algo.ts:66
     // oracle_pools_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec_2 // "oracle_pools_count"
+    bytec_3 // "oracle_pools_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:155
+    // smart_contracts/we_lend/weLendContract.algo.ts:206
     // let totalPrice: uint64 = 0
     intc_0 // 0
-    // smart_contracts/we_lend/contract.algo.ts:156
+    // smart_contracts/we_lend/weLendContract.algo.ts:207
     // for (let i: uint64 = 0; i < oracleIndex; i++) {
     dup
 
 getPricesFromOracles_while_top@1:
-    // smart_contracts/we_lend/contract.algo.ts:156
+    // smart_contracts/we_lend/weLendContract.algo.ts:207
     // for (let i: uint64 = 0; i < oracleIndex; i++) {
     frame_dig 2
     frame_dig 0
     <
     bz getPricesFromOracles_after_while@3
-    // smart_contracts/we_lend/contract.algo.ts:157
+    // smart_contracts/we_lend/weLendContract.algo.ts:208
     // const oracle = this.oracle_pools(new arc4.UintN64(i)).value.copy()
     frame_dig 2
     dup
     itob
-    // smart_contracts/we_lend/contract.algo.ts:48
+    // smart_contracts/we_lend/weLendContract.algo.ts:56
     // oracle_pools = BoxMap<UintN64, Oracle>({ keyPrefix: 'oracle_pools' })
-    bytec 8 // "oracle_pools"
+    bytec 7 // "oracle_pools"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:157
+    // smart_contracts/we_lend/weLendContract.algo.ts:208
     // const oracle = this.oracle_pools(new arc4.UintN64(i)).value.copy()
     box_get
     bury 1
     assert // Box must have value
-    // smart_contracts/we_lend/contract.algo.ts:160
+    // smart_contracts/we_lend/weLendContract.algo.ts:211
     // const price = this.getOraclePrice(tokenId, i)
     frame_dig -1
     dig 1
     callsub getOraclePrice
-    // smart_contracts/we_lend/contract.algo.ts:161
+    // smart_contracts/we_lend/weLendContract.algo.ts:212
     // totalPrice += price
     frame_dig 1
     +
     frame_bury 1
-    // smart_contracts/we_lend/contract.algo.ts:156
+    // smart_contracts/we_lend/weLendContract.algo.ts:207
     // for (let i: uint64 = 0; i < oracleIndex; i++) {
     intc_1 // 1
     +
@@ -842,7 +1056,7 @@ getPricesFromOracles_while_top@1:
     b getPricesFromOracles_while_top@1
 
 getPricesFromOracles_after_while@3:
-    // smart_contracts/we_lend/contract.algo.ts:163
+    // smart_contracts/we_lend/weLendContract.algo.ts:214
     // return totalPrice / (oracleIndex + 1)
     frame_dig 0
     intc_1 // 1
@@ -854,100 +1068,95 @@ getPricesFromOracles_after_while@3:
     retsub
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.addNewCollateralType(collateralTokenId: bytes, baseTokenId: bytes) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.addNewCollateralType(collateralTokenId: bytes, baseTokenId: bytes) -> void:
 addNewCollateralType:
-    // smart_contracts/we_lend/contract.algo.ts:186-187
+    // smart_contracts/we_lend/weLendContract.algo.ts:237-238
     // @abimethod({ allowActions: 'NoOp' })
     // addNewCollateralType(collateralTokenId: UintN64, baseTokenId: UintN64): void {
     proto 2 0
-    // smart_contracts/we_lend/contract.algo.ts:188
-    // assert(op.Txn.sender === this.admin_account.value)
-    txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:38
-    // admin_account = GlobalState<Account>()
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:188
+    // smart_contracts/we_lend/weLendContract.algo.ts:239
+    // const baseToken = Asset(this.base_token_id.value.native)
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:240
+    // assert(op.Txn.sender === this.admin_account.value)
+    txn Sender
+    // smart_contracts/we_lend/weLendContract.algo.ts:41
+    // admin_account = GlobalState<Account>()
+    intc_0 // 0
+    bytec 4 // "admin_account"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:240
     // assert(op.Txn.sender === this.admin_account.value)
     ==
     assert
-    // smart_contracts/we_lend/contract.algo.ts:189
-    // assert(collateralTokenId.native !== this.base_token_id.value.id)
+    // smart_contracts/we_lend/weLendContract.algo.ts:241
+    // assert(collateralTokenId.native !== baseToken.id)
     frame_dig -2
     btoi
     dup
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:189
-    // assert(collateralTokenId.native !== this.base_token_id.value.id)
+    cover 2
+    dig 1
     !=
     assert
-    // smart_contracts/we_lend/contract.algo.ts:190
-    // assert(baseTokenId.native !== this.base_token_id.value.id)
+    // smart_contracts/we_lend/weLendContract.algo.ts:242
+    // assert(baseTokenId.native !== baseToken.id)
     frame_dig -1
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:190
-    // assert(baseTokenId.native !== this.base_token_id.value.id)
     !=
     assert
-    // smart_contracts/we_lend/contract.algo.ts:167
+    // smart_contracts/we_lend/weLendContract.algo.ts:218
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     intc_0 // 0
 
 addNewCollateralType_while_top@3:
-    // smart_contracts/we_lend/contract.algo.ts:54
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
     // accepted_collaterals_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec 4 // "accepted_collaterals_count"
+    bytec_2 // "accepted_collaterals_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:167
+    // smart_contracts/we_lend/weLendContract.algo.ts:218
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     frame_dig 1
     >
     bz addNewCollateralType_after_while@7
-    // smart_contracts/we_lend/contract.algo.ts:168
+    // smart_contracts/we_lend/weLendContract.algo.ts:219
     // const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
     frame_dig 1
     itob
-    // smart_contracts/we_lend/contract.algo.ts:50
+    // smart_contracts/we_lend/weLendContract.algo.ts:59
     // accepted_collaterals = BoxMap<UintN64, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
-    bytec 9 // "accepted_collaterals"
+    bytec 8 // "accepted_collaterals"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:168
+    // smart_contracts/we_lend/weLendContract.algo.ts:219
     // const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
     box_get
     assert // Box must have value
-    // smart_contracts/we_lend/contract.algo.ts:169
+    // smart_contracts/we_lend/weLendContract.algo.ts:220
     // if (collateral.assetId.native === collateralTokenId.native) {
     intc_0 // 0
     extract_uint64
     frame_dig 0
     ==
     bz addNewCollateralType_after_if_else@6
-    // smart_contracts/we_lend/contract.algo.ts:170
+    // smart_contracts/we_lend/weLendContract.algo.ts:221
     // return true
     intc_1 // 1
 
-addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeLend.collateralExists@8:
-    // smart_contracts/we_lend/contract.algo.ts:191
+addNewCollateralType_after_inlined_smart_contracts/we_lend/weLendContract.algo.ts::WeLend.collateralExists@8:
+    // smart_contracts/we_lend/weLendContract.algo.ts:243
     // assert(!this.collateralExists(collateralTokenId))
     !
     assert
-    // smart_contracts/we_lend/contract.algo.ts:193-196
+    // smart_contracts/we_lend/weLendContract.algo.ts:245-248
     // const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
     //   assetId: collateralTokenId,
     //   baseAssetId: baseTokenId,
@@ -955,45 +1164,45 @@ addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeL
     frame_dig -2
     frame_dig -1
     concat
-    // smart_contracts/we_lend/contract.algo.ts:54
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
     // accepted_collaterals_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec 4 // "accepted_collaterals_count"
+    bytec_2 // "accepted_collaterals_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:197
+    // smart_contracts/we_lend/weLendContract.algo.ts:249
     // this.accepted_collaterals(new arc4.UintN64(this.accepted_collaterals_count.value + 1)).value =
     intc_1 // 1
     +
     itob
-    // smart_contracts/we_lend/contract.algo.ts:50
+    // smart_contracts/we_lend/weLendContract.algo.ts:59
     // accepted_collaterals = BoxMap<UintN64, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
-    bytec 9 // "accepted_collaterals"
+    bytec 8 // "accepted_collaterals"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:197-198
+    // smart_contracts/we_lend/weLendContract.algo.ts:249-250
     // this.accepted_collaterals(new arc4.UintN64(this.accepted_collaterals_count.value + 1)).value =
     //   newAcceptedCollateral.copy()
     swap
     box_put
-    // smart_contracts/we_lend/contract.algo.ts:54
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
     // accepted_collaterals_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec 4 // "accepted_collaterals_count"
+    bytec_2 // "accepted_collaterals_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:199
+    // smart_contracts/we_lend/weLendContract.algo.ts:251
     // this.accepted_collaterals_count.value = this.accepted_collaterals_count.value + 1
     intc_1 // 1
     +
-    // smart_contracts/we_lend/contract.algo.ts:54
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
     // accepted_collaterals_count = GlobalState<uint64>()
-    bytec 4 // "accepted_collaterals_count"
-    // smart_contracts/we_lend/contract.algo.ts:199
+    bytec_2 // "accepted_collaterals_count"
+    // smart_contracts/we_lend/weLendContract.algo.ts:251
     // this.accepted_collaterals_count.value = this.accepted_collaterals_count.value + 1
     swap
     app_global_put
-    // smart_contracts/we_lend/contract.algo.ts:200-207
+    // smart_contracts/we_lend/weLendContract.algo.ts:252-259
     // itxn
     //   .assetTransfer({
     //     sender: Global.currentApplicationAddress,
@@ -1003,13 +1212,13 @@ addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeL
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:202
+    // smart_contracts/we_lend/weLendContract.algo.ts:254
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:203
+    // smart_contracts/we_lend/weLendContract.algo.ts:255
     // assetReceiver: Global.currentApplicationAddress,
     dup
-    // smart_contracts/we_lend/contract.algo.ts:205
+    // smart_contracts/we_lend/weLendContract.algo.ts:257
     // assetAmount: 0,
     intc_0 // 0
     itxn_field AssetAmount
@@ -1017,7 +1226,7 @@ addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeL
     itxn_field XferAsset
     itxn_field AssetReceiver
     itxn_field Sender
-    // smart_contracts/we_lend/contract.algo.ts:200-206
+    // smart_contracts/we_lend/weLendContract.algo.ts:252-258
     // itxn
     //   .assetTransfer({
     //     sender: Global.currentApplicationAddress,
@@ -1029,7 +1238,7 @@ addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeL
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:200-207
+    // smart_contracts/we_lend/weLendContract.algo.ts:252-259
     // itxn
     //   .assetTransfer({
     //     sender: Global.currentApplicationAddress,
@@ -1042,7 +1251,7 @@ addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeL
     retsub
 
 addNewCollateralType_after_if_else@6:
-    // smart_contracts/we_lend/contract.algo.ts:167
+    // smart_contracts/we_lend/weLendContract.algo.ts:218
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     frame_dig 1
     intc_1 // 1
@@ -1051,53 +1260,51 @@ addNewCollateralType_after_if_else@6:
     b addNewCollateralType_while_top@3
 
 addNewCollateralType_after_while@7:
-    // smart_contracts/we_lend/contract.algo.ts:173
+    // smart_contracts/we_lend/weLendContract.algo.ts:224
     // return false
     intc_0 // 0
-    // smart_contracts/we_lend/contract.algo.ts:191
+    // smart_contracts/we_lend/weLendContract.algo.ts:243
     // assert(!this.collateralExists(collateralTokenId))
-    b addNewCollateralType_after_inlined_smart_contracts/we_lend/contract.algo.ts::WeLend.collateralExists@8
+    b addNewCollateralType_after_inlined_smart_contracts/we_lend/weLendContract.algo.ts::WeLend.collateralExists@8
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.depositASA(assetTransferTxn: uint64, amount: uint64) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.depositASA(assetTransferTxn: uint64, amount: uint64) -> void:
 depositASA:
-    // smart_contracts/we_lend/contract.algo.ts:228-229
+    // smart_contracts/we_lend/weLendContract.algo.ts:281-282
     // @abimethod({ allowActions: 'NoOp' })
     // depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
     proto 2 0
-    // smart_contracts/we_lend/contract.algo.ts:230-234
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:283
+    // const baseToken = Asset(this.base_token_id.value.native)
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:284-288
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.base_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     frame_dig -2
     gtxns AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:231
+    // smart_contracts/we_lend/weLendContract.algo.ts:285
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:230-234
+    // smart_contracts/we_lend/weLendContract.algo.ts:284-288
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.base_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     ==
     bz depositASA_bool_false@4
     frame_dig -2
     gtxns XferAsset
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:230-234
-    // assertMatch(assetTransferTxn, {
-    //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.base_token_id.value,
-    //   assetAmount: amount,
-    // })
+    frame_dig 0
     ==
     bz depositASA_bool_false@4
     frame_dig -2
@@ -1108,70 +1315,74 @@ depositASA:
     intc_1 // 1
 
 depositASA_bool_merge@5:
-    // smart_contracts/we_lend/contract.algo.ts:230-234
+    // smart_contracts/we_lend/weLendContract.algo.ts:284-288
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.base_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/we_lend/contract.algo.ts:237
-    // const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)
+    // smart_contracts/we_lend/weLendContract.algo.ts:291
+    // const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:237
-    // const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)
+    // smart_contracts/we_lend/weLendContract.algo.ts:291
+    // const depositBalance = op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)
+    btoi
     asset_holding_get AssetBalance
     pop
-    // smart_contracts/we_lend/contract.algo.ts:238
+    // smart_contracts/we_lend/weLendContract.algo.ts:292
     // if (depositBalance[0] === 0) {
     bnz depositASA_else_body@7
     frame_dig -1
 
 depositASA_after_if_else@8:
-    // smart_contracts/we_lend/contract.algo.ts:243-249
+    // smart_contracts/we_lend/weLendContract.algo.ts:297-303
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.lst_token_id.value,
+    //     xferAsset: this.lst_token_id.value.native,
     //     assetAmount: lstDue,
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:245
+    // smart_contracts/we_lend/weLendContract.algo.ts:299
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:31
-    // lst_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:32
+    // lst_token_id = GlobalState<UintN64>()
     intc_0 // 0
-    bytec 5 // "lst_token_id"
+    bytec 15 // "lst_token_id"
     app_global_get_ex
     assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:300
+    // xferAsset: this.lst_token_id.value.native,
+    btoi
     uncover 2
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:243-248
+    // smart_contracts/we_lend/weLendContract.algo.ts:297-302
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.lst_token_id.value,
+    //     xferAsset: this.lst_token_id.value.native,
     //     assetAmount: lstDue,
     //   })
     intc_2 // 4
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:243-249
+    // smart_contracts/we_lend/weLendContract.algo.ts:297-303
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.lst_token_id.value,
+    //     xferAsset: this.lst_token_id.value.native,
     //     assetAmount: lstDue,
     //   })
     //   .submit()
@@ -1179,30 +1390,30 @@ depositASA_after_if_else@8:
     retsub
 
 depositASA_else_body@7:
-    // smart_contracts/we_lend/contract.algo.ts:33
+    // smart_contracts/we_lend/weLendContract.algo.ts:35
     // circulating_lst = GlobalState<uint64>()
     intc_0 // 0
-    bytec 6 // "circulating_lst"
+    bytec 5 // "circulating_lst"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:211
+    // smart_contracts/we_lend/weLendContract.algo.ts:263
     // const [highBits1, lowBits1] = mulw(this.circulating_lst.value, 10000)
     intc_3 // 10000
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:35
+    // smart_contracts/we_lend/weLendContract.algo.ts:38
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 7 // "total_deposits"
+    bytec 6 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:213
+    // smart_contracts/we_lend/weLendContract.algo.ts:265
     // const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
     divw
-    // smart_contracts/we_lend/contract.algo.ts:215
+    // smart_contracts/we_lend/weLendContract.algo.ts:267
     // const [highBits2, lowBits2] = mulw(lstRatio, amount)
     frame_dig -1
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:216
+    // smart_contracts/we_lend/weLendContract.algo.ts:268
     // return divw(highBits2, lowBits2, 10000)
     intc_3 // 10000
     divw
@@ -1213,45 +1424,43 @@ depositASA_bool_false@4:
     b depositASA_bool_merge@5
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.withdrawDeposit(assetTransferTxn: uint64, amount: uint64) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.withdrawDeposit(assetTransferTxn: uint64, amount: uint64) -> void:
 withdrawDeposit:
-    // smart_contracts/we_lend/contract.algo.ts:252-253
+    // smart_contracts/we_lend/weLendContract.algo.ts:306-307
     // @abimethod({ allowActions: 'NoOp' })
     // withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
     proto 2 0
-    // smart_contracts/we_lend/contract.algo.ts:254-258
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:308
+    // const baseToken = Asset(this.base_token_id.value.native)
+    btoi
+    // smart_contracts/we_lend/weLendContract.algo.ts:309-313
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.lst_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     frame_dig -2
     gtxns AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:255
+    // smart_contracts/we_lend/weLendContract.algo.ts:310
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:254-258
+    // smart_contracts/we_lend/weLendContract.algo.ts:309-313
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.lst_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     ==
     bz withdrawDeposit_bool_false@4
     frame_dig -2
     gtxns XferAsset
-    // smart_contracts/we_lend/contract.algo.ts:31
-    // lst_token_id = GlobalState<Asset>({ initialValue: Asset() })
-    intc_0 // 0
-    bytec 5 // "lst_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:254-258
-    // assertMatch(assetTransferTxn, {
-    //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.lst_token_id.value,
-    //   assetAmount: amount,
-    // })
+    frame_dig 0
     ==
     bz withdrawDeposit_bool_false@4
     frame_dig -2
@@ -1262,94 +1471,98 @@ withdrawDeposit:
     intc_1 // 1
 
 withdrawDeposit_bool_merge@5:
-    // smart_contracts/we_lend/contract.algo.ts:254-258
+    // smart_contracts/we_lend/weLendContract.algo.ts:309-313
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
-    //   xferAsset: this.lst_token_id.value,
+    //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/we_lend/contract.algo.ts:35
+    // smart_contracts/we_lend/weLendContract.algo.ts:38
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 7 // "total_deposits"
+    bytec 6 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:220
+    // smart_contracts/we_lend/weLendContract.algo.ts:273
     // const [highBits1, lowBits1] = mulw(this.total_deposits.value, 10000)
     intc_3 // 10000
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:33
+    // smart_contracts/we_lend/weLendContract.algo.ts:35
     // circulating_lst = GlobalState<uint64>()
     intc_0 // 0
-    bytec 6 // "circulating_lst"
+    bytec 5 // "circulating_lst"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:222
+    // smart_contracts/we_lend/weLendContract.algo.ts:275
     // const lstRatio = divw(highBits1, lowBits1, this.circulating_lst.value)
     divw
-    // smart_contracts/we_lend/contract.algo.ts:224
+    // smart_contracts/we_lend/weLendContract.algo.ts:277
     // const [highBits2, lowBits2] = mulw(lstRatio, amount)
     frame_dig -1
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:225
+    // smart_contracts/we_lend/weLendContract.algo.ts:278
     // return divw(highBits2, lowBits2, 10000)
     intc_3 // 10000
     divw
-    // smart_contracts/we_lend/contract.algo.ts:263
-    // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)[0] >= asaDue)
+    // smart_contracts/we_lend/weLendContract.algo.ts:318
+    // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:263
-    // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value)[0] >= asaDue)
+    // smart_contracts/we_lend/weLendContract.algo.ts:318
+    // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
+    btoi
     asset_holding_get AssetBalance
     pop
     dig 1
     >=
     assert
-    // smart_contracts/we_lend/contract.algo.ts:264-270
+    // smart_contracts/we_lend/weLendContract.algo.ts:319-325
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: asaDue,
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:266
+    // smart_contracts/we_lend/weLendContract.algo.ts:321
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:322
+    // xferAsset: this.base_token_id.value.native,
+    btoi
     uncover 2
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:264-269
+    // smart_contracts/we_lend/weLendContract.algo.ts:319-324
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: asaDue,
     //   })
     intc_2 // 4
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:264-270
+    // smart_contracts/we_lend/weLendContract.algo.ts:319-325
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
+    //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: asaDue,
     //   })
     //   .submit()
@@ -1361,9 +1574,9 @@ withdrawDeposit_bool_false@4:
     b withdrawDeposit_bool_merge@5
 
 
-// smart_contracts/we_lend/contract.algo.ts::WeLend.borrow(assetTransferTxn: uint64, requestedLoanAmount: uint64, lstApp: uint64, collateralTokenId: bytes) -> void:
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.borrow(assetTransferTxn: uint64, requestedLoanAmount: uint64, lstApp: uint64, collateralTokenId: bytes) -> void:
 borrow:
-    // smart_contracts/we_lend/contract.algo.ts:273-279
+    // smart_contracts/we_lend/weLendContract.algo.ts:328-334
     // @abimethod({ allowActions: 'NoOp' })
     // borrow(
     //   assetTransferTxn: gtxn.AssetTransferTxn, // The collateral deposit transaction
@@ -1373,7 +1586,7 @@ borrow:
     // ): void {
     proto 4 0
     intc_0 // 0
-    // smart_contracts/we_lend/contract.algo.ts:282-286
+    // smart_contracts/we_lend/weLendContract.algo.ts:337-341
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   // Note: We do not require that assetAmount equals requestedLoanAmount,
@@ -1381,10 +1594,10 @@ borrow:
     // })
     frame_dig -4
     gtxns AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:283
+    // smart_contracts/we_lend/weLendContract.algo.ts:338
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/we_lend/contract.algo.ts:282-286
+    // smart_contracts/we_lend/weLendContract.algo.ts:337-341
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   // Note: We do not require that assetAmount equals requestedLoanAmount,
@@ -1392,37 +1605,37 @@ borrow:
     // })
     ==
     assert // assert target is match for conditions
-    // smart_contracts/we_lend/contract.algo.ts:287
+    // smart_contracts/we_lend/weLendContract.algo.ts:342
     // const collateralDeposit: uint64 = assetTransferTxn.assetAmount
     frame_dig -4
     gtxns AssetAmount
-    // smart_contracts/we_lend/contract.algo.ts:177
+    // smart_contracts/we_lend/weLendContract.algo.ts:228
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     intc_0 // 0
 
-borrow_while_top@5:
-    // smart_contracts/we_lend/contract.algo.ts:54
+borrow_while_top@8:
+    // smart_contracts/we_lend/weLendContract.algo.ts:69
     // accepted_collaterals_count = GlobalState<uint64>()
     intc_0 // 0
-    bytec 4 // "accepted_collaterals_count"
+    bytec_2 // "accepted_collaterals_count"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:177
+    // smart_contracts/we_lend/weLendContract.algo.ts:228
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     frame_dig 2
     dup
     uncover 2
     <
     assert // Collateral not found
-    // smart_contracts/we_lend/contract.algo.ts:178
+    // smart_contracts/we_lend/weLendContract.algo.ts:229
     // const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
     itob
-    // smart_contracts/we_lend/contract.algo.ts:50
+    // smart_contracts/we_lend/weLendContract.algo.ts:59
     // accepted_collaterals = BoxMap<UintN64, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
-    bytec 9 // "accepted_collaterals"
+    bytec 8 // "accepted_collaterals"
     swap
     concat
-    // smart_contracts/we_lend/contract.algo.ts:178
+    // smart_contracts/we_lend/weLendContract.algo.ts:229
     // const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
     box_get
     swap
@@ -1430,20 +1643,20 @@ borrow_while_top@5:
     cover 2
     frame_bury 0
     assert // Box must have value
-    // smart_contracts/we_lend/contract.algo.ts:179
+    // smart_contracts/we_lend/weLendContract.algo.ts:230
     // if (collateral.assetId.native === collateralTokenId.native) {
     intc_0 // 0
     extract_uint64
     frame_dig -1
     btoi
     ==
-    bz borrow_after_if_else@7
-    // smart_contracts/we_lend/contract.algo.ts:295-297
+    bz borrow_after_if_else@10
+    // smart_contracts/we_lend/weLendContract.algo.ts:349-351
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
     // }).returnValue
     itxn_begin
-    bytec 10 // method "getCirculatingLST()uint64"
+    bytec 11 // method "getCirculatingLST()uint64"
     itxn_field ApplicationArgs
     frame_dig -2
     itxn_field ApplicationID
@@ -1461,12 +1674,12 @@ borrow_while_top@5:
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:298-300
+    // smart_contracts/we_lend/weLendContract.algo.ts:352-354
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
     // }).returnValue
     itxn_begin
-    bytec 11 // method "getTotalDeposits()uint64"
+    bytec 12 // method "getTotalDeposits()uint64"
     itxn_field ApplicationArgs
     frame_dig -2
     itxn_field ApplicationID
@@ -1484,109 +1697,412 @@ borrow_while_top@5:
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/we_lend/contract.algo.ts:303
+    // smart_contracts/we_lend/weLendContract.algo.ts:356
     // const [hiCollateral, loCollateral] = mulw(totalDepositsExternal, collateralDeposit)
     frame_dig 1
+    dup
+    cover 3
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:304
+    // smart_contracts/we_lend/weLendContract.algo.ts:357
     // const underlyingCollateral: uint64 = divw(hiCollateral, loCollateral, circulatingExternalLST)
     uncover 2
     divw
-    // smart_contracts/we_lend/contract.algo.ts:308
+    // smart_contracts/we_lend/weLendContract.algo.ts:360
     // const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
     frame_dig 0
     pushint 8 // 8
     extract_uint64
     callsub getPricesFromOracles
-    // smart_contracts/we_lend/contract.algo.ts:313
+    // smart_contracts/we_lend/weLendContract.algo.ts:362
     // const [hiUSD, loUSD] = mulw(underlyingCollateral, oraclePrice)
     mulw
-    // smart_contracts/we_lend/contract.algo.ts:315
-    // const collateralUSD: uint64 = divw(hiUSD, loUSD, 1000000)
-    pushint 1000000 // 1000000
+    // smart_contracts/we_lend/weLendContract.algo.ts:363
+    // const collateralUSD: uint64 = divw(hiUSD, loUSD, 1)
+    intc_1 // 1
     divw
-    // smart_contracts/we_lend/contract.algo.ts:40
+    // smart_contracts/we_lend/weLendContract.algo.ts:44
     // ltv_bps = GlobalState<uint64>()
     intc_0 // 0
-    bytec 12 // "ltv_bps"
+    bytec 13 // "ltv_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:319
+    // smart_contracts/we_lend/weLendContract.algo.ts:365
     // const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10000
     *
     intc_3 // 10000
     /
-    // smart_contracts/we_lend/contract.algo.ts:322
+    // smart_contracts/we_lend/weLendContract.algo.ts:367
     // assert(requestedLoanAmount <= maxBorrowUSD)
     frame_dig -3
     >=
     assert
-    // smart_contracts/we_lend/contract.algo.ts:46
+    // smart_contracts/we_lend/weLendContract.algo.ts:53
     // origination_fee_bps = GlobalState<uint64>()
     intc_0 // 0
-    bytec 13 // "origination_fee_bps"
+    bytec 14 // "origination_fee_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/we_lend/contract.algo.ts:325
+    // smart_contracts/we_lend/weLendContract.algo.ts:369
     // const fee: uint64 = (requestedLoanAmount * this.origination_fee_bps.value) / 10000
     frame_dig -3
     *
     intc_3 // 10000
     /
-    // smart_contracts/we_lend/contract.algo.ts:326
+    // smart_contracts/we_lend/weLendContract.algo.ts:370
     // const disbursement: uint64 = requestedLoanAmount - fee
     frame_dig -3
     swap
     -
-    // smart_contracts/we_lend/contract.algo.ts:330-336
-    // itxn
-    //   .assetTransfer({
-    //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
-    //     assetAmount: disbursement,
-    //   })
-    //   .submit()
-    itxn_begin
-    // smart_contracts/we_lend/contract.algo.ts:332
-    // assetReceiver: op.Txn.sender,
-    txn Sender
-    // smart_contracts/we_lend/contract.algo.ts:28
-    // base_token_id = GlobalState<Asset>({ initialValue: Asset() })
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:371
+    // const [decimals, decimalsExists] = op.AssetParams.assetDecimals(this.base_token_id.value.native)
+    btoi
+    asset_params_get AssetDecimals
+    pop
+    // smart_contracts/we_lend/weLendContract.algo.ts:372
+    // const assetScale: uint64 = 10 ** decimals
+    pushint 10 // 10
+    swap
+    exp
+    // smart_contracts/we_lend/weLendContract.algo.ts:373
+    // const [assetHi, assetLo] = mulw(disbursement, assetScale)
+    dig 1
+    mulw
+    // smart_contracts/we_lend/weLendContract.algo.ts:374
+    // const DIVISOR_1: uint64 = 2 ** 32
+    intc 4 // 4294967296
+    // smart_contracts/we_lend/weLendContract.algo.ts:378
+    // const interim: uint64 = divw(assetHi, assetLo, DIVISOR_1)
+    divw
+    // smart_contracts/we_lend/weLendContract.algo.ts:375
+    // const DIVISOR_2: uint64 = 2 ** 32
+    intc 4 // 4294967296
+    // smart_contracts/we_lend/weLendContract.algo.ts:381
+    // const scaledDownDisbursement: uint64 = interim / DIVISOR_2
+    /
+    // smart_contracts/we_lend/weLendContract.algo.ts:383
+    // this.mintLoanRecord(scaledDownDisbursement, disbursement, collateralTokenId, op.Txn.sender, collateralDeposit)
+    txn Sender
+    // smart_contracts/we_lend/weLendContract.algo.ts:401-419
+    // const asset = itxn
+    //   .assetConfig({
+    //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+    //     url:
+    //       String(borrowerAddress.bytes) +
+    //       ':' +
+    //       String(collateralTokenId.bytes) +
+    //       ':' +
+    //       String(new UintN64(scaledDownDisbursement).bytes) +
+    //       ':' +
+    //       String(new UintN64(Global.latestTimestamp).bytes),
+    //     manager: Global.currentApplicationAddress,
+    //     decimals: 0,
+    //     total: disbursement,
+    //     sender: Global.currentApplicationAddress,
+    //     unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
+    //     reserve: borrowerAddress,
+    //   })
+    //   .submit()
+    itxn_begin
+    // smart_contracts/we_lend/weLendContract.algo.ts:403
+    // assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+    pushbytes "r"
+    frame_dig -1
+    concat
+    dup
+    pushbytes "b"
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:403
+    // assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-406
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    dig 2
+    // smart_contracts/we_lend/weLendContract.algo.ts:406
+    // ':' +
+    bytec 9 // ":"
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-406
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-407
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    // String(collateralTokenId.bytes) +
+    frame_dig -1
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:408
+    // ':' +
+    bytec 9 // ":"
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-408
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    // String(collateralTokenId.bytes) +
+    // ':' +
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:409
+    // String(new UintN64(scaledDownDisbursement).bytes) +
+    dig 4
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-409
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    // String(collateralTokenId.bytes) +
+    // ':' +
+    // String(new UintN64(scaledDownDisbursement).bytes) +
+    swap
+    dig 1
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:410
+    // ':' +
+    bytec 9 // ":"
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-410
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    // String(collateralTokenId.bytes) +
+    // ':' +
+    // String(new UintN64(scaledDownDisbursement).bytes) +
+    // ':' +
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:411
+    // String(new UintN64(Global.latestTimestamp).bytes),
+    global LatestTimestamp
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:405-411
+    // String(borrowerAddress.bytes) +
+    // ':' +
+    // String(collateralTokenId.bytes) +
+    // ':' +
+    // String(new UintN64(scaledDownDisbursement).bytes) +
+    // ':' +
+    // String(new UintN64(Global.latestTimestamp).bytes),
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:412
+    // manager: Global.currentApplicationAddress,
+    global CurrentApplicationAddress
+    // smart_contracts/we_lend/weLendContract.algo.ts:415
+    // sender: Global.currentApplicationAddress,
+    dup
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:416
+    // unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
+    uncover 6
+    swap
+    concat
+    dig 6
+    itxn_field ConfigAssetReserve
+    itxn_field ConfigAssetUnitName
+    itxn_field Sender
+    dig 6
+    itxn_field ConfigAssetTotal
+    // smart_contracts/we_lend/weLendContract.algo.ts:413
+    // decimals: 0,
+    intc_0 // 0
+    itxn_field ConfigAssetDecimals
+    itxn_field ConfigAssetManager
+    itxn_field ConfigAssetURL
+    swap
+    itxn_field ConfigAssetName
+    // smart_contracts/we_lend/weLendContract.algo.ts:401-418
+    // const asset = itxn
+    //   .assetConfig({
+    //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+    //     url:
+    //       String(borrowerAddress.bytes) +
+    //       ':' +
+    //       String(collateralTokenId.bytes) +
+    //       ':' +
+    //       String(new UintN64(scaledDownDisbursement).bytes) +
+    //       ':' +
+    //       String(new UintN64(Global.latestTimestamp).bytes),
+    //     manager: Global.currentApplicationAddress,
+    //     decimals: 0,
+    //     total: disbursement,
+    //     sender: Global.currentApplicationAddress,
+    //     unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
+    //     reserve: borrowerAddress,
+    //   })
+    pushint 3 // 3
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/we_lend/weLendContract.algo.ts:401-419
+    // const asset = itxn
+    //   .assetConfig({
+    //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
+    //     url:
+    //       String(borrowerAddress.bytes) +
+    //       ':' +
+    //       String(collateralTokenId.bytes) +
+    //       ':' +
+    //       String(new UintN64(scaledDownDisbursement).bytes) +
+    //       ':' +
+    //       String(new UintN64(Global.latestTimestamp).bytes),
+    //     manager: Global.currentApplicationAddress,
+    //     decimals: 0,
+    //     total: disbursement,
+    //     sender: Global.currentApplicationAddress,
+    //     unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
+    //     reserve: borrowerAddress,
+    //   })
+    //   .submit()
+    itxn_submit
+    itxn CreatedAssetID
+    // smart_contracts/we_lend/weLendContract.algo.ts:424
+    // collateralAmount: new UintN64(collateralAmount),
+    uncover 5
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:425
+    // disbursement: new UintN64(disbursement),
+    uncover 5
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:428
+    // loanRecordASAId: new UintN64(asset.createdAsset.id),
+    uncover 3
+    itob
+    // smart_contracts/we_lend/weLendContract.algo.ts:421-429
+    // const loanRecord: LoanRecord = new LoanRecord({
+    //   borrowerAddress: new Address(borrowerAddress.bytes),
+    //   collateralTokenId: collateralTokenId,
+    //   collateralAmount: new UintN64(collateralAmount),
+    //   disbursement: new UintN64(disbursement),
+    //   scaledDownDisbursement: new UintN64(scaledDownDisbursement),
+    //   borrowedTokenId: this.base_token_id.value,
+    //   loanRecordASAId: new UintN64(asset.createdAsset.id),
+    // })
+    dig 5
+    frame_dig -1
+    concat
+    uncover 4
+    concat
+    uncover 3
+    concat
+    uncover 3
+    concat
+    uncover 2
+    concat
+    swap
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:61
+    // loan_records = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_records' })
+    bytec 10 // "loan_records"
+    uncover 2
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:430
+    // this.loan_records(borrowerAddress).value = loanRecord.copy()
+    swap
+    box_put
+    // smart_contracts/we_lend/weLendContract.algo.ts:385-391
+    // itxn
+    //   .assetTransfer({
+    //     assetReceiver: op.Txn.sender,
+    //     xferAsset: this.base_token_id.value.native,
+    //     assetAmount: scaledDownDisbursement,
+    //   })
+    //   .submit()
+    itxn_begin
+    // smart_contracts/we_lend/weLendContract.algo.ts:387
+    // assetReceiver: op.Txn.sender,
+    txn Sender
+    // smart_contracts/we_lend/weLendContract.algo.ts:29
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/we_lend/weLendContract.algo.ts:388
+    // xferAsset: this.base_token_id.value.native,
+    btoi
     uncover 2
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/we_lend/contract.algo.ts:330-335
+    // smart_contracts/we_lend/weLendContract.algo.ts:385-390
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
-    //     assetAmount: disbursement,
+    //     xferAsset: this.base_token_id.value.native,
+    //     assetAmount: scaledDownDisbursement,
     //   })
     intc_2 // 4
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/we_lend/contract.algo.ts:330-336
+    // smart_contracts/we_lend/weLendContract.algo.ts:385-391
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
-    //     xferAsset: this.base_token_id.value,
-    //     assetAmount: disbursement,
+    //     xferAsset: this.base_token_id.value.native,
+    //     assetAmount: scaledDownDisbursement,
     //   })
     //   .submit()
     itxn_submit
     retsub
 
-borrow_after_if_else@7:
-    // smart_contracts/we_lend/contract.algo.ts:177
+borrow_after_if_else@10:
+    // smart_contracts/we_lend/weLendContract.algo.ts:228
     // for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
     frame_dig 2
     intc_1 // 1
     +
     frame_bury 2
-    b borrow_while_top@5
+    b borrow_while_top@8
+
+
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getLoanRecord(borrowerAddress: bytes) -> bytes:
+getLoanRecord:
+    // smart_contracts/we_lend/weLendContract.algo.ts:433
+    // getLoanRecord(borrowerAddress: Account): LoanRecord {
+    proto 1 1
+    // smart_contracts/we_lend/weLendContract.algo.ts:61
+    // loan_records = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_records' })
+    bytec 10 // "loan_records"
+    frame_dig -1
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:434
+    // return this.loan_records(borrowerAddress).value
+    box_get
+    assert // Box must have value
+    retsub
+
+
+// smart_contracts/we_lend/weLendContract.algo.ts::WeLend.getLoanRecordASAId(borrowerAddress: bytes) -> uint64:
+getLoanRecordASAId:
+    // smart_contracts/we_lend/weLendContract.algo.ts:437
+    // getLoanRecordASAId(borrowerAddress: Account): uint64 {
+    proto 1 1
+    // smart_contracts/we_lend/weLendContract.algo.ts:61
+    // loan_records = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_records' })
+    bytec 10 // "loan_records"
+    frame_dig -1
+    concat
+    // smart_contracts/we_lend/weLendContract.algo.ts:438
+    // return this.loan_records(borrowerAddress).value.loanRecordASAId.native
+    box_get
+    assert // Box must have value
+    pushint 72 // 72
+    extract_uint64
+    retsub
