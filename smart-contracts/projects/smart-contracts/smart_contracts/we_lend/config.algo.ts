@@ -22,5 +22,6 @@ export class LoanRecord extends arc4.Struct<{
   scaledDownDisbursement: arc4.UintN64
   borrowedTokenId: arc4.UintN64
   loanRecordASAId: arc4.UintN64
+  lastAccrualTimestamp: arc4.UintN64
 }> {}
 
