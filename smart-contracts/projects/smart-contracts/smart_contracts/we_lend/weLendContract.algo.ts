@@ -22,12 +22,11 @@ import {
 import { abiCall, Address, Str, UintN128, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
 import { appOptedIn, divw, mulw } from '@algorandfoundation/algorand-typescript/op'
 import { AcceptedCollateral, LoanRecord, Oracle } from './config.algo'
-import { AssetTransferTxn } from '@algorandfoundation/algorand-typescript/gtxn'
 
 // Number of seconds in a (e.g.) 365-day year
-const SECONDS_PER_YEAR = 365 * 24 * 60 * 60
-const PROTOCOL_SHARE_BPS = 2500 // 25% in basis points
-const DEPOSITOR_SHARE_BPS = 10000 - PROTOCOL_SHARE_BPS // 7500
+const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
+const PROTOCOL_SHARE_BPS: uint64 = 2500 // 25% in basis points
+const DEPOSITOR_SHARE_BPS: uint64 = 10000 - PROTOCOL_SHARE_BPS // 7500
 
 @contract({ name: 'weLend', avmVersion: 11 })
 export class WeLend extends Contract {
@@ -253,7 +252,7 @@ export class WeLend extends Contract {
     for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
       const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
       if (collateral.assetId.native === collateralTokenId.native) {
-        const newTotal = collateral.totalCollateral.native + amount
+        const newTotal:uint64 = collateral.totalCollateral.native + amount
         this.accepted_collaterals(new arc4.UintN64(i)).value = new AcceptedCollateral({
           assetId: collateral.assetId,
           baseAssetId: collateral.baseAssetId,
@@ -410,7 +409,7 @@ export class WeLend extends Contract {
     const [decimals, decExists] = op.AssetParams.assetDecimals(this.base_token_id.value.native)
     const assetScale: uint64 = 10 ** decimals
     const [aH, aL] = mulw(disbursement, assetScale)
-    const dividerScalar = 2 ** 32
+    const dividerScalar:uint64 = 2 ** 32
     const interim: uint64 = divw(aH, aL, dividerScalar)
     const scaledDown: uint64 = interim / dividerScalar
 
@@ -421,7 +420,7 @@ export class WeLend extends Contract {
       old = this.accrueInterest(old)
       this.loan_record(op.Txn.sender).value = old.copy()
 
-      const totalRequested = old.scaledDownDisbursement.native + requestedLoanAmount
+      const totalRequested: uint64 = old.scaledDownDisbursement.native + requestedLoanAmount
       assert(totalRequested <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
 
       // burn old ASA
@@ -433,10 +432,10 @@ export class WeLend extends Contract {
         .submit()
 
       // combine collateral & debt
-      const totalCollateral = old.collateralAmount.native + collateralDeposit
-      const oldDebt = old.scaledDownDisbursement.native
-      const newDebt = oldDebt + disbursement
-      const newTotalDisb = old.disbursement.native + disbursement
+      const totalCollateral: uint64 = old.collateralAmount.native + collateralDeposit
+      const oldDebt: uint64 = old.scaledDownDisbursement.native
+      const newDebt: uint64 = oldDebt + disbursement
+      const newTotalDisb: uint64 = old.disbursement.native + disbursement
 
       // mint replacement record ASA
       const asset = itxn
@@ -451,7 +450,14 @@ export class WeLend extends Contract {
           freeze: Global.currentApplicationAddress,
           clawback: Global.currentApplicationAddress,
           defaultFrozen: false,
-          url: `${op.Txn.sender.bytes}:${old.collateralTokenId.bytes}:${new UintN64(scaledDown).bytes}:${Global.latestTimestamp}`,
+          url:
+          String(op.Txn.sender.bytes) +
+          ':' +
+          String(collateralTokenId.bytes) +
+          ':' +
+          String(new UintN64(newTotalDisb).bytes) +
+          ':' +
+          String(new UintN64(Global.latestTimestamp).bytes),
         })
         .submit()
 
@@ -571,8 +577,8 @@ export class WeLend extends Contract {
     // 4) Divide by seconds_per_year to get interest amount
     const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
 
-    const protoBps = this.protocol_interest_fee_bps.value
-    const depositorBps = 10000 - protoBps
+    const protoBps: uint64 = this.protocol_interest_fee_bps.value
+    const depositorBps: uint64 = 10000 - protoBps
 
     // depositor’s share = interest * depositorBps / 10_000
     const [hiDep, loDep] = mulw(interest, depositorBps)
@@ -589,7 +595,7 @@ export class WeLend extends Contract {
 
     // 4) Update borrower’s outstanding debt (principal + full interest)
 
-    const newPrincipal = principal + interest
+    const newPrincipal: uint64 = principal + interest
 
     // Return an updated LoanRecord object (box write will follow)
     return new LoanRecord({
@@ -627,9 +633,9 @@ export class WeLend extends Contract {
 
     const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
 
-    const currentdebt = loanRecord.scaledDownDisbursement
+    const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
     assert(amount <= currentdebt.native)
-    const remainingDebt = currentdebt.native - amount
+    const remainingDebt: uint64 = currentdebt.native - amount
 
     //Destroy record ASA in all cases
     itxn
@@ -720,7 +726,7 @@ export class WeLend extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  buyout(buyer: Account, debtor: Account, axferTxn: AssetTransferTxn): void {
+  buyout(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     this.loan_record(debtor).value = currentLoanRecord.copy()
@@ -736,11 +742,11 @@ export class WeLend extends Contract {
     const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
     const [hU, lU] = mulw(collateralAmount, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
-    const CR = collateralUSD / debtAmount
+    const CR: uint64 = collateralUSD / debtAmount
     assert(CR > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
 
-    const premiumRate = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
-    const buyoutPrice = collateralUSD * (1 + premiumRate / 10000)
+    const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
+    const buyoutPrice: uint64 = collateralUSD * (1 + premiumRate / 10000)
 
     assertMatch(axferTxn, {
       xferAsset: Asset(this.base_token_id.value.native),
@@ -783,7 +789,7 @@ export class WeLend extends Contract {
       })
       .submit()
     //Update collateral total
-    const newTotal = acceptedCollateral.totalCollateral.native - collateralAmount
+    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 }
