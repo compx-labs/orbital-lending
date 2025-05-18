@@ -12,6 +12,7 @@ export class Oracle extends arc4.Struct<{
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
   baseAssetId: arc4.UintN64
+  totalCollateral: arc4.UintN64
 }> {}
 
 export class LoanRecord extends arc4.Struct<{

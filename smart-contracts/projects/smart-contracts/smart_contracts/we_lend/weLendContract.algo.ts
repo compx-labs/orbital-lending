@@ -22,6 +22,7 @@ import {
 import { abiCall, Address, Str, UintN128, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
 import { appOptedIn, divw, mulw } from '@algorandfoundation/algorand-typescript/op'
 import { AcceptedCollateral, LoanRecord, Oracle } from './config.algo'
+import { AssetTransferTxn } from '@algorandfoundation/algorand-typescript/gtxn'
 
 // Number of seconds in a (e.g.) 365-day year
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60
@@ -248,6 +249,21 @@ export class WeLend extends Contract {
     }
     err('Collateral not found')
   }
+  private updateCollateralTotal(collateralTokenId: UintN64, amount: uint64): void {
+    for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
+      const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
+      if (collateral.assetId.native === collateralTokenId.native) {
+        const newTotal = collateral.totalCollateral.native + amount
+        this.accepted_collaterals(new arc4.UintN64(i)).value = new AcceptedCollateral({
+          assetId: collateral.assetId,
+          baseAssetId: collateral.baseAssetId,
+          totalCollateral: new UintN64(newTotal),
+        }).copy()
+        return
+      }
+    }
+    err('Collateral not found')
+  }
 
   @abimethod({ allowActions: 'NoOp' })
   addNewCollateralType(collateralTokenId: UintN64, baseTokenId: UintN64): void {
@@ -260,6 +276,7 @@ export class WeLend extends Contract {
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
       baseAssetId: baseTokenId,
+      totalCollateral: new UintN64(0),
     })
     this.accepted_collaterals(new arc4.UintN64(this.accepted_collaterals_count.value + 1)).value =
       newAcceptedCollateral.copy()
@@ -431,6 +448,9 @@ export class WeLend extends Contract {
           decimals: 0,
           manager: Global.currentApplicationAddress,
           reserve: op.Txn.sender,
+          freeze: Global.currentApplicationAddress,
+          clawback: Global.currentApplicationAddress,
+          defaultFrozen: false,
           url: `${op.Txn.sender.bytes}:${old.collateralTokenId.bytes}:${new UintN64(scaledDown).bytes}:${Global.latestTimestamp}`,
         })
         .submit()
@@ -445,6 +465,8 @@ export class WeLend extends Contract {
         loanRecordASAId: new UintN64(asset.createdAsset.id),
         lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
       }).copy()
+      this.active_loan_records.value = this.active_loan_records.value + 1
+      this.updateCollateralTotal(collateralTokenId, collateralDeposit)
     } else {
       // — Brand-New Loan —
       assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
@@ -485,6 +507,9 @@ export class WeLend extends Contract {
         sender: Global.currentApplicationAddress,
         unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
         reserve: borrowerAddress,
+        freeze: Global.currentApplicationAddress,
+        clawback: Global.currentApplicationAddress,
+        defaultFrozen: false,
       })
       .submit()
 
@@ -500,6 +525,31 @@ export class WeLend extends Contract {
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
     this.active_loan_records.value = this.active_loan_records.value + 1
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  claimLoanRecordASA(debtor: Account, assetId: Asset): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const assetExists = Global.currentApplicationAddress.isOptedIn(assetId)
+    assert(assetExists, 'Loan record ASA does not exist')
+    const loanRecord = this.loan_record(debtor).value.copy()
+    itxn
+      .assetTransfer({
+        assetReceiver: debtor,
+        xferAsset: assetId,
+        assetAmount: 1,
+      })
+      .submit()
+
+    //opt app out of asa
+    itxn
+      .assetTransfer({
+        assetReceiver: Global.currentApplicationAddress,
+        xferAsset: assetId,
+        assetAmount: 0,
+        assetCloseTo: debtor,
+      })
+      .submit()
   }
 
   private accrueInterest(record: LoanRecord): LoanRecord {
@@ -626,6 +676,115 @@ export class WeLend extends Contract {
       })
       .submit()
     this.fee_pool.value = 0
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  accrueLoanInterest(debtor: Account): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const currentLoanRecord = this.loan_record(debtor).value.copy()
+    //Apply interest
+    this.accrueInterest(currentLoanRecord)
+
+    //Clawback old nft if outwith the application address
+    const currentLoanRecordASAId = this.getLoanRecordASAId(debtor)
+    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecordASAId))
+    if (!assetExists) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          xferAsset: currentLoanRecord.loanRecordASAId.native,
+          assetSender: debtor,
+          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
+        })
+        .submit()
+    }
+
+    //destory old nft
+    itxn
+      .assetConfig({
+        configAsset: currentLoanRecord.loanRecordASAId.native,
+        sender: Global.currentApplicationAddress,
+      })
+      .submit()
+
+    //mint new nft
+    this.mintLoanRecord(
+      currentLoanRecord.scaledDownDisbursement.native,
+      currentLoanRecord.disbursement.native,
+      currentLoanRecord.collateralTokenId,
+      debtor,
+      currentLoanRecord.collateralAmount.native,
+    )
+    //Update box storage
+    this.loan_record(debtor).value = currentLoanRecord.copy()
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  buyout(buyer: Account, debtor: Account, axferTxn: AssetTransferTxn): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const currentLoanRecord = this.loan_record(debtor).value.copy()
+    this.loan_record(debtor).value = currentLoanRecord.copy()
+
+    const collateralAmount = currentLoanRecord.collateralAmount.native
+    const debtAmount = currentLoanRecord.scaledDownDisbursement.native
+    const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
+    const acceptedCollateral = this.getCollateral(collateralTokenId)
+
+    assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
+
+    // Price via oracle
+    const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const [hU, lU] = mulw(collateralAmount, oraclePrice)
+    const collateralUSD: uint64 = divw(hU, lU, 1)
+    const CR = collateralUSD / debtAmount
+    assert(CR > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
+
+    const premiumRate = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
+    const buyoutPrice = collateralUSD * (1 + premiumRate / 10000)
+
+    assertMatch(axferTxn, {
+      xferAsset: Asset(this.base_token_id.value.native),
+      assetReceiver: Global.currentApplicationAddress,
+      assetAmount: buyoutPrice,
+    })
+
+    //Buyout can proceed
+
+    //Clawback the loan record ASA
+    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
+    if (!assetExists) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          xferAsset: currentLoanRecord.loanRecordASAId.native,
+          assetSender: debtor,
+          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
+        })
+        .submit()
+    }
+    //Destroy the loan record ASA
+    itxn
+      .assetConfig({
+        configAsset: currentLoanRecord.loanRecordASAId.native,
+        sender: Global.currentApplicationAddress,
+      })
+      .submit()
+
+    //Update the loan record for the debtor
+    this.loan_record(debtor).delete()
+    this.active_loan_records.value = this.active_loan_records.value - 1
+
+    //Transfer the collateral to the buyer
+    itxn
+      .assetTransfer({
+        assetReceiver: buyer,
+        xferAsset: collateralTokenId.native,
+        assetAmount: collateralAmount,
+      })
+      .submit()
+    //Update collateral total
+    const newTotal = acceptedCollateral.totalCollateral.native - collateralAmount
+    this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 }
 
