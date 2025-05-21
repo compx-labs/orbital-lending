@@ -96,7 +96,7 @@ export class WeLend extends Contract {
 
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
-      amount: 34000,
+      amount: 400000,
     })
 
     this.ltv_bps.value = ltv_bps
@@ -117,6 +117,7 @@ export class WeLend extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: this.base_token_id.value.native,
         assetAmount: 0,
+        fee: 1000,
       })
       .submit()
 
@@ -131,6 +132,7 @@ export class WeLend extends Contract {
         manager: Global.currentApplicationAddress,
         unitName: 'c' + String(baseToken.unitName),
         assetName: 'c' + String(this.base_token_id.value.bytes),
+        fee: 1000,
       })
       .submit()
     this.lst_token_id.value = new UintN64(result.configAsset.id)
