@@ -14,9 +14,9 @@
 ## 🧱 2. Collateral & Oracle Setup
 - [ ] Add valid oracle pool (with dummy or real LP data)  
 - [ ] Confirm oracle state stored correctly  
-- [ ] Add accepted collateral token  
-- [ ] Validate collateral config and opt-in  
-- [ ] Prevent duplicate or invalid collateral entries  
+- [x] Add accepted collateral token  
+- [x] Validate collateral config and opt-in  
+- [x] Prevent duplicate or invalid collateral entries  
 
 ## 💰 3. Deposits & Withdrawals
 - [ ] Deposit base token into protocol  
