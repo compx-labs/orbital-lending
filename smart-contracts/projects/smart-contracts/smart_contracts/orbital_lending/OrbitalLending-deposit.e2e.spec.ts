@@ -305,4 +305,45 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(userTokenBalance).toBeDefined()
     expect(userTokenBalance.assetHolding?.amount).toEqual(1000000n)
   })
+
+  test('Deposit xUSD - xUSD Lending Contract', async () => {
+    const depositAmount = 100n
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId
+    expect(lstTokenId).toBeDefined()
+
+    if (lstTokenId) {
+      await xUSDLendingContractClient.algorand.send.assetOptIn({
+        sender: depositorAccount.addr,
+        assetId: lstTokenId,
+        note: 'Opting in to cxUSD asset',
+      })
+
+      const depositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: depositorAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: depositAmount,
+        note: 'Depositing xUSD',
+      })
+
+      await xUSDLendingContractClient.send.depositAsa({
+        args: [depositTxn, depositAmount],
+        assetReferences: [xUSDAssetId],
+      })
+
+      const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(depositorAccount.addr, lstTokenId)
+        .do()
+      expect(userTokenBalance).toBeDefined()
+      expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
+      console.log('cxUSD balance after deposit:', userTokenBalance.assetHolding?.amount)
+      expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
+
+      const boxValue = await getBoxValue(xUSDAssetId, xUSDLendingContractClient)
+      expect(boxValue).toBeDefined()
+      expect(boxValue.totalCollateral).toEqual(depositAmount)
+    }
+  })
 })

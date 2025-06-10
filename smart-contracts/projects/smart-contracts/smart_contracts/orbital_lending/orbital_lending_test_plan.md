@@ -19,7 +19,7 @@
 - [x] Prevent duplicate or invalid collateral entries  
 
 ## 💰 3. Deposits & Withdrawals
-- [ ] Deposit base token into protocol  
+- [x] Deposit base token into protocol  
 - [ ] Receive LST correctly based on deposit ratio  
 - [ ] Withdraw deposit (LST burn → ASA returned)  
 - [ ] Confirm balances after deposit/withdraw  
