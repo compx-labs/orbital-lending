@@ -123,8 +123,6 @@ export class OrbitalLending extends Contract {
     }
   }
 
-
-
   //If generating a new LST for the base token.
   public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -311,16 +309,19 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  addNewCollateralType(collateralTokenId: UintN64, baseTokenId: UintN64): void {
+  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value)
     assert(collateralTokenId.native !== baseToken.id)
-    assert(baseTokenId.native !== baseToken.id)
     assert(!this.collateralExists(collateralTokenId))
+    assertMatch(mbrTxn, {
+      sender: this.admin_account.value,
+      amount: 101000,
+    })
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
-      baseAssetId: baseTokenId,
+      baseAssetId: this.base_token_id.value,
       totalCollateral: new UintN64(0),
     })
     this.accepted_collaterals(new arc4.UintN64(this.accepted_collaterals_count.value + 1)).value =
@@ -332,6 +333,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: collateralTokenId.native,
         assetAmount: 0,
+        fee: 1000,
       })
       .submit()
   }

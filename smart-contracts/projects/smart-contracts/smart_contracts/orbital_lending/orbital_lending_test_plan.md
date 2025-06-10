@@ -2,14 +2,14 @@
 # ✅ Orbital Lending Test Plan
 
 ## ⚙️ 1. Contract Deployment & Configuration
-- [ ] Deploy xusd contract with manager account  
-- [ ] Deploy algo contract with manager account  
-- [ ] Create base token ASA - xUSD
-- [ ] Initialize xusd contract with MBR and parameters 
-- [ ] create cAlgo lst for use in algo contract
-- [ ] Initialize algo contract with MBR and parameters   
-- [ ] Validate global state (LTV, interest, fees, etc.)  
-- [ ] Confirm LST is created correctly and ASA opt-in done
+- [x] Deploy xusd contract with manager account  
+- [x] Deploy algo contract with manager account  
+- [x] Create base token ASA - xUSD
+- [x] Initialize xusd contract with MBR and parameters 
+- [x] create cAlgo lst for use in algo contract
+- [x] Initialize algo contract with MBR and parameters   
+- [x] Validate global state (LTV, interest, fees, etc.)  
+- [x] Confirm LST is created correctly and ASA opt-in done
 
 ## 🧱 2. Collateral & Oracle Setup
 - [ ] Add valid oracle pool (with dummy or real LP data)  
