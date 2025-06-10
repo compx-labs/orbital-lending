@@ -1,0 +1,295 @@
+#pragma version 11
+#pragma typetrack false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 1 0
+    bytecblock "admin_account" "prices"
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txn NumAppArgs
+    bz main_after_if_else@11
+    pushbytess 0xda53fefe 0x3baf88d1 0x82829c5d 0xac13e004 0x23ab9b6a // method "createApplication(account)void", method "addTokenListing(uint64,uint64)void", method "updateTokenPrice(uint64,uint64)void", method "getTokenPrice(uint64)(uint64,uint64,uint64)", method "removeTokenListing(uint64)void"
+    txna ApplicationArgs 0
+    match main_createApplication_route@3 main_addTokenListing_route@4 main_updateTokenPrice_route@5 main_getTokenPrice_route@6 main_removeTokenListing_route@7
+
+main_after_if_else@11:
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    intc_1 // 0
+    return
+
+main_removeTokenListing_route@7:
+    // smart_contracts/Oracle/oracle.algo.ts:65
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txna ApplicationArgs 1
+    // smart_contracts/Oracle/oracle.algo.ts:65
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub removeTokenListing
+    intc_0 // 1
+    return
+
+main_getTokenPrice_route@6:
+    // smart_contracts/Oracle/oracle.algo.ts:58
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txna ApplicationArgs 1
+    // smart_contracts/Oracle/oracle.algo.ts:58
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub getTokenPrice
+    pushbytes 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_updateTokenPrice_route@5:
+    // smart_contracts/Oracle/oracle.algo.ts:43
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/Oracle/oracle.algo.ts:43
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub updateTokenPrice
+    intc_0 // 1
+    return
+
+main_addTokenListing_route@4:
+    // smart_contracts/Oracle/oracle.algo.ts:30
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/Oracle/oracle.algo.ts:30
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub addTokenListing
+    intc_0 // 1
+    return
+
+main_createApplication_route@3:
+    // smart_contracts/Oracle/oracle.algo.ts:25
+    // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    !
+    assert // can only call when creating
+    // smart_contracts/Oracle/oracle.algo.ts:18-19
+    // @contract({ name: 'oracle', avmVersion: 11 })
+    // export class Oracle extends Contract {
+    txna ApplicationArgs 1
+    btoi
+    txnas Accounts
+    // smart_contracts/Oracle/oracle.algo.ts:25
+    // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
+    callsub createApplication
+    intc_0 // 1
+    return
+
+
+// smart_contracts/Oracle/oracle.algo.ts::Oracle.createApplication(admin: bytes) -> void:
+createApplication:
+    // smart_contracts/Oracle/oracle.algo.ts:25-26
+    // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
+    // public createApplication(admin: Account): void {
+    proto 1 0
+    // smart_contracts/Oracle/oracle.algo.ts:23
+    // admin_account = GlobalState<Account>()
+    bytec_0 // "admin_account"
+    // smart_contracts/Oracle/oracle.algo.ts:27
+    // this.admin_account.value = admin
+    frame_dig -1
+    app_global_put
+    retsub
+
+
+// smart_contracts/Oracle/oracle.algo.ts::Oracle.addTokenListing(assetId: bytes, initialPrice: bytes) -> void:
+addTokenListing:
+    // smart_contracts/Oracle/oracle.algo.ts:30-31
+    // @abimethod({ allowActions: 'NoOp' })
+    // public addTokenListing(assetId: UintN64, initialPrice: UintN64): void {
+    proto 2 0
+    // smart_contracts/Oracle/oracle.algo.ts:32
+    // assert(op.Txn.sender === this.admin_account.value)
+    txn Sender
+    // smart_contracts/Oracle/oracle.algo.ts:23
+    // admin_account = GlobalState<Account>()
+    intc_1 // 0
+    bytec_0 // "admin_account"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/Oracle/oracle.algo.ts:32
+    // assert(op.Txn.sender === this.admin_account.value)
+    ==
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:37
+    // lastUpdated: new UintN64(Global.latestTimestamp),
+    global LatestTimestamp
+    itob
+    // smart_contracts/Oracle/oracle.algo.ts:34-38
+    // const newTokenPrice = new TokenPrice({
+    //   assetId: assetId,
+    //   price: initialPrice,
+    //   lastUpdated: new UintN64(Global.latestTimestamp),
+    // })
+    frame_dig -2
+    frame_dig -1
+    concat
+    swap
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:20
+    // token_prices = BoxMap<OracleKey, TokenPrice>({ keyPrefix: 'prices' })
+    bytec_1 // "prices"
+    frame_dig -2
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:40
+    // this.token_prices(key).value = newTokenPrice.copy()
+    swap
+    box_put
+    retsub
+
+
+// smart_contracts/Oracle/oracle.algo.ts::Oracle.updateTokenPrice(assetId: bytes, newPrice: bytes) -> void:
+updateTokenPrice:
+    // smart_contracts/Oracle/oracle.algo.ts:43-44
+    // @abimethod({ allowActions: 'NoOp' })
+    // public updateTokenPrice(assetId: UintN64, newPrice: UintN64): void {
+    proto 2 0
+    // smart_contracts/Oracle/oracle.algo.ts:45
+    // assert(op.Txn.sender === this.admin_account.value)
+    txn Sender
+    // smart_contracts/Oracle/oracle.algo.ts:23
+    // admin_account = GlobalState<Account>()
+    intc_1 // 0
+    bytec_0 // "admin_account"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/Oracle/oracle.algo.ts:45
+    // assert(op.Txn.sender === this.admin_account.value)
+    ==
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:20
+    // token_prices = BoxMap<OracleKey, TokenPrice>({ keyPrefix: 'prices' })
+    bytec_1 // "prices"
+    frame_dig -2
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:48
+    // assert(this.token_prices(key).exists)
+    dup
+    box_len
+    bury 1
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:53
+    // lastUpdated: new UintN64(Global.latestTimestamp),
+    global LatestTimestamp
+    itob
+    // smart_contracts/Oracle/oracle.algo.ts:50-54
+    // const newTokenPrice = new TokenPrice({
+    //   assetId: assetId,
+    //   price: newPrice,
+    //   lastUpdated: new UintN64(Global.latestTimestamp),
+    // })
+    frame_dig -2
+    frame_dig -1
+    concat
+    swap
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:55
+    // this.token_prices(key).value = newTokenPrice.copy()
+    box_put
+    retsub
+
+
+// smart_contracts/Oracle/oracle.algo.ts::Oracle.getTokenPrice(assetId: bytes) -> bytes:
+getTokenPrice:
+    // smart_contracts/Oracle/oracle.algo.ts:58-59
+    // @abimethod({ allowActions: 'NoOp' })
+    // public getTokenPrice(assetId: UintN64): TokenPrice {
+    proto 1 1
+    // smart_contracts/Oracle/oracle.algo.ts:20
+    // token_prices = BoxMap<OracleKey, TokenPrice>({ keyPrefix: 'prices' })
+    bytec_1 // "prices"
+    frame_dig -1
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:61
+    // assert(this.token_prices(key).exists)
+    dup
+    box_len
+    bury 1
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:62
+    // return this.token_prices(key).value.copy()
+    box_get
+    assert // Box must have value
+    retsub
+
+
+// smart_contracts/Oracle/oracle.algo.ts::Oracle.removeTokenListing(assetId: bytes) -> void:
+removeTokenListing:
+    // smart_contracts/Oracle/oracle.algo.ts:65-66
+    // @abimethod({ allowActions: 'NoOp' })
+    // public removeTokenListing(assetId: UintN64): void {
+    proto 1 0
+    // smart_contracts/Oracle/oracle.algo.ts:67
+    // assert(op.Txn.sender === this.admin_account.value)
+    txn Sender
+    // smart_contracts/Oracle/oracle.algo.ts:23
+    // admin_account = GlobalState<Account>()
+    intc_1 // 0
+    bytec_0 // "admin_account"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/Oracle/oracle.algo.ts:67
+    // assert(op.Txn.sender === this.admin_account.value)
+    ==
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:20
+    // token_prices = BoxMap<OracleKey, TokenPrice>({ keyPrefix: 'prices' })
+    bytec_1 // "prices"
+    frame_dig -1
+    concat
+    // smart_contracts/Oracle/oracle.algo.ts:70
+    // assert(this.token_prices(key).exists)
+    dup
+    box_len
+    bury 1
+    assert
+    // smart_contracts/Oracle/oracle.algo.ts:72
+    // this.token_prices(key).delete()
+    box_del
+    pop
+    retsub

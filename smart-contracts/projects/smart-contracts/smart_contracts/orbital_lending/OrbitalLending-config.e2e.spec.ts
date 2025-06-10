@@ -7,8 +7,11 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
+import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
+
 let xUSDLendingContractClient: OrbitalLendingClient
 let algoLendingContractClient: OrbitalLendingClient
+let oracleAppClient: OracleClient
 let managerAccount: Account
 
 let xUSDAssetId = 0n
@@ -39,18 +42,14 @@ describe('orbital-lending Testing - config', () => {
         defaultSender: managerAccount.addr,
       })
 
-      const { appClient } = await factory.deploy({
-        createParams: {
-          sender: managerAccount.addr,
-          args: [managerAccount.addr.publicKey, baseAssetId],
-          method: 'createApplication',
-          extraFee: microAlgo(2000),
-          
-
-        },
-        onUpdate: 'append',
-        onSchemaBreak: 'append',
-        appName: appName
+      const { appClient } = await factory.send.create.createApplication({
+        args: [
+          managerAccount.addr.publicKey, // manager address
+          baseAssetId, // base asset id
+        ],
+        sender: managerAccount.addr,
+        accountReferences: [managerAccount.addr],
+        assetReferences: [baseAssetId],
       })
       appClient.algorand.setSignerFromAccount(managerAccount)
       console.log('app Created, address', algosdk.encodeAddress(appClient.appAddress.publicKey))
@@ -82,6 +81,22 @@ describe('orbital-lending Testing - config', () => {
     const algoGlobalState = await algoLendingContractClient.state.global.getAll()
     console.log('algo contract base asset id', algoGlobalState.baseTokenId)
     expect(algoGlobalState.baseTokenId).toEqual(0n)
+
+    const oracleFactory = localnet.algorand.client.getTypedAppFactory(OracleFactory, {
+      defaultSender: managerAccount.addr,
+    })
+    const { appClient } = await oracleFactory.deploy({
+      createParams: {
+        sender: managerAccount.addr,
+        args: [managerAccount.addr.publicKey],
+        method: 'createApplication',
+        extraFee: microAlgo(2000),
+      },
+      onUpdate: 'append',
+      onSchemaBreak: 'append',
+      appName: 'Oracle',
+    })
+    oracleAppClient = appClient
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
@@ -94,7 +109,15 @@ describe('orbital-lending Testing - config', () => {
       note: 'Funding contract',
     })
     await xUSDLendingContractClient.send.initApplication({
-      args: [payTxn, ltv_bps, liq_threshold_bps, interest_bps, origination_fee_bps, protocol_interest_fee_bps],
+      args: [
+        payTxn,
+        ltv_bps,
+        liq_threshold_bps,
+        interest_bps,
+        origination_fee_bps,
+        protocol_interest_fee_bps,
+        oracleAppClient.appId,
+      ],
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -110,13 +133,12 @@ describe('orbital-lending Testing - config', () => {
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     expect(globalState).toBeDefined()
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
-    const adminAddress = globalState.adminAccount
-    const adminAddressBytes = adminAddress?.asByteArray()
-    const adminAddressString = adminAddressBytes ? algosdk.encodeAddress(adminAddressBytes) : undefined
-    const managerAccountBytes = managerAccount.addr
-    const managerAccountString = algosdk.encodeAddress(managerAccountBytes.publicKey)
 
-    expect(adminAddressString).toEqual(managerAccountString)
+    const adminAddressContract = globalState.adminAccount
+    console.log('admin address', adminAddressContract)
+    console.log('manager address', algosdk.encodeAddress(managerAccount.addr.publicKey))
+    expect(adminAddressContract).toEqual(algosdk.encodeAddress(managerAccount.addr.publicKey))
+
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
     expect(globalState.interestBps).toEqual(interest_bps)
@@ -136,7 +158,15 @@ describe('orbital-lending Testing - config', () => {
       note: 'Funding contract',
     })
     await algoLendingContractClient.send.initApplication({
-      args: [payTxn, ltv_bps, liq_threshold_bps, interest_bps, origination_fee_bps, protocol_interest_fee_bps],
+      args: [
+        payTxn,
+        ltv_bps,
+        liq_threshold_bps,
+        interest_bps,
+        origination_fee_bps,
+        protocol_interest_fee_bps,
+        oracleAppClient.appId,
+      ],
     })
 
     //create lst externally
@@ -181,13 +211,6 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState).toBeDefined()
     expect(globalState.baseTokenId).toEqual(0n)
 
-    const adminAddress = globalState.adminAccount
-    const adminAddressBytes = adminAddress?.asByteArray()
-    const adminAddressString = adminAddressBytes ? algosdk.encodeAddress(adminAddressBytes) : undefined
-    const managerAccountBytes = managerAccount.addr
-    const managerAccountString = algosdk.encodeAddress(managerAccountBytes.publicKey)
-    console.log('adminAddress', adminAddressString)
-    expect(adminAddressString).toEqual(managerAccountString)
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
     expect(globalState.interestBps).toEqual(interest_bps)

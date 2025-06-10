@@ -12,8 +12,8 @@
 - [x] Confirm LST is created correctly and ASA opt-in done
 
 ## 🧱 2. Collateral & Oracle Setup
-- [ ] Add valid oracle pool (with dummy or real LP data)  
-- [ ] Confirm oracle state stored correctly  
+- [x] Add valid oracle pool (with dummy or real LP data)  
+- [x] Confirm oracle state stored correctly  
 - [x] Add accepted collateral token  
 - [x] Validate collateral config and opt-in  
 - [x] Prevent duplicate or invalid collateral entries  

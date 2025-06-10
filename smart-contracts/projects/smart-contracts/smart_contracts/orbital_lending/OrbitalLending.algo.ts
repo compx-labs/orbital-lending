@@ -21,7 +21,8 @@ import {
 } from '@algorandfoundation/algorand-typescript'
 import { abiCall, Address, Str, UintN128, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
 import { appOptedIn, divw, mulw } from '@algorandfoundation/algorand-typescript/op'
-import { AcceptedCollateral, LoanRecord, Oracle } from './config.algo'
+import { AcceptedCollateral, AcceptedCollateralKey, LoanRecord, Oracle } from './config.algo'
+import { TokenPrice } from '../Oracle/config.algo'
 
 // Number of seconds in a (e.g.) 365-day year
 const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
@@ -59,18 +60,14 @@ export class OrbitalLending extends Contract {
 
   protocol_interest_fee_bps = GlobalState<uint64>()
 
-  //List of oracle pools
-  oracle_pool = BoxMap<UintN64, Oracle>({ keyPrefix: 'oracle_pool' })
+  oracle_app = GlobalState<Application>()
 
   //List of accepted collateral types
-  accepted_collaterals = BoxMap<UintN64, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
+  accepted_collaterals = BoxMap<AcceptedCollateralKey, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
 
   loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
 
   active_loan_records = GlobalState<uint64>()
-
-  //Number of oracle pools
-  oracle_pools_count = GlobalState<uint64>()
 
   //Number of accepted collateral types
   accepted_collaterals_count = GlobalState<uint64>()
@@ -91,6 +88,7 @@ export class OrbitalLending extends Contract {
     interest_bps: uint64,
     origination_fee_bps: uint64,
     protocol_interest_fee_bps: uint64,
+    oracle_app_id: Application,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
 
@@ -103,13 +101,13 @@ export class OrbitalLending extends Contract {
     this.liq_threshold_bps.value = liq_threshold_bps
     this.interest_bps.value = interest_bps
     this.origination_fee_bps.value = origination_fee_bps
-    this.oracle_pools_count.value = 0
     this.accepted_collaterals_count.value = 0
     this.fee_pool.value = 0
     this.circulating_lst.value = 0
     this.total_deposits.value = 0
     this.active_loan_records.value = 0
     this.protocol_interest_fee_bps.value = protocol_interest_fee_bps
+    this.oracle_app.value = oracle_app_id
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -188,124 +186,46 @@ export class OrbitalLending extends Contract {
     return this.total_deposits.value
   }
 
-  getOraclePoolsCount(): uint64 {
-    return this.oracle_pools_count.value
-  }
-
   getAcceptedCollateralsCount(): uint64 {
     return this.accepted_collaterals_count.value
   }
 
-  addOraclePool(poolAddress: Address, contractAppId: UintN64): void {
-    assert(op.Txn.sender === this.admin_account.value)
-    const [token_1_cumulative_price, token_1_cumulative_price_exists] = op.AppLocal.getExUint64(
-      poolAddress.native,
-      contractAppId.native,
-      Bytes('asset_1_cumulative_price'),
-    )
-    const [token_2_cumulative_price, token_2_cumulative_price_exists] = op.AppLocal.getExUint64(
-      poolAddress.native,
-      contractAppId.native,
-      Bytes('asset_2_cumulative_price'),
-    )
-    const [cumulativePriceLastTimestamp, cumulativePriceLastTimestampExists] = op.AppLocal.getExUint64(
-      poolAddress.native,
-      contractAppId.native,
-      Bytes('cumulative_price_update_timestamp'),
-    )
-    const newOracle: Oracle = new Oracle({
-      address: poolAddress,
-      contractAppId: contractAppId,
-      asset1LastCumulativePrice: new UintN64(token_1_cumulative_price),
-      asset2LastCumulativePrice: new UintN64(token_2_cumulative_price),
-      cumulativePriceLastTimestamp: new UintN64(cumulativePriceLastTimestamp),
-    })
-    this.oracle_pool(new arc4.UintN64(this.oracle_pools_count.value + 1)).value = newOracle.copy()
-    this.oracle_pools_count.value = this.oracle_pools_count.value + 1
-  }
-
-  getOraclePrice(tokenId: uint64, oracleIndex: uint64): uint64 {
-    const oracle = this.oracle_pool(new arc4.UintN64(oracleIndex)).value.copy()
+  getOraclePrice(tokenId: uint64): uint64 {
+    const oracle: Application = this.oracle_app.value
     const address = oracle.address
-    const contractAppId = oracle.contractAppId
+    const contractAppId = oracle.id
 
-    const contractAppIdObj = Application(contractAppId.native)
+    const result = abiCall(PriceOracleStub.prototype.getTokenPrice, {
+      appId: contractAppId,
+      args: [new UintN64(tokenId)],
+    }).returnValue
 
-    const [token_1_id, token_1_exists] = op.AppLocal.getExUint64(address.native, contractAppIdObj, Bytes('asset_1_id'))
-    const [new_cumulative_timestamp, new_cumulative_timestamp_exists] = op.AppLocal.getExUint64(
-      address.native,
-      contractAppIdObj,
-      Bytes('cumulative_price_update_timestamp'),
-    )
-    let newCummulativePrice: uint64 = 0
-    if (token_1_id === tokenId) {
-      const [price, priceExists] = op.AppLocal.getExUint64(
-        address.native,
-        contractAppIdObj,
-        Bytes('asset_1_cumulative_price'),
-      )
-      newCummulativePrice = price
-    } else {
-      const [price, priceExists] = op.AppLocal.getExUint64(
-        address.native,
-        contractAppIdObj,
-        Bytes('asset_2_cumulative_price'),
-      )
-      newCummulativePrice = price
-    }
-    const previousTimestamp = oracle.cumulativePriceLastTimestamp.native
-    const deltaTime: uint64 = new_cumulative_timestamp - previousTimestamp
-    const deltaPrice: uint64 = newCummulativePrice - oracle.asset1LastCumulativePrice.native
-    const instantaneous_price: uint64 = deltaPrice / deltaTime
-    return instantaneous_price
-  }
-
-  getPricesFromOracles(tokenId: uint64): uint64 {
-    const oracleIndex = this.oracle_pools_count.value
-    let totalPrice: uint64 = 0
-    for (let i: uint64 = 0; i < oracleIndex; i++) {
-      const oracle = this.oracle_pool(new arc4.UintN64(i)).value.copy()
-      const address = oracle.address
-      const contractAppId = oracle.contractAppId
-      const price = this.getOraclePrice(tokenId, i)
-      totalPrice += price
-    }
-    return totalPrice / (oracleIndex + 1)
+    return result.price.native
   }
 
   private collateralExists(collateralTokenId: UintN64): boolean {
-    for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
-      const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
-      if (collateral.assetId.native === collateralTokenId.native) {
-        return true
-      }
-    }
-    return false
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
+    return this.accepted_collaterals(key).exists
   }
 
   private getCollateral(collateralTokenId: UintN64): AcceptedCollateral {
-    for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
-      const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
-      if (collateral.assetId.native === collateralTokenId.native) {
-        return collateral
-      }
-    }
-    err('Collateral not found')
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
+    assert(this.accepted_collaterals(key).exists, 'Collateral not found')
+    return this.accepted_collaterals(key).value.copy()
   }
+
   private updateCollateralTotal(collateralTokenId: UintN64, amount: uint64): void {
-    for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
-      const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
-      if (collateral.assetId.native === collateralTokenId.native) {
-        const newTotal: uint64 = collateral.totalCollateral.native + amount
-        this.accepted_collaterals(new arc4.UintN64(i)).value = new AcceptedCollateral({
-          assetId: collateral.assetId,
-          baseAssetId: collateral.baseAssetId,
-          totalCollateral: new UintN64(newTotal),
-        }).copy()
-        return
-      }
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
+    const collateral = this.accepted_collaterals(key).value.copy()
+
+    if (collateral.assetId.native === collateralTokenId.native) {
+      const newTotal: uint64 = collateral.totalCollateral.native + amount
+      this.accepted_collaterals(key).value = new AcceptedCollateral({
+        assetId: collateral.assetId,
+        baseAssetId: collateral.baseAssetId,
+        totalCollateral: new UintN64(newTotal),
+      }).copy()
     }
-    err('Collateral not found')
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -313,7 +233,7 @@ export class OrbitalLending extends Contract {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value)
     assert(collateralTokenId.native !== baseToken.id)
-    assert(!this.collateralExists(collateralTokenId))
+    //assert(!this.collateralExists(collateralTokenId))
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
       amount: 101000,
@@ -324,8 +244,8 @@ export class OrbitalLending extends Contract {
       baseAssetId: this.base_token_id.value,
       totalCollateral: new UintN64(0),
     })
-    this.accepted_collaterals(new arc4.UintN64(this.accepted_collaterals_count.value + 1)).value =
-      newAcceptedCollateral.copy()
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
+    this.accepted_collaterals(key).value = newAcceptedCollateral.copy()
     this.accepted_collaterals_count.value = this.accepted_collaterals_count.value + 1
     itxn
       .assetTransfer({
@@ -443,7 +363,7 @@ export class OrbitalLending extends Contract {
     const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
 
     // Price via oracle
-    const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
     const [hU, lU] = mulw(underlyingCollateral, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
 
@@ -795,7 +715,7 @@ export class OrbitalLending extends Contract {
     assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
 
     // Price via oracle
-    const oraclePrice: uint64 = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
     const [hU, lU] = mulw(collateralAmount, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
     const CR: uint64 = collateralUSD / debtAmount
@@ -859,7 +779,7 @@ export class OrbitalLending extends Contract {
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
-    const oraclePrice = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
     const [h, l] = mulw(collateralAmount, oraclePrice)
     const collateralUSD = divw(h, l, 1)
 
@@ -931,7 +851,7 @@ export class OrbitalLending extends Contract {
     const liqBps: uint64 = this.liq_threshold_bps.value
 
     const acceptedCollateral = this.getCollateral(record.collateralTokenId)
-    const oraclePrice = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
     const [hi, lo] = mulw(collateralAmount, oraclePrice)
     const collateralValueUSD = divw(hi, lo, 1)
 
@@ -960,6 +880,13 @@ export abstract class TargetContract extends Contract {
   @abimethod()
   getTotalDeposits(): uint64 {
     // Stub implementation
+    err('stub only')
+  }
+}
+
+export abstract class PriceOracleStub extends Contract {
+  @abimethod({ allowActions: 'NoOp' })
+  getTokenPrice(assetId: UintN64): TokenPrice {
     err('stub only')
   }
 }

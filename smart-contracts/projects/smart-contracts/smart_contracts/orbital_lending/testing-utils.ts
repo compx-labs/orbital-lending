@@ -14,6 +14,9 @@ export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient
     new algosdk.ABIUintType(64), // totalCollateral
   ])
 
+  const boxNames = await appClient.appClient.getBoxNames();
+  console.log('Box names:', boxNames);
+
   const keyBytes = new Uint8Array(8)
   const view = new DataView(keyBytes.buffer)
   view.setBigUint64(0, index, false) // false for big-endian
