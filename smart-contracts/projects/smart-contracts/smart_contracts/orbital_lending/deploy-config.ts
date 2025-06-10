@@ -1,14 +1,14 @@
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
-import { WeLendFactory } from '../artifacts/we_lend/weLendClient'
+import { OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 
 // Below is a showcase of various deployment options you can use in TypeScript Client
 export async function deploy() {
-  console.log('=== Deploying WeLend ===')
+  console.log('=== Deploying Orbital Lending ===')
 
   const algorand = AlgorandClient.fromEnvironment()
   const deployer = await algorand.account.fromEnvironment('DEPLOYER')
 
-  const factory = algorand.client.getTypedAppFactory(WeLendFactory, {
+  const factory = algorand.client.getTypedAppFactory(OrbitalLendingFactory, {
     defaultSender: deployer.addr,
   })
 
@@ -23,11 +23,4 @@ export async function deploy() {
     })
   }
 
-  const method = 'hello'  
-  const response = await appClient.send.hello({
-    args: { name: 'world' },
-  })
-  console.log(
-    `Called ${method} on ${appClient.appClient.appName} (${appClient.appClient.appId}) with name = world, received: ${response.return}`,
-  )
 }

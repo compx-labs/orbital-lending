@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/explicit-member-accessibility */
-import { Account, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
+import { Account, bytes, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
 import {
   abimethod,
   Application,
@@ -28,8 +28,8 @@ const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 const PROTOCOL_SHARE_BPS: uint64 = 2500 // 25% in basis points
 const DEPOSITOR_SHARE_BPS: uint64 = 10000 - PROTOCOL_SHARE_BPS // 7500
 
-@contract({ name: 'weLend', avmVersion: 11 })
-export class WeLend extends Contract {
+@contract({ name: 'orbital-lending', avmVersion: 11 })
+export class OrbitalLending extends Contract {
   // The main lending token of this contract - used for deposit and borrowing
   base_token_id = GlobalState<UintN64>()
 
@@ -111,15 +111,28 @@ export class WeLend extends Contract {
     this.active_loan_records.value = 0
     this.protocol_interest_fee_bps.value = protocol_interest_fee_bps
 
+    if (this.base_token_id.value.native !== 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          xferAsset: this.base_token_id.value.native,
+          assetAmount: 0,
+          fee: 1000,
+        })
+        .submit()
+    }
+  }
+
+
+
+  //If generating a new LST for the base token.
+  public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
+    assert(op.Txn.sender === this.admin_account.value)
+    assertMatch(mbrTxn, {
+      sender: this.admin_account.value,
+      amount: 102000,
+    })
     /// Submit opt-in transaction: 0 asset transfer to self
-    itxn
-      .assetTransfer({
-        assetReceiver: Global.currentApplicationAddress,
-        xferAsset: this.base_token_id.value.native,
-        assetAmount: 0,
-        fee: 1000,
-      })
-      .submit()
 
     //Create LST token
     const baseToken = Asset(this.base_token_id.value.native)
@@ -136,6 +149,37 @@ export class WeLend extends Contract {
       })
       .submit()
     this.lst_token_id.value = new UintN64(result.configAsset.id)
+  }
+
+  //If LST already created externally.
+  public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
+    assert(op.Txn.sender === this.admin_account.value)
+    assertMatch(mbrTxn, {
+      sender: this.admin_account.value,
+      amount: 2000,
+    })
+    this.lst_token_id.value = new UintN64(lstAssetId)
+
+    //Opt-in to the LST token
+    itxn
+      .assetTransfer({
+        assetReceiver: Global.currentApplicationAddress,
+        xferAsset: lstAssetId,
+        assetAmount: 0,
+        fee: 1000,
+      })
+      .submit()
+  }
+
+  public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
+    assert(op.Txn.sender === this.admin_account.value)
+    assert(this.lst_token_id.value.native === axferTxn.xferAsset.id, 'LST token not set')
+
+    assertMatch(axferTxn, {
+      sender: this.admin_account.value,
+      assetReceiver: Global.currentApplicationAddress,
+    })
+    this.circulating_lst.value = circulating_lst
   }
 
   getCirculatingLST(): uint64 {
@@ -254,7 +298,7 @@ export class WeLend extends Contract {
     for (let i: uint64 = 0; i < this.accepted_collaterals_count.value; i++) {
       const collateral = this.accepted_collaterals(new arc4.UintN64(i)).value.copy()
       if (collateral.assetId.native === collateralTokenId.native) {
-        const newTotal:uint64 = collateral.totalCollateral.native + amount
+        const newTotal: uint64 = collateral.totalCollateral.native + amount
         this.accepted_collaterals(new arc4.UintN64(i)).value = new AcceptedCollateral({
           assetId: collateral.assetId,
           baseAssetId: collateral.baseAssetId,
@@ -374,6 +418,7 @@ export class WeLend extends Contract {
     requestedLoanAmount: uint64,
     lstApp: uint64,
     collateralTokenId: UintN64,
+    arc19MetadataStr: bytes,
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
@@ -411,7 +456,7 @@ export class WeLend extends Contract {
     const [decimals, decExists] = op.AssetParams.assetDecimals(this.base_token_id.value.native)
     const assetScale: uint64 = 10 ** decimals
     const [aH, aL] = mulw(disbursement, assetScale)
-    const dividerScalar:uint64 = 2 ** 32
+    const dividerScalar: uint64 = 2 ** 32
     const interim: uint64 = divw(aH, aL, dividerScalar)
     const scaledDown: uint64 = interim / dividerScalar
 
@@ -425,14 +470,6 @@ export class WeLend extends Contract {
       const totalRequested: uint64 = old.scaledDownDisbursement.native + requestedLoanAmount
       assert(totalRequested <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
 
-      // burn old ASA
-      itxn
-        .assetConfig({
-          configAsset: old.loanRecordASAId.native,
-          sender: Global.currentApplicationAddress,
-        })
-        .submit()
-
       // combine collateral & debt
       const totalCollateral: uint64 = old.collateralAmount.native + collateralDeposit
       const oldDebt: uint64 = old.scaledDownDisbursement.native
@@ -440,28 +477,15 @@ export class WeLend extends Contract {
       const newTotalDisb: uint64 = old.disbursement.native + disbursement
 
       // mint replacement record ASA
-      const asset = itxn
-        .assetConfig({
-          sender: Global.currentApplicationAddress,
-          assetName: `r${old.collateralTokenId.bytes}b${this.base_token_id.value.bytes}`,
-          unitName: `r${old.collateralTokenId.bytes}${this.base_token_id.value.bytes}`,
-          total: newTotalDisb,
-          decimals: 0,
-          manager: Global.currentApplicationAddress,
-          reserve: op.Txn.sender,
-          freeze: Global.currentApplicationAddress,
-          clawback: Global.currentApplicationAddress,
-          defaultFrozen: false,
-          url:
-          String(op.Txn.sender.bytes) +
-          ':' +
-          String(collateralTokenId.bytes) +
-          ':' +
-          String(new UintN64(newTotalDisb).bytes) +
-          ':' +
-          String(new UintN64(Global.latestTimestamp).bytes),
-        })
-        .submit()
+      this.updateLoanRecord(
+        newDebt,
+        newTotalDisb,
+        old.collateralTokenId,
+        op.Txn.sender,
+        totalCollateral,
+        arc19MetadataStr,
+        old.loanRecordASAId.native,
+      )
 
       this.loan_record(op.Txn.sender).value = new LoanRecord({
         borrowerAddress: old.borrowerAddress,
@@ -470,7 +494,7 @@ export class WeLend extends Contract {
         disbursement: new UintN64(newTotalDisb),
         scaledDownDisbursement: new UintN64(newDebt),
         borrowedTokenId: old.borrowedTokenId,
-        loanRecordASAId: new UintN64(asset.createdAsset.id),
+        loanRecordASAId: old.loanRecordASAId,
         lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
       }).copy()
       this.active_loan_records.value = this.active_loan_records.value + 1
@@ -478,7 +502,14 @@ export class WeLend extends Contract {
     } else {
       // — Brand-New Loan —
       assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
-      this.mintLoanRecord(scaledDown, disbursement, collateralTokenId, op.Txn.sender, collateralDeposit)
+      this.mintLoanRecord(
+        scaledDown,
+        disbursement,
+        collateralTokenId,
+        op.Txn.sender,
+        collateralDeposit,
+        arc19MetadataStr,
+      )
     }
 
     // ─── 5. Disburse the funds ─────────────────────────────────────────────
@@ -491,12 +522,45 @@ export class WeLend extends Contract {
       .submit()
   }
 
+  private updateLoanRecord(
+    scaledDownDisbursement: uint64,
+    disbursement: uint64,
+    collateralTokenId: UintN64,
+    borrowerAddress: Account,
+    collateralAmount: uint64,
+    arc19MetadataStr: bytes,
+    assetId: uint64,
+  ): void {
+    const asset = itxn
+      .assetConfig({
+        manager: Global.currentApplicationAddress,
+        sender: Global.currentApplicationAddress,
+        reserve: arc19MetadataStr,
+        configAsset: assetId,
+      })
+      .submit()
+
+    const loanRecord: LoanRecord = new LoanRecord({
+      borrowerAddress: new Address(borrowerAddress.bytes),
+      collateralTokenId: collateralTokenId,
+      collateralAmount: new UintN64(collateralAmount),
+      disbursement: new UintN64(disbursement),
+      scaledDownDisbursement: new UintN64(scaledDownDisbursement),
+      borrowedTokenId: this.base_token_id.value,
+      loanRecordASAId: new UintN64(asset.createdAsset.id),
+      lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
+    })
+    this.loan_record(borrowerAddress).value = loanRecord.copy()
+    this.active_loan_records.value = this.active_loan_records.value + 1
+  }
+
   private mintLoanRecord(
     scaledDownDisbursement: uint64,
     disbursement: uint64,
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
+    arc19MetadataStr: bytes,
   ): void {
     const asset = itxn
       .assetConfig({
@@ -514,7 +578,7 @@ export class WeLend extends Contract {
         total: disbursement,
         sender: Global.currentApplicationAddress,
         unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
-        reserve: borrowerAddress,
+        reserve: arc19MetadataStr,
         freeze: Global.currentApplicationAddress,
         clawback: Global.currentApplicationAddress,
         defaultFrozen: false,
@@ -621,7 +685,7 @@ export class WeLend extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  repayLoan(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
+  repayLoan(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, arc19MetaDataStr: bytes): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -639,15 +703,13 @@ export class WeLend extends Contract {
     assert(amount <= currentdebt.native)
     const remainingDebt: uint64 = currentdebt.native - amount
 
-    //Destroy record ASA in all cases
-    itxn
-      .assetConfig({
-        configAsset: loanRecordASAId,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
-
     if (remainingDebt === 0) {
+      itxn
+        .assetConfig({
+          configAsset: loanRecordASAId,
+          sender: Global.currentApplicationAddress,
+        })
+        .submit()
       //return collateral asset
 
       //Delete box reference
@@ -663,12 +725,14 @@ export class WeLend extends Contract {
         .submit()
     } else {
       // Update the record and mint a new ASA
-      this.mintLoanRecord(
+      this.updateLoanRecord(
         remainingDebt, // scaledDownDisbursement
         loanRecord.disbursement.native, // original disbursement (for metadata)
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
+        arc19MetaDataStr, // arc19 metadata
+        loanRecordASAId, // existing ASA ID to update
       )
     }
   }
@@ -687,25 +751,11 @@ export class WeLend extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  accrueLoanInterest(debtor: Account): void {
+  accrueLoanInterest(debtor: Account, arc19MetaDataStr: bytes): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     //Apply interest
     this.accrueInterest(currentLoanRecord)
-
-    //Clawback old nft if outwith the application address
-    const currentLoanRecordASAId = this.getLoanRecordASAId(debtor)
-    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecordASAId))
-    if (!assetExists) {
-      itxn
-        .assetTransfer({
-          assetReceiver: Global.currentApplicationAddress,
-          xferAsset: currentLoanRecord.loanRecordASAId.native,
-          assetSender: debtor,
-          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
-        })
-        .submit()
-    }
 
     //destory old nft
     itxn
@@ -716,12 +766,14 @@ export class WeLend extends Contract {
       .submit()
 
     //mint new nft
-    this.mintLoanRecord(
+    this.updateLoanRecord(
       currentLoanRecord.scaledDownDisbursement.native,
       currentLoanRecord.disbursement.native,
       currentLoanRecord.collateralTokenId,
       debtor,
       currentLoanRecord.collateralAmount.native,
+      arc19MetaDataStr,
+      currentLoanRecord.loanRecordASAId.native, // existing ASA ID to update
     )
     //Update box storage
     this.loan_record(debtor).value = currentLoanRecord.copy()
@@ -793,6 +845,107 @@ export class WeLend extends Contract {
     //Update collateral total
     const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  liquidate(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+
+    const record = this.loan_record(debtor).value.copy()
+    const collateralAmount = record.collateralAmount.native
+    const debtAmount = record.scaledDownDisbursement.native
+    const collateralTokenId = record.collateralTokenId
+    const acceptedCollateral = this.getCollateral(collateralTokenId)
+
+    const oraclePrice = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const [h, l] = mulw(collateralAmount, oraclePrice)
+    const collateralUSD = divw(h, l, 1)
+
+    const CR: uint64 = collateralUSD / debtAmount
+    assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
+
+    //Transfer must be full amount of the loan
+    assertMatch(axferTxn, {
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(this.base_token_id.value.native),
+      assetAmount: debtAmount,
+    })
+
+    //Clawback ASA if needed
+    const loanRecordASAId = record.loanRecordASAId.native
+    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
+    if (!assetExists) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          assetSender: debtor,
+          xferAsset: loanRecordASAId,
+          assetAmount: 1,
+        })
+        .submit()
+    }
+    //Destroy the loan record ASA
+    itxn
+      .assetConfig({
+        configAsset: loanRecordASAId,
+        sender: Global.currentApplicationAddress,
+      })
+      .submit()
+
+    //Delete the loan record
+    this.loan_record(debtor).delete()
+    this.active_loan_records.value = this.active_loan_records.value - 1
+
+    //transfer the collateral to the liquidator (the sender of the txn)
+    itxn
+      .assetTransfer({
+        assetReceiver: op.Txn.sender,
+        xferAsset: collateralTokenId.native,
+        assetAmount: collateralAmount,
+      })
+      .submit()
+
+    //Update the collateral total
+    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
+    this.updateCollateralTotal(collateralTokenId, newTotal)
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  getLoanStatus(borrower: Account): {
+    outstandingDebt: uint64
+    collateralValueUSD: uint64
+    collateralAmount: uint64
+    collateralRatioBps: uint64
+    liquidationThresholdBps: uint64
+    eligibleForLiquidation: boolean
+    eligibleForBuyout: boolean
+  } {
+    assert(this.loan_record(borrower).exists, 'Loan record does not exist')
+    let record = this.loan_record(borrower).value.copy()
+    record = this.accrueInterest(record) // simulate interest accrual for latest status
+
+    const debt: uint64 = record.scaledDownDisbursement.native
+    const collateralAmount: uint64 = record.collateralAmount.native
+    const liqBps: uint64 = this.liq_threshold_bps.value
+
+    const acceptedCollateral = this.getCollateral(record.collateralTokenId)
+    const oraclePrice = this.getPricesFromOracles(acceptedCollateral.baseAssetId.native)
+    const [hi, lo] = mulw(collateralAmount, oraclePrice)
+    const collateralValueUSD = divw(hi, lo, 1)
+
+    const CR: uint64 = (collateralValueUSD * 10000) / debt
+    const eligibleForLiquidation = CR < liqBps
+    const eligibleForBuyout = CR > liqBps
+
+    return {
+      outstandingDebt: debt,
+      collateralValueUSD: collateralValueUSD,
+      collateralAmount: collateralAmount,
+      collateralRatioBps: CR,
+      liquidationThresholdBps: liqBps,
+      eligibleForLiquidation,
+      eligibleForBuyout,
+    }
   }
 }
 
