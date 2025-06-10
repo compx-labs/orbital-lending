@@ -214,11 +214,26 @@ describe('orbital-lending Testing - collateral setup', () => {
       assetReferences: [cAlgoAssetId],
     })
 
-    const boxValue =await getBoxValue(1n, xUSDLendingContractClient)
+    const boxValue = await getBoxValue(1n, xUSDLendingContractClient)
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
     expect(boxValue.baseAssetId).toEqual(xUSDAssetId)
     expect(boxValue.totalCollateral).toEqual(0n)
+  })
 
+  test('add existing collateral - xUSD lending contract - Failure expected', async () => {
+    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(101000n),
+      note: 'Funding collateral addition',
+    })
+
+    await expect(
+      xUSDLendingContractClient.send.addNewCollateralType({
+        args: [cAlgoAssetId, mbrTxn],
+        assetReferences: [cAlgoAssetId],
+      }),
+    ).rejects.toThrowError()
   })
 })
