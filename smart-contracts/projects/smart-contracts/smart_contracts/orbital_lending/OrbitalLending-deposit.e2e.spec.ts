@@ -16,7 +16,7 @@ let xUSDLendingContractClient: OrbitalLendingClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
-let depositorAccount: Account
+
 
 let xUSDAssetId = 0n
 let cxUSDAssetId = 0n
@@ -27,7 +27,12 @@ const liq_threshold_bps = 1000000n
 const interest_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
+
 const NUM_DEPOSITORS = 5
+const DEPOSITOR_XUSD_INITIAL_BALANCE = 1000n
+const DEPOSITOR_INITIAL_DEPOSIT_AMOUNT = 100n
+const DEPOSITOR_INITIAL_WITHDRAW_AMOUNT = 50n
+
 const depositors: Account[] = []
 
 describe('orbital-lending Testing - collateral setup', () => {
@@ -226,7 +231,7 @@ describe('orbital-lending Testing - collateral setup', () => {
   })
 
   test('Deposit xUSD - xUSD Lending Contract', async () => {
-    const depositAmount = 100n
+    const depositAmount = DEPOSITOR_INITIAL_DEPOSIT_AMOUNT
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const depositorAccount = depositors[i]
       xUSDLendingContractClient.algorand.setSignerFromAccount(depositorAccount)
@@ -269,7 +274,7 @@ describe('orbital-lending Testing - collateral setup', () => {
   })
 
   test('Withdraw deposited xUSD - xUSD Lending Contract', async () => {
-    const withdrawAmount = 50n
+    const withdrawAmount = DEPOSITOR_INITIAL_WITHDRAW_AMOUNT
     const algod = xUSDLendingContractClient.algorand.client.algod
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const depositorAccount = depositors[i]
@@ -314,6 +319,28 @@ describe('orbital-lending Testing - collateral setup', () => {
         const lstTokenBalanceInfoAfter = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
         expect(lstTokenBalanceInfoAfter).toBeDefined()
         expect(lstTokenBalanceInfoAfter.assetHolding?.amount).toEqual(lstTokenBalanceBeforeWithdraw - withdrawAmount)
+      }
+    }
+  })
+
+  test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {  
+      const depositorAccount = depositors[i]
+      localnet.algorand.setSignerFromAccount(depositorAccount)
+      //Ensure we use the asset from global state instead of global const
+      const globalState = await xUSDLendingContractClient.state.global.getAll()
+      const lstTokenId = globalState.lstTokenId
+      expect(lstTokenId).toBeDefined()
+      expect(lstTokenId).toEqual(cxUSDAssetId)
+      if (lstTokenId) {
+        const lstTokenBalanceInfo = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
+        expect(lstTokenBalanceInfo).toBeDefined()
+        expect(lstTokenBalanceInfo.assetHolding?.amount).toEqual(DEPOSITOR_INITIAL_DEPOSIT_AMOUNT - DEPOSITOR_INITIAL_WITHDRAW_AMOUNT)
+
+        const xUSDUserTokenInfo = await algod.accountAssetInformation(depositorAccount.addr, xUSDAssetId).do()
+        expect(xUSDUserTokenInfo).toBeDefined()
+        expect(xUSDUserTokenInfo.assetHolding?.amount).toEqual(DEPOSITOR_XUSD_INITIAL_BALANCE + DEPOSITOR_INITIAL_WITHDRAW_AMOUNT - DEPOSITOR_INITIAL_DEPOSIT_AMOUNT)
       }
     }
   })
