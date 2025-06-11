@@ -5,10 +5,13 @@ import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { beforeAll, describe, expect, test } from 'vitest'
 
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
-import algosdk, { Account, Address } from 'algosdk'
+import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
 import { getBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
+import { deploy } from './orbital-deploy'
+import { createToken } from './token-create'
+import { deployOracle } from '../Oracle/oracle-deploy'
 let xUSDLendingContractClient: OrbitalLendingClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
@@ -24,6 +27,8 @@ const liq_threshold_bps = 1000000n
 const interest_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
+const NUM_DEPOSITORS = 5
+const depositors: Account[] = []
 
 describe('orbital-lending Testing - collateral setup', () => {
   const localnet = algorandFixture()
@@ -39,76 +44,11 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     const { generateAccount } = localnet.context
     managerAccount = await generateAccount({ initialFunds: microAlgo(10000000) })
+    xUSDAssetId = await createToken(managerAccount, 'xUSD', 6)
 
-    depositorAccount = await generateAccount({ initialFunds: microAlgo(10000000) })
-
-    const deploy = async (baseAssetId: bigint, appName: string) => {
-      const factory = localnet.algorand.client.getTypedAppFactory(OrbitalLendingFactory, {
-        defaultSender: managerAccount.addr,
-      })
-
-      const { appClient } = await factory.send.create.createApplication({
-        args: [
-          managerAccount.addr.publicKey, // manager address
-          baseAssetId, // base asset id
-        ],
-        sender: managerAccount.addr,
-        accountReferences: [managerAccount.addr],
-        assetReferences: [baseAssetId],
-      })
-      appClient.algorand.setSignerFromAccount(managerAccount)
-      console.log('app Created, address', algosdk.encodeAddress(appClient.appAddress.publicKey))
-      return { client: appClient }
-    }
-
-    //create xusd asset for contract 1
-    const assetCreateTxn = await localnet.context.algorand.send.assetCreate({
-      sender: managerAccount.addr,
-      total: 1700000000n,
-      decimals: 6,
-      defaultFrozen: false,
-      unitName: 'xUSD',
-      assetName: 'xUSD Stablecoin',
-      manager: managerAccount.addr,
-      reserve: managerAccount.addr,
-      url: 'https://compx.io',
-    })
-    xUSDAssetId = assetCreateTxn.assetId
-
-    const xUSDDeploymentResult = await deploy(xUSDAssetId, 'xUSD Lending')
-    xUSDLendingContractClient = xUSDDeploymentResult.client
-    const xUSDGlobalState = await xUSDLendingContractClient.state.global.getAll()
-    console.log('xusd contract base asset id', xUSDGlobalState.baseTokenId)
-    expect(xUSDGlobalState.baseTokenId).toEqual(xUSDAssetId)
-
-    const algoDeploymentResult = await deploy(0n, 'Algo Lending')
-    algoLendingContractClient = algoDeploymentResult.client
-    const algoGlobalState = await algoLendingContractClient.state.global.getAll()
-    console.log('algo contract base asset id', algoGlobalState.baseTokenId)
-    expect(algoGlobalState.baseTokenId).toEqual(0n)
-
-    const oracleFactory = localnet.algorand.client.getTypedAppFactory(OracleFactory, {
-      defaultSender: managerAccount.addr,
-    })
-    const { appClient } = await oracleFactory.deploy({
-      createParams: {
-        sender: managerAccount.addr,
-        args: [managerAccount.addr.publicKey],
-        method: 'createApplication',
-        extraFee: microAlgo(2000),
-      },
-      onUpdate: 'append',
-      onSchemaBreak: 'append',
-      appName: 'Oracle',
-    })
-    oracleAppClient = appClient
-
-    oracleAppClient.algorand.send.payment({
-      sender: managerAccount.addr,
-      receiver: oracleAppClient.appAddress,
-      amount: microAlgo(1000000),
-      note: 'Funding oracle contract',
-    })
+    xUSDLendingContractClient = await deploy(xUSDAssetId, managerAccount)
+    algoLendingContractClient = await deploy(0n, managerAccount)
+    oracleAppClient = await deployOracle(managerAccount)
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
@@ -120,6 +60,7 @@ describe('orbital-lending Testing - collateral setup', () => {
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
       note: 'Funding contract',
     })
+
     await xUSDLendingContractClient.send.initApplication({
       args: [
         payTxn,
@@ -175,21 +116,7 @@ describe('orbital-lending Testing - collateral setup', () => {
         oracleAppClient.appId,
       ],
     })
-
-    //create lst externally
-    const assetCreateREsult = await algoLendingContractClient.algorand.send.assetCreate({
-      sender: managerAccount.addr,
-      total: 10000000000n,
-      decimals: 6,
-      defaultFrozen: false,
-      unitName: 'cALGO',
-      assetName: 'cALGO',
-      manager: managerAccount.addr,
-      reserve: managerAccount.addr,
-      url: 'https://compx.io',
-    })
-
-    const lstId = assetCreateREsult.assetId
+    const lstId = await createToken(managerAccount, 'cALGO', 6)
 
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
@@ -252,24 +179,8 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(boxValue.totalCollateral).toEqual(0n)
   })
 
-  test.skip('add existing collateral - xUSD lending contract - Failure expected', async () => {
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(101000n),
-      note: 'Funding collateral addition',
-    })
-
-    await expect(
-      xUSDLendingContractClient.send.addNewCollateralType({
-        args: [cAlgoAssetId, mbrTxn],
-        assetReferences: [cAlgoAssetId],
-      }),
-    ).rejects.toThrowError()
-  })
-
   test('Add token price to oracle', async () => {
-    const price = 1200000n // Example price for cALGO in xUSD
+    const price = 1200000n // Example price for cALGO in $
     await oracleAppClient.send.addTokenListing({
       args: [cAlgoAssetId, price],
       assetReferences: [cAlgoAssetId],
@@ -284,66 +195,126 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(returnedPrice).toEqual(price)
   })
 
-  test('Init depositor - xUSD Lending Contract', async () => {
-    await xUSDLendingContractClient.algorand.send.assetOptIn({
-      sender: depositorAccount.addr,
-      assetId: xUSDAssetId,
-      note: 'Opting in to xUSD asset',
-    })
+  test('Init depositors - xUSD Lending Contract', async () => {
+    const { generateAccount } = localnet.context
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const depositorAccount = await generateAccount({ initialFunds: microAlgo(10000000) })
+      xUSDLendingContractClient.algorand.setSignerFromAccount(depositorAccount)
 
-    await xUSDLendingContractClient.algorand.send.assetTransfer({
-      sender: managerAccount.addr,
-      receiver: depositorAccount.addr,
-      assetId: xUSDAssetId,
-      amount: 1000000n,
-      note: 'Funding depositor with xUSD',
-    })
+      await xUSDLendingContractClient.algorand.send.assetOptIn({
+        sender: depositorAccount.addr,
+        assetId: xUSDAssetId,
+        note: 'Opting in to xUSD asset',
+      })
 
-    const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
-      .accountAssetInformation(depositorAccount.addr, xUSDAssetId)
-      .do()
-    expect(userTokenBalance).toBeDefined()
-    expect(userTokenBalance.assetHolding?.amount).toEqual(1000000n)
+      await xUSDLendingContractClient.algorand.send.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: depositorAccount.addr,
+        assetId: xUSDAssetId,
+        amount: 1000000n,
+        note: 'Funding depositor with xUSD',
+      })
+
+      const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(depositorAccount.addr, xUSDAssetId)
+        .do()
+      expect(userTokenBalance).toBeDefined()
+      expect(userTokenBalance.assetHolding?.amount).toEqual(1000000n)
+
+      depositors.push(depositorAccount)
+    }
   })
 
   test('Deposit xUSD - xUSD Lending Contract', async () => {
     const depositAmount = 100n
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const depositorAccount = depositors[i]
+      xUSDLendingContractClient.algorand.setSignerFromAccount(depositorAccount)
+      localnet.algorand.setSignerFromAccount(depositorAccount)
+      const globalState = await xUSDLendingContractClient.state.global.getAll()
+      const lstTokenId = globalState.lstTokenId
+      expect(lstTokenId).toBeDefined()
 
-    const globalState = await xUSDLendingContractClient.state.global.getAll()
-    const lstTokenId = globalState.lstTokenId
-    expect(lstTokenId).toBeDefined()
+      if (lstTokenId) {
+        await xUSDLendingContractClient.algorand.send.assetOptIn({
+          sender: depositorAccount.addr,
+          assetId: lstTokenId,
+          note: 'Opting in to cxUSD asset',
+        })
 
-    if (lstTokenId) {
-      await xUSDLendingContractClient.algorand.send.assetOptIn({
-        sender: depositorAccount.addr,
-        assetId: lstTokenId,
-        note: 'Opting in to cxUSD asset',
-      })
+        const depositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+          sender: depositorAccount.addr,
+          receiver: xUSDLendingContractClient.appClient.appAddress,
+          assetId: xUSDAssetId,
+          amount: depositAmount,
+          note: 'Depositing xUSD',
+        })
 
-      const depositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
-        sender: depositorAccount.addr,
-        receiver: xUSDLendingContractClient.appClient.appAddress,
-        assetId: xUSDAssetId,
-        amount: depositAmount,
-        note: 'Depositing xUSD',
-      })
+        await xUSDLendingContractClient.send.depositAsa({
+          args: [depositTxn, depositAmount],
+          assetReferences: [xUSDAssetId],
+        })
 
-      await xUSDLendingContractClient.send.depositAsa({
-        args: [depositTxn, depositAmount],
-        assetReferences: [xUSDAssetId],
-      })
+        const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
+          .accountAssetInformation(depositorAccount.addr, lstTokenId)
+          .do()
+        expect(userTokenBalance).toBeDefined()
+        expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
 
-      const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
-        .accountAssetInformation(depositorAccount.addr, lstTokenId)
-        .do()
-      expect(userTokenBalance).toBeDefined()
-      expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
-      console.log('cxUSD balance after deposit:', userTokenBalance.assetHolding?.amount)
-      expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
+        const boxValue = await getBoxValue(xUSDAssetId, xUSDLendingContractClient)
+        expect(boxValue).toBeDefined()
+        expect(boxValue.totalCollateral).toEqual(depositAmount * BigInt(i + 1))
+      }
+    }
+  })
 
-      const boxValue = await getBoxValue(xUSDAssetId, xUSDLendingContractClient)
-      expect(boxValue).toBeDefined()
-      expect(boxValue.totalCollateral).toEqual(depositAmount)
+  test('Withdraw deposited xUSD - xUSD Lending Contract', async () => {
+    const withdrawAmount = 50n
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const depositorAccount = depositors[i]
+      localnet.algorand.setSignerFromAccount(depositorAccount)
+      //Ensure we use the asset from global state instead of global const
+      const globalState = await xUSDLendingContractClient.state.global.getAll()
+      const lstTokenId = globalState.lstTokenId
+      expect(lstTokenId).toBeDefined()
+      expect(lstTokenId).toEqual(cxUSDAssetId)
+      if (lstTokenId) {
+        const lstTokenBalanceInfo = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
+        expect(lstTokenBalanceInfo).toBeDefined()
+        expect(lstTokenBalanceInfo.assetHolding?.amount).toEqual(100n)
+        const lstTokenBalanceBeforeWithdraw = lstTokenBalanceInfo.assetHolding?.amount || 0n
+
+        // Get xUSD asset balance prior to withdraw call
+        const xUSDUserTokenInfo = await algod.accountAssetInformation(depositorAccount.addr, xUSDAssetId).do()
+        expect(xUSDUserTokenInfo).toBeDefined()
+        const xUSDUserBalanceBeforeWithdraw = xUSDUserTokenInfo.assetHolding?.amount || 0n
+
+        const axferTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+          sender: xUSDLendingContractClient.appClient.appAddress,
+          receiver: depositorAccount.addr,
+          assetId: lstTokenId,
+          amount: withdrawAmount,
+          note: 'Returning cXUSD to contract',
+        })
+
+        await xUSDLendingContractClient.send.withdrawDeposit({
+          args: [axferTxn, withdrawAmount, xUSDLendingContractClient.appId],
+          assetReferences: [lstTokenId],
+          appReferences: [xUSDLendingContractClient.appId],
+        })
+
+        // Get xUSD asset balance prior to withdraw call
+        const xUSDUserTokenInfoAfter = await algod.accountAssetInformation(depositorAccount.addr, xUSDAssetId).do()
+        expect(xUSDUserTokenInfoAfter).toBeDefined()
+        const xUSDUserBalanceAfterWithdraw = xUSDUserTokenInfoAfter.assetHolding?.amount || 0n
+
+        expect(xUSDUserBalanceAfterWithdraw).toEqual(xUSDUserBalanceBeforeWithdraw + withdrawAmount)
+
+        const lstTokenBalanceInfoAfter = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
+        expect(lstTokenBalanceInfoAfter).toBeDefined()
+        expect(lstTokenBalanceInfoAfter.assetHolding?.amount).toEqual(lstTokenBalanceBeforeWithdraw - withdrawAmount)
+      }
     }
   })
 })

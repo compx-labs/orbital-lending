@@ -21,8 +21,8 @@
 ## 💰 3. Deposits & Withdrawals
 - [x] Deposit base token into protocol  
 - [ ] Receive LST correctly based on deposit ratio  
-- [ ] Withdraw deposit (LST burn → ASA returned)  
-- [ ] Confirm balances after deposit/withdraw  
+- [x] Withdraw deposit (LST burn → ASA returned)  
+- [x] Confirm balances after deposit/withdraw  
 - [ ] Test calculateASADue and calculateLSTDue logic  
 
 ## 🏦 4. Borrowing
