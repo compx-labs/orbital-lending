@@ -193,14 +193,15 @@ export class OrbitalLending extends Contract {
     return this.accepted_collaterals_count.value
   }
 
-  getOraclePrice(tokenId: uint64): uint64 {
+  getOraclePrice(tokenId: UintN64): uint64 {
     const oracle: Application = this.oracle_app.value
     const address = oracle.address
     const contractAppId = oracle.id
 
     const result = abiCall(PriceOracleStub.prototype.getTokenPrice, {
       appId: contractAppId,
-      args: [new UintN64(tokenId)],
+      args: [tokenId],
+      fee: 1000,
     }).returnValue
 
     return result.price.native
@@ -260,7 +261,7 @@ export class OrbitalLending extends Contract {
       .submit()
     this.last_added_collateral.value = collateralTokenId
 
-      assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
+    assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
   private calculateLSTDue(amount: uint64): uint64 {
@@ -380,13 +381,14 @@ export class OrbitalLending extends Contract {
     requestedLoanAmount: uint64,
     lstApp: uint64,
     collateralTokenId: UintN64,
-    arc19MetadataStr: bytes,
+    templateReserveAddress: Account,
+    arc19MetaDataStr: string,
     mbrTxn: gtxn.PaymentTxn,
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
     assertMatch(mbrTxn, {
-      amount: 4000, 
+      amount: 4000,
     })
 
     // ─── 1. Validate the collateral deposit ────────────────────────────────
@@ -399,15 +401,21 @@ export class OrbitalLending extends Contract {
 
     // ─── 2. Price & LTV check (same for both branches) ─────────────────────
     const acceptedCollateral = this.getCollateral(collateralTokenId)
-    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, { appId: lstApp }).returnValue
-    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, { appId: lstApp }).returnValue
+    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstApp,
+      fee: 1000,
+    }).returnValue
+    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstApp,
+      fee: 1000,
+    }).returnValue
 
     // Convert LST→underlying
     const [hC, lC] = mulw(totalDepositsExternal, collateralDeposit)
     const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
 
     // Price via oracle
-    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     const [hU, lU] = mulw(underlyingCollateral, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
 
@@ -449,7 +457,7 @@ export class OrbitalLending extends Contract {
         old.collateralTokenId,
         op.Txn.sender,
         totalCollateral,
-        arc19MetadataStr,
+        templateReserveAddress,
         old.loanRecordASAId.native,
       )
 
@@ -474,7 +482,8 @@ export class OrbitalLending extends Contract {
         collateralTokenId,
         op.Txn.sender,
         collateralDeposit,
-        arc19MetadataStr,
+        arc19MetaDataStr,
+        templateReserveAddress,
       )
     }
 
@@ -505,14 +514,14 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
-    arc19MetadataStr: bytes,
+    templateReserveAddress: Account,
     assetId: uint64,
   ): void {
     const asset = itxn
       .assetConfig({
         manager: Global.currentApplicationAddress,
         sender: Global.currentApplicationAddress,
-        reserve: arc19MetadataStr,
+        reserve: templateReserveAddress,
         configAsset: assetId,
         fee: 1000,
       })
@@ -538,25 +547,19 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
-    arc19MetadataStr: bytes,
+    arc19MetadataStr: string,
+    templateReserveAddress: Account,
   ): void {
     const asset = itxn
       .assetConfig({
         assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
-        url:
-          String(borrowerAddress.bytes) +
-          ':' +
-          String(collateralTokenId.bytes) +
-          ':' +
-          String(new UintN64(scaledDownDisbursement).bytes) +
-          ':' +
-          String(new UintN64(Global.latestTimestamp).bytes),
+        url: arc19MetadataStr,
         manager: Global.currentApplicationAddress,
         decimals: 0,
         total: disbursement,
         sender: Global.currentApplicationAddress,
-        unitName: 'r' + String(collateralTokenId.bytes) + String(this.base_token_id.value.bytes),
-        reserve: arc19MetadataStr,
+        unitName: 'CMPXLR',
+        reserve: templateReserveAddress,
         freeze: Global.currentApplicationAddress,
         clawback: Global.currentApplicationAddress,
         defaultFrozen: false,
@@ -664,7 +667,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, arc19MetaDataStr: bytes): void {
+  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, templateReserveAddress: Account): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -710,14 +713,14 @@ export class OrbitalLending extends Contract {
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
-        arc19MetaDataStr, // arc19 metadata
+        templateReserveAddress, // arc19 metadata
         loanRecordASAId, // existing ASA ID to update
       )
     }
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, arc19MetaDataStr: bytes): void {
+  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, templateReserveAddress: Account): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(paymentTxn, {
       receiver: Global.currentApplicationAddress,
@@ -763,7 +766,7 @@ export class OrbitalLending extends Contract {
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
-        arc19MetaDataStr, // arc19 metadata
+        templateReserveAddress, // arc19 metadata
         loanRecordASAId, // existing ASA ID to update
       )
     }
@@ -783,7 +786,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  accrueLoanInterest(debtor: Account, arc19MetaDataStr: bytes): void {
+  accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     //Apply interest
@@ -796,7 +799,7 @@ export class OrbitalLending extends Contract {
       currentLoanRecord.collateralTokenId,
       debtor,
       currentLoanRecord.collateralAmount.native,
-      arc19MetaDataStr,
+      templateReserveAddress,
       currentLoanRecord.loanRecordASAId.native, // existing ASA ID to update
     )
     //Update box storage
@@ -817,7 +820,7 @@ export class OrbitalLending extends Contract {
     assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
 
     // Price via oracle
-    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     const [hU, lU] = mulw(collateralAmount, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
     const CR: uint64 = collateralUSD / debtAmount
@@ -885,7 +888,7 @@ export class OrbitalLending extends Contract {
     assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
 
     // Price via oracle
-    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     const [hU, lU] = mulw(collateralAmount, oraclePrice)
     const collateralUSD: uint64 = divw(hU, lU, 1)
     const CR: uint64 = collateralUSD / debtAmount
@@ -948,7 +951,7 @@ export class OrbitalLending extends Contract {
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
-    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice = this.getOraclePrice(collateralTokenId)
     const [h, l] = mulw(collateralAmount, oraclePrice)
     const collateralUSD = divw(h, l, 1)
 
@@ -1011,7 +1014,7 @@ export class OrbitalLending extends Contract {
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
-    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice = this.getOraclePrice(collateralTokenId)
     const [h, l] = mulw(collateralAmount, oraclePrice)
     const collateralUSD = divw(h, l, 1)
 
@@ -1082,7 +1085,7 @@ export class OrbitalLending extends Contract {
     const liqBps: uint64 = this.liq_threshold_bps.value
 
     const acceptedCollateral = this.getCollateral(record.collateralTokenId)
-    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const oraclePrice = this.getOraclePrice(record.collateralTokenId)
     const [hi, lo] = mulw(collateralAmount, oraclePrice)
     const collateralValueUSD = divw(hi, lo, 1)
 
