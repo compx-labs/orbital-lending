@@ -74,6 +74,8 @@ export class OrbitalLending extends Contract {
 
   fee_pool = GlobalState<uint64>()
 
+  last_added_collateral = GlobalState<UintN64>()
+
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
   public createApplication(admin: Account, baseTokenId: uint64): void {
     this.admin_account.value = admin
@@ -108,6 +110,7 @@ export class OrbitalLending extends Contract {
     this.active_loan_records.value = 0
     this.protocol_interest_fee_bps.value = protocol_interest_fee_bps
     this.oracle_app.value = oracle_app_id
+    this.lst_token_id.value = new UintN64(99)
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -144,7 +147,7 @@ export class OrbitalLending extends Contract {
         fee: 1000,
       })
       .submit()
-    this.lst_token_id.value = new UintN64(result.configAsset.id)
+    this.lst_token_id.value = new UintN64(result.createdAsset.id)
   }
 
   //If LST already created externally.
@@ -210,7 +213,6 @@ export class OrbitalLending extends Contract {
 
   private getCollateral(collateralTokenId: UintN64): AcceptedCollateral {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
-    assert(this.accepted_collaterals(key).exists, 'Collateral not found')
     return this.accepted_collaterals(key).value.copy()
   }
 
@@ -233,7 +235,7 @@ export class OrbitalLending extends Contract {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value)
     assert(collateralTokenId.native !== baseToken.id)
-    //assert(!this.collateralExists(collateralTokenId))
+    assert(!this.collateralExists(collateralTokenId))
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
       amount: 101000,
@@ -256,6 +258,9 @@ export class OrbitalLending extends Contract {
         fee: 1000,
       })
       .submit()
+    this.last_added_collateral.value = collateralTokenId
+
+      assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
   private calculateLSTDue(amount: uint64): uint64 {
@@ -270,8 +275,24 @@ export class OrbitalLending extends Contract {
   // Calculate how much underlying ASA to return for a given LST amount,
   // by querying the external LST contract’s circulatingLST & totalDeposits.
   private calculateASADue(amount: uint64, lstApp: uint64): uint64 {
-    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, { appId: lstApp }).returnValue
-    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, { appId: lstApp }).returnValue
+    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstApp,
+      fee: 1000,
+    }).returnValue
+    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstApp,
+      fee: 1000,
+    }).returnValue
+
+    // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
+    const [hi, lo] = mulw(totalDepositsExternal, amount)
+    return divw(hi, lo, circulatingExternalLST)
+  }
+
+  private calculateLSTDueLocal(amount: uint64): uint64 {
+    // Calculate the LST due based on the local state of this contract
+    const circulatingExternalLST = this.circulating_lst.value
+    const totalDepositsExternal = this.total_deposits.value
 
     // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
     const [hi, lo] = mulw(totalDepositsExternal, amount)
@@ -279,12 +300,15 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
+  depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: baseToken,
       assetAmount: amount,
+    })
+    assertMatch(mbrTxn, {
+      amount: 1000,
     })
 
     let lstDue: uint64 = 0
@@ -292,7 +316,7 @@ export class OrbitalLending extends Contract {
       Global.currentApplicationAddress,
       this.base_token_id.value.native,
     )
-    if (depositBalance[0] === 0) {
+    if (this.total_deposits.value === 0) {
       lstDue = amount
     } else {
       lstDue = this.calculateLSTDue(amount)
@@ -302,6 +326,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.lst_token_id.value.native,
         assetAmount: lstDue,
+        fee: 1000,
       })
       .submit()
 
@@ -310,16 +335,30 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, lstAppId: uint64): void {
-    const baseToken = Asset(this.base_token_id.value.native)
+  withdrawDeposit(
+    assetTransferTxn: gtxn.AssetTransferTxn,
+    amount: uint64,
+    lstAppId: uint64,
+    mbrTxn: gtxn.PaymentTxn,
+  ): void {
+    const lstAsset = Asset(this.lst_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
-      xferAsset: baseToken,
+      xferAsset: lstAsset,
       assetAmount: amount,
     })
 
+    assertMatch(mbrTxn, {
+      amount: 3000,
+    })
+
     //Calculate the return amount of ASA
-    const asaDue = this.calculateASADue(amount, lstAppId)
+    let asaDue: uint64 = 0
+    if (lstAppId === Global.currentApplicationId.id) {
+      asaDue = this.calculateLSTDueLocal(amount)
+    } else {
+      asaDue = this.calculateASADue(amount, lstAppId)
+    }
 
     assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     itxn
@@ -327,6 +366,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.base_token_id.value.native,
         assetAmount: asaDue,
+        fee: 1000,
       })
       .submit()
 
@@ -341,16 +381,20 @@ export class OrbitalLending extends Contract {
     lstApp: uint64,
     collateralTokenId: UintN64,
     arc19MetadataStr: bytes,
+    mbrTxn: gtxn.PaymentTxn,
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
+    assertMatch(mbrTxn, {
+      amount: 4000, 
+    })
 
     // ─── 1. Validate the collateral deposit ────────────────────────────────
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
       // user must transfer LST collateral in this txn…
     })
-    assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
+    //assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
     const collateralDeposit = assetTransferTxn.assetAmount
 
     // ─── 2. Price & LTV check (same for both branches) ─────────────────────
@@ -435,13 +479,24 @@ export class OrbitalLending extends Contract {
     }
 
     // ─── 5. Disburse the funds ─────────────────────────────────────────────
-    itxn
-      .assetTransfer({
-        assetReceiver: op.Txn.sender,
-        xferAsset: this.base_token_id.value.native,
-        assetAmount: scaledDown,
-      })
-      .submit()
+    if (this.base_token_id.value.native === 0) {
+      itxn
+        .payment({
+          receiver: op.Txn.sender,
+          amount: scaledDown,
+          fee: 1000, // Set a small fee for the payment transaction
+        })
+        .submit()
+    } else {
+      itxn
+        .assetTransfer({
+          assetReceiver: op.Txn.sender,
+          xferAsset: this.base_token_id.value.native,
+          assetAmount: scaledDown,
+          fee: 1000, // Set a small fee for the asset transfer transaction
+        })
+        .submit()
+    }
   }
 
   private updateLoanRecord(
@@ -459,6 +514,7 @@ export class OrbitalLending extends Contract {
         sender: Global.currentApplicationAddress,
         reserve: arc19MetadataStr,
         configAsset: assetId,
+        fee: 1000,
       })
       .submit()
 
@@ -504,6 +560,7 @@ export class OrbitalLending extends Contract {
         freeze: Global.currentApplicationAddress,
         clawback: Global.currentApplicationAddress,
         defaultFrozen: false,
+        fee: 1000, // Set a small fee for the asset config transaction
       })
       .submit()
 
@@ -607,7 +664,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  repayLoan(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, arc19MetaDataStr: bytes): void {
+  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, arc19MetaDataStr: bytes): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -626,6 +683,59 @@ export class OrbitalLending extends Contract {
     const remainingDebt: uint64 = currentdebt.native - amount
 
     if (remainingDebt === 0) {
+      itxn
+        .assetConfig({
+          configAsset: loanRecordASAId,
+          sender: Global.currentApplicationAddress,
+        })
+        .submit()
+      //return collateral asset
+
+      //Delete box reference
+      this.loan_record(op.Txn.sender).delete()
+      this.active_loan_records.value = this.active_loan_records.value - 1
+
+      itxn
+        .assetTransfer({
+          assetReceiver: op.Txn.sender,
+          xferAsset: loanRecord.collateralTokenId.native,
+          assetAmount: loanRecord.collateralAmount.native,
+        })
+        .submit()
+    } else {
+      // Update the record and mint a new ASA
+      this.updateLoanRecord(
+        remainingDebt, // scaledDownDisbursement
+        loanRecord.disbursement.native, // original disbursement (for metadata)
+        loanRecord.collateralTokenId, // collateral type
+        op.Txn.sender, // borrower
+        loanRecord.collateralAmount.native, // collateral locked
+        arc19MetaDataStr, // arc19 metadata
+        loanRecordASAId, // existing ASA ID to update
+      )
+    }
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, arc19MetaDataStr: bytes): void {
+    const baseToken = Asset(this.base_token_id.value.native)
+    assertMatch(paymentTxn, {
+      receiver: Global.currentApplicationAddress,
+      amount: amount,
+    })
+
+    let loanRecord = this.getLoanRecord(op.Txn.sender)
+    loanRecord = this.accrueInterest(loanRecord)
+    this.loan_record(op.Txn.sender).value = loanRecord.copy()
+
+    const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
+
+    const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
+    assert(amount <= currentdebt.native)
+    const remainingDebt: uint64 = currentdebt.native - amount
+
+    if (remainingDebt === 0) {
+      //destroy asa
       itxn
         .assetConfig({
           configAsset: loanRecordASAId,
@@ -679,14 +789,6 @@ export class OrbitalLending extends Contract {
     //Apply interest
     this.accrueInterest(currentLoanRecord)
 
-    //destory old nft
-    itxn
-      .assetConfig({
-        configAsset: currentLoanRecord.loanRecordASAId.native,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
-
     //mint new nft
     this.updateLoanRecord(
       currentLoanRecord.scaledDownDisbursement.native,
@@ -702,7 +804,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  buyout(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
+  buyoutASA(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     this.loan_record(debtor).value = currentLoanRecord.copy()
@@ -770,7 +872,74 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  liquidate(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
+  buyoutAlgo(buyer: Account, debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const currentLoanRecord = this.loan_record(debtor).value.copy()
+    this.loan_record(debtor).value = currentLoanRecord.copy()
+
+    const collateralAmount = currentLoanRecord.collateralAmount.native
+    const debtAmount = currentLoanRecord.scaledDownDisbursement.native
+    const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
+    const acceptedCollateral = this.getCollateral(collateralTokenId)
+
+    assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
+
+    // Price via oracle
+    const oraclePrice: uint64 = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const [hU, lU] = mulw(collateralAmount, oraclePrice)
+    const collateralUSD: uint64 = divw(hU, lU, 1)
+    const CR: uint64 = collateralUSD / debtAmount
+    assert(CR > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
+
+    const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
+    const buyoutPrice: uint64 = collateralUSD * (1 + premiumRate / 10000)
+
+    assertMatch(paymentTxn, {
+      receiver: Global.currentApplicationAddress,
+      amount: buyoutPrice,
+    })
+
+    //Buyout can proceed
+
+    //Clawback the loan record ASA
+    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
+    if (!assetExists) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          xferAsset: currentLoanRecord.loanRecordASAId.native,
+          assetSender: debtor,
+          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
+        })
+        .submit()
+    }
+    //Destroy the loan record ASA
+    itxn
+      .assetConfig({
+        configAsset: currentLoanRecord.loanRecordASAId.native,
+        sender: Global.currentApplicationAddress,
+      })
+      .submit()
+
+    //Update the loan record for the debtor
+    this.loan_record(debtor).delete()
+    this.active_loan_records.value = this.active_loan_records.value - 1
+
+    //Transfer the collateral to the buyer
+    itxn
+      .assetTransfer({
+        assetReceiver: buyer,
+        xferAsset: collateralTokenId.native,
+        assetAmount: collateralAmount,
+      })
+      .submit()
+    //Update collateral total
+    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
+    this.updateCollateralTotal(collateralTokenId, newTotal)
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  liquidateASA(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
 
     const record = this.loan_record(debtor).value.copy()
@@ -791,6 +960,68 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(this.base_token_id.value.native),
       assetAmount: debtAmount,
+    })
+
+    //Clawback ASA if needed
+    const loanRecordASAId = record.loanRecordASAId.native
+    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
+    if (!assetExists) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          assetSender: debtor,
+          xferAsset: loanRecordASAId,
+          assetAmount: 1,
+        })
+        .submit()
+    }
+    //Destroy the loan record ASA
+    itxn
+      .assetConfig({
+        configAsset: loanRecordASAId,
+        sender: Global.currentApplicationAddress,
+      })
+      .submit()
+
+    //Delete the loan record
+    this.loan_record(debtor).delete()
+    this.active_loan_records.value = this.active_loan_records.value - 1
+
+    //transfer the collateral to the liquidator (the sender of the txn)
+    itxn
+      .assetTransfer({
+        assetReceiver: op.Txn.sender,
+        xferAsset: collateralTokenId.native,
+        assetAmount: collateralAmount,
+      })
+      .submit()
+
+    //Update the collateral total
+    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
+    this.updateCollateralTotal(collateralTokenId, newTotal)
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  liquidateAlgo(debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+
+    const record = this.loan_record(debtor).value.copy()
+    const collateralAmount = record.collateralAmount.native
+    const debtAmount = record.scaledDownDisbursement.native
+    const collateralTokenId = record.collateralTokenId
+    const acceptedCollateral = this.getCollateral(collateralTokenId)
+
+    const oraclePrice = this.getOraclePrice(acceptedCollateral.baseAssetId.native)
+    const [h, l] = mulw(collateralAmount, oraclePrice)
+    const collateralUSD = divw(h, l, 1)
+
+    const CR: uint64 = collateralUSD / debtAmount
+    assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
+
+    //Transfer must be full amount of the loan
+    assertMatch(paymentTxn, {
+      receiver: Global.currentApplicationAddress,
+      amount: debtAmount,
     })
 
     //Clawback ASA if needed

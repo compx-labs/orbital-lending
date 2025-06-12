@@ -5,9 +5,10 @@ export interface getBoxValueReturnType {
   assetId: bigint
   baseAssetId: bigint
   totalCollateral: bigint
+  boxRef: algosdk.BoxReference
 }
 
-export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient): Promise<getBoxValueReturnType> {
+export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient, appId: bigint): Promise<getBoxValueReturnType> {
   const acceptedCollateralType = new algosdk.ABITupleType([
     new algosdk.ABIUintType(64), // assetId
     new algosdk.ABIUintType(64), // baseAssetId
@@ -30,5 +31,9 @@ export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient
     assetId,
     baseAssetId,
     totalCollateral,
+    boxRef: {
+      appIndex: appId,
+      name: new TextEncoder().encode('accepted_collaterals' + index)
+    }
   }
 }

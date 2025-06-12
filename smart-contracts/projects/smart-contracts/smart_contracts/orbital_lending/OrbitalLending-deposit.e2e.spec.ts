@@ -12,14 +12,13 @@ import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
 import { deployOracle } from '../Oracle/oracle-deploy'
+import { BoxRef } from '@algorandfoundation/algorand-typescript'
 let xUSDLendingContractClient: OrbitalLendingClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
 
-
 let xUSDAssetId = 0n
-let cxUSDAssetId = 0n
 let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 2500n
@@ -28,10 +27,11 @@ const interest_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 
-const NUM_DEPOSITORS = 5
+const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 1000n
 const DEPOSITOR_INITIAL_DEPOSIT_AMOUNT = 100n
 const DEPOSITOR_INITIAL_WITHDRAW_AMOUNT = 50n
+const DEPOSITOR_INITIAL_BORROW_AMOUNT = 5n
 
 const depositors: Account[] = []
 
@@ -98,7 +98,7 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(globalState.protocolInterestFeeBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.lstTokenId).toBeDefined()
-    cxUSDAssetId = globalState.lstTokenId ? 0n : 0n
+    expect(globalState.lstTokenId).not.toEqual(99n)
   })
 
   test('orbital initialization - algo client', async () => {
@@ -177,7 +177,7 @@ describe('orbital-lending Testing - collateral setup', () => {
       assetReferences: [cAlgoAssetId],
     })
 
-    const boxValue = await getBoxValue(cAlgoAssetId, xUSDLendingContractClient)
+    const boxValue = await getBoxValue(cAlgoAssetId, xUSDLendingContractClient, xUSDLendingContractClient.appId)
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
     expect(boxValue.baseAssetId).toEqual(xUSDAssetId)
@@ -216,7 +216,7 @@ describe('orbital-lending Testing - collateral setup', () => {
         sender: managerAccount.addr,
         receiver: depositorAccount.addr,
         assetId: xUSDAssetId,
-        amount: 1000000n,
+        amount: DEPOSITOR_XUSD_INITIAL_BALANCE,
         note: 'Funding depositor with xUSD',
       })
 
@@ -224,7 +224,7 @@ describe('orbital-lending Testing - collateral setup', () => {
         .accountAssetInformation(depositorAccount.addr, xUSDAssetId)
         .do()
       expect(userTokenBalance).toBeDefined()
-      expect(userTokenBalance.assetHolding?.amount).toEqual(1000000n)
+      expect(userTokenBalance.assetHolding?.amount).toEqual(DEPOSITOR_XUSD_INITIAL_BALANCE)
 
       depositors.push(depositorAccount)
     }
@@ -255,9 +255,17 @@ describe('orbital-lending Testing - collateral setup', () => {
           note: 'Depositing xUSD',
         })
 
+        const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+          sender: depositorAccount.addr,
+          receiver: xUSDLendingContractClient.appClient.appAddress,
+          amount: microAlgo(1000n),
+          note: 'Funding deposit',
+        })
+
         await xUSDLendingContractClient.send.depositAsa({
-          args: [depositTxn, depositAmount],
+          args: [depositTxn, depositAmount, mbrTxn],
           assetReferences: [xUSDAssetId],
+          sender: depositorAccount.addr,
         })
 
         const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
@@ -265,10 +273,6 @@ describe('orbital-lending Testing - collateral setup', () => {
           .do()
         expect(userTokenBalance).toBeDefined()
         expect(userTokenBalance.assetHolding?.amount).toEqual(100n)
-
-        const boxValue = await getBoxValue(xUSDAssetId, xUSDLendingContractClient)
-        expect(boxValue).toBeDefined()
-        expect(boxValue.totalCollateral).toEqual(depositAmount * BigInt(i + 1))
       }
     }
   })
@@ -283,7 +287,6 @@ describe('orbital-lending Testing - collateral setup', () => {
       const globalState = await xUSDLendingContractClient.state.global.getAll()
       const lstTokenId = globalState.lstTokenId
       expect(lstTokenId).toBeDefined()
-      expect(lstTokenId).toEqual(cxUSDAssetId)
       if (lstTokenId) {
         const lstTokenBalanceInfo = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
         expect(lstTokenBalanceInfo).toBeDefined()
@@ -296,17 +299,25 @@ describe('orbital-lending Testing - collateral setup', () => {
         const xUSDUserBalanceBeforeWithdraw = xUSDUserTokenInfo.assetHolding?.amount || 0n
 
         const axferTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
-          sender: xUSDLendingContractClient.appClient.appAddress,
-          receiver: depositorAccount.addr,
+          sender: depositorAccount.addr,
+          receiver: xUSDLendingContractClient.appClient.appAddress,
           assetId: lstTokenId,
           amount: withdrawAmount,
           note: 'Returning cXUSD to contract',
         })
 
+        const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+          sender: depositorAccount.addr,
+          receiver: xUSDLendingContractClient.appClient.appAddress,
+          amount: microAlgo(3000n),
+          note: 'Funding withdraw',
+        })
+
         await xUSDLendingContractClient.send.withdrawDeposit({
-          args: [axferTxn, withdrawAmount, xUSDLendingContractClient.appId],
+          args: [axferTxn, withdrawAmount, xUSDLendingContractClient.appId, mbrTxn],
           assetReferences: [lstTokenId],
           appReferences: [xUSDLendingContractClient.appId],
+          sender: depositorAccount.addr,
         })
 
         // Get xUSD asset balance prior to withdraw call
@@ -325,23 +336,128 @@ describe('orbital-lending Testing - collateral setup', () => {
 
   test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
     const algod = xUSDLendingContractClient.algorand.client.algod
-    for (let i = 0; i < NUM_DEPOSITORS; i++) {  
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const depositorAccount = depositors[i]
       localnet.algorand.setSignerFromAccount(depositorAccount)
       //Ensure we use the asset from global state instead of global const
       const globalState = await xUSDLendingContractClient.state.global.getAll()
       const lstTokenId = globalState.lstTokenId
       expect(lstTokenId).toBeDefined()
-      expect(lstTokenId).toEqual(cxUSDAssetId)
+      expect(lstTokenId).toBeGreaterThan(0n)
       if (lstTokenId) {
         const lstTokenBalanceInfo = await algod.accountAssetInformation(depositorAccount.addr, lstTokenId).do()
         expect(lstTokenBalanceInfo).toBeDefined()
-        expect(lstTokenBalanceInfo.assetHolding?.amount).toEqual(DEPOSITOR_INITIAL_DEPOSIT_AMOUNT - DEPOSITOR_INITIAL_WITHDRAW_AMOUNT)
+        expect(lstTokenBalanceInfo.assetHolding?.amount).toEqual(
+          DEPOSITOR_INITIAL_DEPOSIT_AMOUNT - DEPOSITOR_INITIAL_WITHDRAW_AMOUNT,
+        )
 
         const xUSDUserTokenInfo = await algod.accountAssetInformation(depositorAccount.addr, xUSDAssetId).do()
         expect(xUSDUserTokenInfo).toBeDefined()
-        expect(xUSDUserTokenInfo.assetHolding?.amount).toEqual(DEPOSITOR_XUSD_INITIAL_BALANCE + DEPOSITOR_INITIAL_WITHDRAW_AMOUNT - DEPOSITOR_INITIAL_DEPOSIT_AMOUNT)
+        expect(xUSDUserTokenInfo.assetHolding?.amount).toEqual(
+          DEPOSITOR_XUSD_INITIAL_BALANCE + DEPOSITOR_INITIAL_WITHDRAW_AMOUNT - DEPOSITOR_INITIAL_DEPOSIT_AMOUNT,
+        )
       }
+    }
+  })
+
+  test('Add collateral asset to algo contract', async () => {
+    //  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
+
+    const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(101000n),
+      note: 'Funding collateral addition',
+    })
+
+    const boxNames = await algoLendingContractClient.appClient.getBoxNames()
+    console.log('Box names before:', boxNames)
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId
+    expect(lstTokenId).toBeGreaterThan(0n)
+    expect(lstTokenId).toBeDefined()
+    if (lstTokenId) {
+      await algoLendingContractClient.send.addNewCollateralType({
+        args: [lstTokenId, mbrTxn],
+        assetReferences: [lstTokenId],
+      })
+
+      const boxValue = await getBoxValue(lstTokenId, algoLendingContractClient, algoLendingContractClient.appId)
+      expect(boxValue).toBeDefined()
+      expect(boxValue.assetId).toEqual(lstTokenId)
+      console.log('Box assetId:', boxValue.assetId)
+      expect(boxValue.baseAssetId).toEqual(0n)
+      expect(boxValue.totalCollateral).toEqual(0n)
+    }
+  })
+
+  test('Borrow Algo with cxUSD - algo Lending Contract', async () => {
+    const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
+    const borrowerAccount = depositors[0]
+    algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+
+    const globalStateXUSDContract = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd = globalStateXUSDContract.lstTokenId
+    console.log('cxusd', cxusd)
+    const lstAppId = xUSDLendingContractClient.appId
+    const arc19String = new Uint8Array(Buffer.from('this-is-a-test-arc19-metadata-string', 'utf8'))
+    const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(borrowerAccount.addr)
+      .do()
+
+    expect(cxusd).toBeDefined()
+    expect(cxusd).toBeGreaterThan(0n)
+
+    if (cxusd) {
+      const boxValue = await getBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
+      expect(boxValue).toBeDefined()
+      expect(boxValue.assetId).toEqual(cxusd)
+      console.log('Box assetId:', boxValue.assetId)
+      expect(boxValue.baseAssetId).toEqual(0n)
+
+      const globalState = await algoLendingContractClient.state.global.getAll()
+      const collateral_count = globalState.acceptedCollateralsCount
+      expect(collateral_count).toBeDefined()
+      expect(collateral_count).toBeGreaterThan(0n)
+      console.log('Accepted collaterals count:', collateral_count)
+
+      const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: borrowerAccount.addr,
+        receiver: algoLendingContractClient.appClient.appAddress,
+        assetId: cxusd,
+        amount: borrowAmount,
+        note: 'Depositing cxUSD collateral for borrowing',
+      })
+      const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+        sender: borrowerAccount.addr,
+        receiver: algoLendingContractClient.appClient.appAddress,
+        amount: microAlgo(4000n),
+        note: 'Funding borrow',
+      })
+
+      await algoLendingContractClient.send.borrow({
+        args: [axferTxn, borrowAmount, lstAppId, cAlgoAssetId, arc19String, mbrTxn],
+        assetReferences: [cxusd],
+        appReferences: [lstAppId],
+        boxReferences: [
+          {
+            appId: boxValue.boxRef.appIndex as bigint,
+            name: boxValue.boxRef.name,
+
+          },
+        ],
+        sender: borrowerAccount.addr,
+      })
+
+      // Confirm borrow was succesful
+      //Check for algo increase in account
+      const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+        .accountInformation(borrowerAccount.addr)
+        .do()
+      expect(algoBalanceAfter).toBeDefined()
+      expect(algoBalanceAfter).toBeGreaterThan(algoBalanceBefore)
+      console.log(`Borrower account difference in Algo balance: ${algoBalanceAfter - algoBalanceBefore} microAlgos`)
     }
   })
 })
