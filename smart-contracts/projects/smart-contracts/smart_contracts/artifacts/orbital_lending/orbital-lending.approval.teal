@@ -3,29 +3,40 @@
 
 // @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
 main:
-    intcblock 0 1 4 1000 10000 4294967296
-    bytecblock "base_token_id" "active_loan_records" "loan_record" "admin_account" 0x151f7c75 "total_deposits" "circulating_lst" "liq_threshold_bps" "accepted_collaterals" "fee_pool" "lst_token_id" "accepted_collaterals_count" 0x09ef525f 0xae859f3b "ltv_bps" "interest_bps" "origination_fee_bps" "protocol_interest_fee_bps" "oracle_app"
+    intcblock 0 1 4 1000 10000
+    bytecblock "base_token_id" "active_loan_records" "loan_record" "total_deposits" "admin_account" 0x151f7c75 "circulating_lst" "liq_threshold_bps" "accepted_collaterals" "fee_pool" "lst_token_id" "accepted_collaterals_count" 0x09ef525f 0xae859f3b "ltv_bps" "interest_bps" "origination_fee_bps" "protocol_interest_fee_bps" "oracle_app"
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:32-33
     // @contract({ name: 'orbital-lending', avmVersion: 11 })
     // export class OrbitalLending extends Contract {
     txn NumAppArgs
-    bz main_after_if_else@31
+    bz main_after_if_else@33
     pushbytess 0x3b01665e 0x9de42732 0x17c33662 0x5efce39a 0x5cac25a9 // method "createApplication(account,uint64)void", method "initApplication(pay,uint64,uint64,uint64,uint64,uint64,application)void", method "generateLSTToken(pay)void", method "optInToLST(uint64,pay)void", method "configureLSTToken(axfer,uint64)void"
     bytec 12 // method "getCirculatingLST()uint64"
     bytec 13 // method "getTotalDeposits()uint64"
-    pushbytess 0x6c6337c0 0xe596ac73 0x53b5111f 0x72c5c57b 0x3e41a49b 0x1a99f82e 0x6177ca28 0xf676074f 0xabaf9805 0xbe1256e6 0xb95560e0 0x96da416e 0x8553cffa 0x1dffadde 0xf0eda6a8 0x836dbb73 0xf16507ce 0xdaa7f7f2 // method "getAcceptedCollateralsCount()uint64", method "getOraclePrice(uint64)uint64", method "addNewCollateralType(uint64,pay)void", method "depositASA(axfer,uint64,pay)void", method "withdrawDeposit(axfer,uint64,uint64,pay)void", method "borrow(axfer,uint64,uint64,uint64,account,string,pay)void", method "claimLoanRecordASA(account,asset)void", method "getLoanRecord(account)(address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)", method "getLoanRecordASAId(account)uint64", method "repayLoanASA(axfer,uint64,account)void", method "repayLoanAlgo(pay,uint64,account)void", method "withdrawFees()void", method "accrueLoanInterest(account,account)void", method "buyoutASA(account,account,axfer)void", method "buyoutAlgo(account,account,pay)void", method "liquidateASA(account,axfer)void", method "liquidateAlgo(account,pay)void", method "getLoanStatus(account)(uint64,uint64,uint64,uint64,uint64,bool,bool)"
+    pushbytess 0x6c6337c0 0xe596ac73 0x53b5111f 0x72c5c57b 0xbae4c238 0x3e41a49b 0x1a99f82e 0x6177ca28 0xf676074f 0xabaf9805 0xbe1256e6 0xb95560e0 0x96da416e 0x8553cffa 0x1dffadde 0xf0eda6a8 0x836dbb73 0xf16507ce 0xdaa7f7f2 0x3172ca9d // method "getAcceptedCollateralsCount()uint64", method "getOraclePrice(uint64)uint64", method "addNewCollateralType(uint64,pay)void", method "depositASA(axfer,uint64,pay)void", method "depositAlgo(pay,uint64,pay)void", method "withdrawDeposit(axfer,uint64,uint64,pay)void", method "borrow(axfer,uint64,uint64,uint64,account,string,pay)void", method "claimLoanRecordASA(account,asset)void", method "getLoanRecord(account)(address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)", method "getLoanRecordASAId(account)uint64", method "repayLoanASA(axfer,uint64,account)void", method "repayLoanAlgo(pay,uint64,account)void", method "withdrawFees()void", method "accrueLoanInterest(account,account)void", method "buyoutASA(account,account,axfer)void", method "buyoutAlgo(account,account,pay)void", method "liquidateASA(account,axfer)void", method "liquidateAlgo(account,pay)void", method "getLoanStatus(account)(uint64,uint64,uint64,uint64,uint64,bool,bool)", method "gas()void"
     txna ApplicationArgs 0
-    match main_createApplication_route@3 main_initApplication_route@4 main_generateLSTToken_route@5 main_optInToLST_route@6 main_configureLSTToken_route@7 main_getCirculatingLST_route@8 main_getTotalDeposits_route@9 main_getAcceptedCollateralsCount_route@10 main_getOraclePrice_route@11 main_addNewCollateralType_route@12 main_depositASA_route@13 main_withdrawDeposit_route@14 main_borrow_route@15 main_claimLoanRecordASA_route@16 main_getLoanRecord_route@17 main_getLoanRecordASAId_route@18 main_repayLoanASA_route@19 main_repayLoanAlgo_route@20 main_withdrawFees_route@21 main_accrueLoanInterest_route@22 main_buyoutASA_route@23 main_buyoutAlgo_route@24 main_liquidateASA_route@25 main_liquidateAlgo_route@26 main_getLoanStatus_route@27
+    match main_createApplication_route@3 main_initApplication_route@4 main_generateLSTToken_route@5 main_optInToLST_route@6 main_configureLSTToken_route@7 main_getCirculatingLST_route@8 main_getTotalDeposits_route@9 main_getAcceptedCollateralsCount_route@10 main_getOraclePrice_route@11 main_addNewCollateralType_route@12 main_depositASA_route@13 main_depositAlgo_route@14 main_withdrawDeposit_route@15 main_borrow_route@16 main_claimLoanRecordASA_route@17 main_getLoanRecord_route@18 main_getLoanRecordASAId_route@19 main_repayLoanASA_route@20 main_repayLoanAlgo_route@21 main_withdrawFees_route@22 main_accrueLoanInterest_route@23 main_buyoutASA_route@24 main_buyoutAlgo_route@25 main_liquidateASA_route@26 main_liquidateAlgo_route@27 main_getLoanStatus_route@28 main_gas_route@29
 
-main_after_if_else@31:
+main_after_if_else@33:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:32-33
     // @contract({ name: 'orbital-lending', avmVersion: 11 })
     // export class OrbitalLending extends Contract {
     intc_0 // 0
     return
 
-main_getLoanStatus_route@27:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1069
+main_gas_route@29:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1152
+    // gas(): void {}
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    intc_1 // 1
+    return
+
+main_getLoanStatus_route@28:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1114
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -38,7 +49,7 @@ main_getLoanStatus_route@27:
     txna ApplicationArgs 1
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1069
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1114
     // @abimethod({ allowActions: 'NoOp' })
     callsub getLoanStatus
     uncover 6
@@ -76,15 +87,15 @@ main_getLoanStatus_route@27:
     pushint 321 // 321
     swap
     setbit
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
     intc_1 // 1
     return
 
-main_liquidateAlgo_route@26:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007
+main_liquidateAlgo_route@27:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1052
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -105,14 +116,14 @@ main_liquidateAlgo_route@26:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1052
     // @abimethod({ allowActions: 'NoOp' })
     callsub liquidateAlgo
     intc_1 // 1
     return
 
-main_liquidateASA_route@25:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:944
+main_liquidateASA_route@26:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:989
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -133,14 +144,14 @@ main_liquidateASA_route@25:
     intc_2 // axfer
     ==
     assert // transaction type is axfer
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:944
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:989
     // @abimethod({ allowActions: 'NoOp' })
     callsub liquidateASA
     intc_1 // 1
     return
 
-main_buyoutAlgo_route@24:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877
+main_buyoutAlgo_route@25:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:922
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -164,14 +175,14 @@ main_buyoutAlgo_route@24:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:922
     // @abimethod({ allowActions: 'NoOp' })
     callsub buyoutAlgo
     intc_1 // 1
     return
 
-main_buyoutASA_route@23:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:809
+main_buyoutASA_route@24:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:854
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -195,14 +206,14 @@ main_buyoutASA_route@23:
     intc_2 // axfer
     ==
     assert // transaction type is axfer
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:809
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:854
     // @abimethod({ allowActions: 'NoOp' })
     callsub buyoutASA
     intc_1 // 1
     return
 
-main_accrueLoanInterest_route@22:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:788
+main_accrueLoanInterest_route@23:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:833
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -218,14 +229,14 @@ main_accrueLoanInterest_route@22:
     txna ApplicationArgs 2
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:788
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:833
     // @abimethod({ allowActions: 'NoOp' })
     callsub accrueLoanInterest
     intc_1 // 1
     return
 
-main_withdrawFees_route@21:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:775
+main_withdrawFees_route@22:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:820
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -236,8 +247,8 @@ main_withdrawFees_route@21:
     intc_1 // 1
     return
 
-main_repayLoanAlgo_route@20:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:722
+main_repayLoanAlgo_route@21:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:767
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -260,14 +271,14 @@ main_repayLoanAlgo_route@20:
     txna ApplicationArgs 2
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:722
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:767
     // @abimethod({ allowActions: 'NoOp' })
     callsub repayLoanAlgo
     intc_1 // 1
     return
 
-main_repayLoanASA_route@19:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:669
+main_repayLoanASA_route@20:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:714
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -290,14 +301,14 @@ main_repayLoanASA_route@19:
     txna ApplicationArgs 2
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:669
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:714
     // @abimethod({ allowActions: 'NoOp' })
     callsub repayLoanASA
     intc_1 // 1
     return
 
-main_getLoanRecordASAId_route@18:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:665
+main_getLoanRecordASAId_route@19:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:710
     // getLoanRecordASAId(borrowerAddress: Account): uint64 {
     txn OnCompletion
     !
@@ -310,19 +321,19 @@ main_getLoanRecordASAId_route@18:
     txna ApplicationArgs 1
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:665
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:710
     // getLoanRecordASAId(borrowerAddress: Account): uint64 {
     callsub getLoanRecordASAId
     itob
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
     intc_1 // 1
     return
 
-main_getLoanRecord_route@17:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:661
+main_getLoanRecord_route@18:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:706
     // getLoanRecord(borrowerAddress: Account): LoanRecord {
     txn OnCompletion
     !
@@ -335,18 +346,18 @@ main_getLoanRecord_route@17:
     txna ApplicationArgs 1
     btoi
     txnas Accounts
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:661
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:706
     // getLoanRecord(borrowerAddress: Account): LoanRecord {
     callsub getLoanRecord
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
     intc_1 // 1
     return
 
-main_claimLoanRecordASA_route@16:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:584
+main_claimLoanRecordASA_route@17:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:629
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -362,14 +373,14 @@ main_claimLoanRecordASA_route@16:
     txna ApplicationArgs 2
     btoi
     txnas Assets
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:584
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:629
     // @abimethod({ allowActions: 'NoOp' })
     callsub claimLoanRecordASA
     intc_1 // 1
     return
 
-main_borrow_route@15:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:378
+main_borrow_route@16:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:407
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -405,14 +416,14 @@ main_borrow_route@15:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:378
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:407
     // @abimethod({ allowActions: 'NoOp' })
     callsub borrow
     intc_1 // 1
     return
 
-main_withdrawDeposit_route@14:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:338
+main_withdrawDeposit_route@15:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:367
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -442,14 +453,49 @@ main_withdrawDeposit_route@14:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:338
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:367
     // @abimethod({ allowActions: 'NoOp' })
     callsub withdrawDeposit
     intc_1 // 1
     return
 
+main_depositAlgo_route@14:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:337
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:32-33
+    // @contract({ name: 'orbital-lending', avmVersion: 11 })
+    // export class OrbitalLending extends Contract {
+    txn GroupIndex
+    pushint 2 // 2
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    txna ApplicationArgs 1
+    btoi
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:337
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub depositAlgo
+    intc_1 // 1
+    return
+
 main_depositASA_route@13:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:303
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:302
     // @abimethod({ allowActions: 'NoOp' })
     txn OnCompletion
     !
@@ -477,7 +523,7 @@ main_depositASA_route@13:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:303
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:302
     // @abimethod({ allowActions: 'NoOp' })
     callsub depositASA
     intc_1 // 1
@@ -525,7 +571,7 @@ main_getOraclePrice_route@11:
     // getOraclePrice(tokenId: UintN64): uint64 {
     callsub getOraclePrice
     itob
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
@@ -542,7 +588,7 @@ main_getAcceptedCollateralsCount_route@10:
     assert // can only call when not creating
     callsub getAcceptedCollateralsCount
     itob
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
@@ -559,7 +605,7 @@ main_getTotalDeposits_route@9:
     assert // can only call when not creating
     callsub getTotalDeposits
     itob
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
@@ -576,7 +622,7 @@ main_getCirculatingLST_route@8:
     assert // can only call when not creating
     callsub getCirculatingLST
     itob
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     swap
     concat
     log
@@ -732,7 +778,7 @@ createApplication:
     proto 2 0
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:81
     // this.admin_account.value = admin
     frame_dig -2
@@ -771,7 +817,7 @@ initApplication:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:95
@@ -788,7 +834,7 @@ initApplication:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:97-100
@@ -870,7 +916,7 @@ initApplication_bool_merge@4:
     app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:109
     // this.total_deposits.value = 0
     intc_0 // 0
@@ -985,7 +1031,7 @@ generateLSTToken:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:129
@@ -1002,7 +1048,7 @@ generateLSTToken:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:130-133
@@ -1162,7 +1208,7 @@ optInToLST:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:155
@@ -1179,7 +1225,7 @@ optInToLST:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:156-159
@@ -1283,7 +1329,7 @@ configureLSTToken:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:174
@@ -1313,7 +1359,7 @@ configureLSTToken:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:177-180
@@ -1376,7 +1422,7 @@ getTotalDeposits:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:189
@@ -1442,7 +1488,7 @@ getOraclePrice:
     itxn LastLog
     dup
     extract 0 4
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     ==
     assert // Bytes has valid prefix
     pushint 12 // 12
@@ -1537,7 +1583,7 @@ addNewCollateralType:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:237
@@ -1576,7 +1622,7 @@ addNewCollateralType:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:240-243
@@ -1706,18 +1752,11 @@ addNewCollateralType_bool_merge@4:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:77
-    // last_added_collateral = GlobalState<UintN64>()
-    pushbytes "last_added_collateral"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:262
-    // this.last_added_collateral.value = collateralTokenId
-    frame_dig -2
-    app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:212
     // return this.accepted_collaterals(key).exists
     box_len
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:264
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:263
     // assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
     assert // unsupported collateral
     retsub
@@ -1727,9 +1766,44 @@ addNewCollateralType_bool_false@3:
     b addNewCollateralType_bool_merge@4
 
 
+// smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.calculateLSTDue(amount: uint64) -> uint64:
+calculateLSTDue:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:266
+    // private calculateLSTDue(amount: uint64): uint64 {
+    proto 1 1
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
+    // circulating_lst = GlobalState<uint64>()
+    intc_0 // 0
+    bytec 6 // "circulating_lst"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:267
+    // const [highBits1, lowBits1] = mulw(this.circulating_lst.value, 10000)
+    intc 4 // 10000
+    mulw
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
+    // total_deposits = GlobalState<uint64>()
+    intc_0 // 0
+    bytec_3 // "total_deposits"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:269
+    // const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
+    divw
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:271
+    // const [highBits2, lowBits2] = mulw(lstRatio, amount)
+    frame_dig -1
+    mulw
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:272
+    // return divw(highBits2, lowBits2, 10000)
+    intc 4 // 10000
+    divw
+    retsub
+
+
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.depositASA(assetTransferTxn: uint64, amount: uint64, mbrTxn: uint64) -> void:
 depositASA:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:303-304
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:302-303
     // @abimethod({ allowActions: 'NoOp' })
     // depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     proto 3 0
@@ -1739,10 +1813,10 @@ depositASA:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:305
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:304
     // const baseToken = Asset(this.base_token_id.value.native)
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:306-310
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:305-309
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
@@ -1750,10 +1824,10 @@ depositASA:
     // })
     frame_dig -3
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:307
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:306
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:306-310
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:305-309
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
@@ -1774,23 +1848,23 @@ depositASA:
     intc_1 // 1
 
 depositASA_bool_merge@5:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:306-310
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:305-309
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:311-313
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:310-312
     // assertMatch(mbrTxn, {
     //   amount: 1000,
     // })
     frame_dig -1
     gtxns Amount
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:312
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:311
     // amount: 1000,
     intc_3 // 1000
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:311-313
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:310-312
     // assertMatch(mbrTxn, {
     //   amount: 1000,
     // })
@@ -1806,16 +1880,16 @@ depositASA_bool_merge@5:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:320
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:319
     // if (this.total_deposits.value === 0) {
     bnz depositASA_else_body@7
     frame_dig -2
 
 depositASA_after_if_else@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:325-332
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:324-331
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -1825,7 +1899,7 @@ depositASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:327
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:326
     // assetReceiver: op.Txn.sender,
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:38
@@ -1834,14 +1908,14 @@ depositASA_after_if_else@8:
     bytec 10 // "lst_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:328
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:327
     // xferAsset: this.lst_token_id.value.native,
     btoi
     dig 2
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:325-331
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:324-330
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -1851,11 +1925,11 @@ depositASA_after_if_else@8:
     //   })
     intc_2 // 4
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:330
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:329
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:325-332
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:324-331
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -1871,63 +1945,40 @@ depositASA_after_if_else@8:
     bytec 6 // "circulating_lst"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:334
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:333
     // this.circulating_lst.value += lstDue
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
     // circulating_lst = GlobalState<uint64>()
     bytec 6 // "circulating_lst"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:334
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:333
     // this.circulating_lst.value += lstDue
     swap
     app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:335
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:334
     // this.total_deposits.value += amount
     frame_dig -2
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
-    bytec 5 // "total_deposits"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:335
+    bytec_3 // "total_deposits"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:334
     // this.total_deposits.value += amount
     swap
     app_global_put
     retsub
 
 depositASA_else_body@7:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
-    // circulating_lst = GlobalState<uint64>()
-    intc_0 // 0
-    bytec 6 // "circulating_lst"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:268
-    // const [highBits1, lowBits1] = mulw(this.circulating_lst.value, 10000)
-    intc 4 // 10000
-    mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
-    // total_deposits = GlobalState<uint64>()
-    intc_0 // 0
-    bytec 5 // "total_deposits"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:270
-    // const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
-    divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:272
-    // const [highBits2, lowBits2] = mulw(lstRatio, amount)
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:322
+    // lstDue = this.calculateLSTDue(amount)
     frame_dig -2
-    mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:273
-    // return divw(highBits2, lowBits2, 10000)
-    intc 4 // 10000
-    divw
+    callsub calculateLSTDue
     b depositASA_after_if_else@8
 
 depositASA_bool_false@4:
@@ -1935,9 +1986,177 @@ depositASA_bool_false@4:
     b depositASA_bool_merge@5
 
 
+// smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.depositAlgo(depositTxn: uint64, amount: uint64, mbrTxn: uint64) -> void:
+depositAlgo:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:337-338
+    // @abimethod({ allowActions: 'NoOp' })
+    // depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
+    proto 3 0
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    bury 1
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:340-343
+    // assertMatch(depositTxn, {
+    //   receiver: Global.currentApplicationAddress,
+    //   amount: amount,
+    // })
+    frame_dig -3
+    gtxns Receiver
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:341
+    // receiver: Global.currentApplicationAddress,
+    global CurrentApplicationAddress
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:340-343
+    // assertMatch(depositTxn, {
+    //   receiver: Global.currentApplicationAddress,
+    //   amount: amount,
+    // })
+    ==
+    bz depositAlgo_bool_false@3
+    frame_dig -3
+    gtxns Amount
+    frame_dig -2
+    ==
+    bz depositAlgo_bool_false@3
+    intc_1 // 1
+
+depositAlgo_bool_merge@4:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:340-343
+    // assertMatch(depositTxn, {
+    //   receiver: Global.currentApplicationAddress,
+    //   amount: amount,
+    // })
+    assert // assert target is match for conditions
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:344-346
+    // assertMatch(mbrTxn, {
+    //   amount: 1000,
+    // })
+    frame_dig -1
+    gtxns Amount
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:345
+    // amount: 1000,
+    intc_3 // 1000
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:344-346
+    // assertMatch(mbrTxn, {
+    //   amount: 1000,
+    // })
+    ==
+    assert // assert target is match for conditions
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
+    // total_deposits = GlobalState<uint64>()
+    intc_0 // 0
+    bytec_3 // "total_deposits"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:349
+    // if (this.total_deposits.value === 0) {
+    bnz depositAlgo_else_body@6
+    frame_dig -2
+
+depositAlgo_after_if_else@7:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:354-361
+    // itxn
+    //   .assetTransfer({
+    //     assetReceiver: op.Txn.sender,
+    //     xferAsset: this.lst_token_id.value.native,
+    //     assetAmount: lstDue,
+    //     fee: 1000,
+    //   })
+    //   .submit()
+    itxn_begin
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:356
+    // assetReceiver: op.Txn.sender,
+    txn Sender
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:38
+    // lst_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec 10 // "lst_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:357
+    // xferAsset: this.lst_token_id.value.native,
+    btoi
+    dig 2
+    itxn_field AssetAmount
+    itxn_field XferAsset
+    itxn_field AssetReceiver
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:354-360
+    // itxn
+    //   .assetTransfer({
+    //     assetReceiver: op.Txn.sender,
+    //     xferAsset: this.lst_token_id.value.native,
+    //     assetAmount: lstDue,
+    //     fee: 1000,
+    //   })
+    intc_2 // 4
+    itxn_field TypeEnum
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:359
+    // fee: 1000,
+    intc_3 // 1000
+    itxn_field Fee
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:354-361
+    // itxn
+    //   .assetTransfer({
+    //     assetReceiver: op.Txn.sender,
+    //     xferAsset: this.lst_token_id.value.native,
+    //     assetAmount: lstDue,
+    //     fee: 1000,
+    //   })
+    //   .submit()
+    itxn_submit
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
+    // circulating_lst = GlobalState<uint64>()
+    intc_0 // 0
+    bytec 6 // "circulating_lst"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:363
+    // this.circulating_lst.value += lstDue
+    +
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
+    // circulating_lst = GlobalState<uint64>()
+    bytec 6 // "circulating_lst"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:363
+    // this.circulating_lst.value += lstDue
+    swap
+    app_global_put
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
+    // total_deposits = GlobalState<uint64>()
+    intc_0 // 0
+    bytec_3 // "total_deposits"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:364
+    // this.total_deposits.value += amount
+    frame_dig -2
+    +
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
+    // total_deposits = GlobalState<uint64>()
+    bytec_3 // "total_deposits"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:364
+    // this.total_deposits.value += amount
+    swap
+    app_global_put
+    retsub
+
+depositAlgo_else_body@6:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:352
+    // lstDue = this.calculateLSTDue(amount)
+    frame_dig -2
+    callsub calculateLSTDue
+    b depositAlgo_after_if_else@7
+
+depositAlgo_bool_false@3:
+    intc_0 // 0
+    b depositAlgo_bool_merge@4
+
+
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.withdrawDeposit(assetTransferTxn: uint64, amount: uint64, lstAppId: uint64, mbrTxn: uint64) -> void:
 withdrawDeposit:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:338-344
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:367-373
     // @abimethod({ allowActions: 'NoOp' })
     // withdrawDeposit(
     //   assetTransferTxn: gtxn.AssetTransferTxn,
@@ -1952,10 +2171,10 @@ withdrawDeposit:
     bytec 10 // "lst_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:345
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:374
     // const lstAsset = Asset(this.lst_token_id.value.native)
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:346-350
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:375-379
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: lstAsset,
@@ -1963,10 +2182,10 @@ withdrawDeposit:
     // })
     frame_dig -4
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:347
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:376
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:346-350
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:375-379
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: lstAsset,
@@ -1987,29 +2206,29 @@ withdrawDeposit:
     intc_1 // 1
 
 withdrawDeposit_bool_merge@5:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:346-350
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:375-379
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: lstAsset,
     //   assetAmount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:352-354
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:381-383
     // assertMatch(mbrTxn, {
     //   amount: 3000,
     // })
     frame_dig -1
     gtxns Amount
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:353
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:382
     // amount: 3000,
     pushint 3000 // 3000
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:352-354
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:381-383
     // assertMatch(mbrTxn, {
     //   amount: 3000,
     // })
     ==
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:358
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:387
     // if (lstAppId === Global.currentApplicationId.id) {
     frame_dig -2
     global CurrentApplicationID
@@ -2024,20 +2243,20 @@ withdrawDeposit_bool_merge@5:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:299
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:298
     // const [hi, lo] = mulw(totalDepositsExternal, amount)
     frame_dig -3
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:300
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:299
     // return divw(hi, lo, circulatingExternalLST)
     uncover 2
     divw
 
 withdrawDeposit_after_if_else@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:364
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:393
     // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     global CurrentApplicationAddress
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
@@ -2046,7 +2265,7 @@ withdrawDeposit_after_if_else@8:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:364
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:393
     // assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     btoi
     asset_holding_get AssetBalance
@@ -2054,7 +2273,7 @@ withdrawDeposit_after_if_else@8:
     dig 1
     >=
     assert
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:365-372
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:394-401
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -2064,7 +2283,7 @@ withdrawDeposit_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:367
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:396
     // assetReceiver: op.Txn.sender,
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
@@ -2073,14 +2292,14 @@ withdrawDeposit_after_if_else@8:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:368
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:397
     // xferAsset: this.base_token_id.value.native,
     btoi
     dig 2
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:365-371
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:394-400
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -2090,11 +2309,11 @@ withdrawDeposit_after_if_else@8:
     //   })
     intc_2 // 4
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:370
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:399
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:365-372
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:394-401
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -2110,38 +2329,38 @@ withdrawDeposit_after_if_else@8:
     bytec 6 // "circulating_lst"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:374
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:403
     // this.circulating_lst.value -= amount // LST burned
     frame_dig -3
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:41
     // circulating_lst = GlobalState<uint64>()
     bytec 6 // "circulating_lst"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:374
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:403
     // this.circulating_lst.value -= amount // LST burned
     swap
     app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:375
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:404
     // this.total_deposits.value -= asaDue // ASA returned
     swap
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
-    bytec 5 // "total_deposits"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:375
+    bytec_3 // "total_deposits"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:404
     // this.total_deposits.value -= asaDue // ASA returned
     swap
     app_global_put
     retsub
 
 withdrawDeposit_else_body@7:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:279-282
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:278-281
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2153,11 +2372,11 @@ withdrawDeposit_else_body@7:
     itxn_field ApplicationID
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:281
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:280
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:279-282
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:278-281
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2168,11 +2387,11 @@ withdrawDeposit_else_body@7:
     extract 4 0
     swap
     extract 0 4
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:283-286
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:282-285
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2184,11 +2403,11 @@ withdrawDeposit_else_body@7:
     itxn_field ApplicationID
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:285
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:284
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:283-286
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:282-285
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2199,15 +2418,15 @@ withdrawDeposit_else_body@7:
     extract 4 0
     swap
     extract 0 4
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:289
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:288
     // const [hi, lo] = mulw(totalDepositsExternal, amount)
     frame_dig -3
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:290
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:289
     // return divw(hi, lo, circulatingExternalLST)
     uncover 2
     divw
@@ -2220,7 +2439,7 @@ withdrawDeposit_bool_false@4:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.borrow(assetTransferTxn: uint64, requestedLoanAmount: uint64, lstApp: uint64, collateralTokenId: bytes, templateReserveAddress: bytes, arc19MetaDataStr: bytes, mbrTxn: uint64) -> void:
 borrow:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:378-387
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:407-416
     // @abimethod({ allowActions: 'NoOp' })
     // borrow(
     //   assetTransferTxn: gtxn.AssetTransferTxn,
@@ -2232,68 +2451,77 @@ borrow:
     //   mbrTxn: gtxn.PaymentTxn,
     // ): void {
     proto 7 0
+    pushbytes ""
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:389
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:418
     // const hasLoan = this.loan_record(op.Txn.sender).exists
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:389
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:418
     // const hasLoan = this.loan_record(op.Txn.sender).exists
     box_len
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:390-392
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:419-421
     // assertMatch(mbrTxn, {
     //   amount: 4000,
     // })
     frame_dig -1
     gtxns Amount
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:391
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:420
     // amount: 4000,
     pushint 4000 // 4000
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:390-392
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:419-421
     // assertMatch(mbrTxn, {
     //   amount: 4000,
     // })
     ==
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:395-398
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:424-427
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   // user must transfer LST collateral in this txn…
     // })
     frame_dig -7
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:396
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:425
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:395-398
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:424-427
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   // user must transfer LST collateral in this txn…
     // })
     ==
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:400
-    // const collateralDeposit = assetTransferTxn.assetAmount
-    frame_dig -7
-    gtxns AssetAmount
-    dup
-    cover 2
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:66
     // accepted_collaterals = BoxMap<AcceptedCollateralKey, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
     bytec 8 // "accepted_collaterals"
     frame_dig -4
     concat
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:212
+    // return this.accepted_collaterals(key).exists
+    dup
+    box_len
+    bury 1
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:428
+    // assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
+    assert // unsupported collateral
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:429
+    // const collateralDeposit = assetTransferTxn.assetAmount
+    frame_dig -7
+    gtxns AssetAmount
+    dup
+    uncover 2
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:217
     // return this.accepted_collaterals(key).value.copy()
     box_get
     bury 1
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:404-407
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:435-438
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2305,11 +2533,11 @@ borrow:
     itxn_field ApplicationID
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:406
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:437
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:404-407
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:435-438
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2320,11 +2548,11 @@ borrow:
     extract 4 0
     swap
     extract 0 4
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:408-411
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:440-443
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2336,11 +2564,11 @@ borrow:
     itxn_field ApplicationID
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:410
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:442
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:408-411
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:440-443
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
     //   fee: 1000,
@@ -2351,26 +2579,26 @@ borrow:
     extract 4 0
     swap
     extract 0 4
-    bytec 4 // 0x151f7c75
+    bytec 5 // 0x151f7c75
     ==
     assert // Bytes has valid prefix
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:414
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:446
     // const [hC, lC] = mulw(totalDepositsExternal, collateralDeposit)
     uncover 2
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:415
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:447
     // const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
     uncover 2
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:418
-    // const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:450
+    // const collateralOraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     frame_dig -4
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:419
-    // const [hU, lU] = mulw(underlyingCollateral, oraclePrice)
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:452
+    // const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:420
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:453
     // const collateralUSD: uint64 = divw(hU, lU, 1)
     intc_1 // 1
     divw
@@ -2380,105 +2608,138 @@ borrow:
     bytec 14 // "ltv_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:422
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:456
     // const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10000
     *
     intc 4 // 10000
     /
-    swap
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:59
-    // origination_fee_bps = GlobalState<uint64>()
-    intc_0 // 0
-    bytec 16 // "origination_fee_bps"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:425
-    // const fee: uint64 = (requestedLoanAmount * this.origination_fee_bps.value) / 10000
-    frame_dig -6
-    *
-    intc 4 // 10000
-    /
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:426
-    // const disbursement: uint64 = requestedLoanAmount - fee
-    frame_dig -6
-    dig 1
-    -
-    dup
-    cover 2
-    cover 4
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
-    // fee_pool = GlobalState<uint64>()
-    intc_0 // 0
-    bytec 9 // "fee_pool"
-    app_global_get_ex
-    assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:427
-    // this.fee_pool.value += fee
-    +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
-    // fee_pool = GlobalState<uint64>()
-    bytec 9 // "fee_pool"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:427
-    // this.fee_pool.value += fee
-    swap
-    app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
     // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:430
-    // const [decimals, decExists] = op.AssetParams.assetDecimals(this.base_token_id.value.native)
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:459
+    // const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
+    callsub getOraclePrice
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:461
+    // const [bH, bL] = mulw(requestedLoanAmount, 1_000_000) // optional scaling if price is 6-decimal
+    frame_dig -6
+    pushint 1000000 // 1000000
+    mulw
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:462
+    // const requestedBaseTokenAmount: uint64 = divw(bH, bL, baseTokenOraclePrice)
+    uncover 2
+    divw
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:59
+    // origination_fee_bps = GlobalState<uint64>()
+    intc_0 // 0
+    bytec 16 // "origination_fee_bps"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:465
+    // const fee: uint64 = (requestedBaseTokenAmount * this.origination_fee_bps.value) / 10000
+    dig 1
+    *
+    intc 4 // 10000
+    /
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:466
+    // const disbursement: uint64 = requestedBaseTokenAmount - fee
+    swap
+    dig 1
+    -
+    swap
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
+    // fee_pool = GlobalState<uint64>()
+    intc_0 // 0
+    bytec 9 // "fee_pool"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:467
+    // this.fee_pool.value += fee
+    +
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
+    // fee_pool = GlobalState<uint64>()
+    bytec 9 // "fee_pool"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:467
+    // this.fee_pool.value += fee
+    swap
+    app_global_put
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:470
+    // let decimals: uint64 = 6
+    pushint 6 // 6
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:471
+    // if (this.base_token_id.value.native !== 0) {
+    btoi
+    bz borrow_after_if_else@4
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
+    // base_token_id = GlobalState<UintN64>()
+    intc_0 // 0
+    bytec_0 // "base_token_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:472
+    // const assetParams = op.AssetParams.assetDecimals(this.base_token_id.value.native)
     btoi
     asset_params_get AssetDecimals
     pop
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:431
+    frame_bury 5
+
+borrow_after_if_else@4:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:475
     // const assetScale: uint64 = 10 ** decimals
     pushint 10 // 10
-    swap
+    frame_dig 5
     exp
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:432
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:477
     // const [aH, aL] = mulw(disbursement, assetScale)
+    frame_dig 4
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:433
-    // const dividerScalar: uint64 = 2 ** 32
-    intc 5 // 4294967296
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:434
-    // const interim: uint64 = divw(aH, aL, dividerScalar)
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:478
+    // const scaledDown: uint64 = divw(aH, aL, 2 ** 32)
+    pushint 4294967296 // 4294967296
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:433
-    // const dividerScalar: uint64 = 2 ** 32
-    intc 5 // 4294967296
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:435
-    // const scaledDown: uint64 = interim / dividerScalar
-    /
-    cover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:438
+    dup
+    frame_bury 0
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:77
+    // last_scaled_down_disbursement = GlobalState<uint64>()
+    pushbytes "last_scaled_down_disbursement"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:480
+    // this.last_scaled_down_disbursement.value = scaledDown
+    swap
+    app_global_put
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:483
     // if (hasLoan) {
-    bz borrow_else_body@4
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:440
+    frame_dig 1
+    bz borrow_else_body@6
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:485
     // let old = this.getLoanRecord(op.Txn.sender)
     txn Sender
     callsub getLoanRecord
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:441
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:486
     // old = this.accrueInterest(old)
     callsub accrueInterest
     pop
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:442
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:487
     // this.loan_record(op.Txn.sender).value = old.copy()
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:442
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:487
     // this.loan_record(op.Txn.sender).value = old.copy()
     dig 1
     box_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:444
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:489
     // const totalRequested: uint64 = old.scaledDownDisbursement.native + requestedLoanAmount
     dup
     pushint 56 // 56
@@ -2486,49 +2747,49 @@ borrow:
     dup
     frame_dig -6
     +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:445
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:490
     // assert(totalRequested <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
-    uncover 3
+    frame_dig 3
     <=
     assert // exceeds LTV limit with existing debt
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:448
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:493
     // const totalCollateral: uint64 = old.collateralAmount.native + collateralDeposit
     dig 1
     pushint 40 // 40
     extract_uint64
-    frame_dig 0
+    frame_dig 2
     dup
     cover 4
     +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:450
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:495
     // const newDebt: uint64 = oldDebt + disbursement
     swap
-    frame_dig 1
+    frame_dig 4
     dup
     cover 2
     +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:451
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:496
     // const newTotalDisb: uint64 = old.disbursement.native + disbursement
     dig 3
     pushint 48 // 48
     extract_uint64
     uncover 2
     +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:457
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:502
     // old.collateralTokenId,
     dig 3
     extract 32 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:458
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:503
     // op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:461
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:506
     // old.loanRecordASAId.native,
     dig 5
     extract 72 8 // on error: Index access is out of bounds
     dig 6
     pushint 72 // 72
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:454-462
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:499-507
     // this.updateLoanRecord(
     //   newDebt,
     //   newTotalDisb,
@@ -2546,31 +2807,31 @@ borrow:
     frame_dig -3
     uncover 6
     callsub updateLoanRecord
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:465
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:510
     // borrowerAddress: old.borrowerAddress,
     dig 5
     extract 0 32 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:467
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:512
     // collateralAmount: new UintN64(totalCollateral),
     uncover 5
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:468
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:513
     // disbursement: new UintN64(newTotalDisb),
     uncover 4
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:469
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:514
     // scaledDownDisbursement: new UintN64(newDebt),
     uncover 5
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:470
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:515
     // borrowedTokenId: old.borrowedTokenId,
     uncover 6
     extract 64 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:472
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:517
     // lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     global LatestTimestamp
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:464-473
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:509-518
     // this.loan_record(op.Txn.sender).value = new LoanRecord({
     //   borrowerAddress: old.borrowerAddress,
     //   collateralTokenId: old.collateralTokenId,
@@ -2599,13 +2860,13 @@ borrow:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:464
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:509
     // this.loan_record(op.Txn.sender).value = new LoanRecord({
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:464-473
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:509-518
     // this.loan_record(op.Txn.sender).value = new LoanRecord({
     //   borrowerAddress: old.borrowerAddress,
     //   collateralTokenId: old.collateralTokenId,
@@ -2624,85 +2885,85 @@ borrow:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:474
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:519
     // this.active_loan_records.value = this.active_loan_records.value + 1
     intc_1 // 1
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:474
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:519
     // this.active_loan_records.value = this.active_loan_records.value + 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:475
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:520
     // this.updateCollateralTotal(collateralTokenId, collateralDeposit)
     frame_dig -4
     swap
     callsub updateCollateralTotal
 
-borrow_after_if_else@5:
+borrow_after_if_else@7:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
     // base_token_id = GlobalState<UintN64>()
     intc_0 // 0
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:491
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:536
     // if (this.base_token_id.value.native === 0) {
     btoi
-    bnz borrow_else_body@8
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:492-498
+    bnz borrow_else_body@10
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:537-543
     // itxn
     //   .payment({
     //     receiver: op.Txn.sender,
     //     amount: scaledDown,
-    //     fee: 1000, // Set a small fee for the payment transaction
+    //     fee: 1000,
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:494
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:539
     // receiver: op.Txn.sender,
     txn Sender
-    frame_dig 2
+    frame_dig 0
     itxn_field Amount
     itxn_field Receiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:492-497
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:537-542
     // itxn
     //   .payment({
     //     receiver: op.Txn.sender,
     //     amount: scaledDown,
-    //     fee: 1000, // Set a small fee for the payment transaction
+    //     fee: 1000,
     //   })
     intc_1 // 1
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:496
-    // fee: 1000, // Set a small fee for the payment transaction
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:541
+    // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:492-498
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:537-543
     // itxn
     //   .payment({
     //     receiver: op.Txn.sender,
     //     amount: scaledDown,
-    //     fee: 1000, // Set a small fee for the payment transaction
+    //     fee: 1000,
     //   })
     //   .submit()
     itxn_submit
     retsub
 
-borrow_else_body@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:500-507
+borrow_else_body@10:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:545-552
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
     //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: scaledDown,
-    //     fee: 1000, // Set a small fee for the asset transfer transaction
+    //     fee: 1000,
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:502
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:547
     // assetReceiver: op.Txn.sender,
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
@@ -2711,49 +2972,50 @@ borrow_else_body@8:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:503
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:548
     // xferAsset: this.base_token_id.value.native,
     btoi
-    frame_dig 2
+    frame_dig 0
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:500-506
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:545-551
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
     //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: scaledDown,
-    //     fee: 1000, // Set a small fee for the asset transfer transaction
+    //     fee: 1000,
     //   })
     intc_2 // 4
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:505
-    // fee: 1000, // Set a small fee for the asset transfer transaction
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:550
+    // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:500-507
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:545-552
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
     //     xferAsset: this.base_token_id.value.native,
     //     assetAmount: scaledDown,
-    //     fee: 1000, // Set a small fee for the asset transfer transaction
+    //     fee: 1000,
     //   })
     //   .submit()
     itxn_submit
     retsub
 
-borrow_else_body@4:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:478
+borrow_else_body@6:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:523
     // assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
     frame_dig -6
-    >=
+    frame_dig 3
+    <=
     assert // exceeds LTV limit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:483
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:528
     // op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:553-568
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:598-613
     // const asset = itxn
     //   .assetConfig({
     //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
@@ -2771,7 +3033,7 @@ borrow_else_body@4:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:555
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:600
     // assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
     pushbytes "r"
     frame_dig -4
@@ -2784,16 +3046,16 @@ borrow_else_body@4:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:555
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:600
     // assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:557
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:602
     // manager: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:560
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:605
     // sender: Global.currentApplicationAddress,
     dupn 3
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:565
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:610
     // defaultFrozen: false,
     intc_0 // 0
     itxn_field ConfigAssetDefaultFrozen
@@ -2801,15 +3063,15 @@ borrow_else_body@4:
     itxn_field ConfigAssetFreeze
     frame_dig -3
     itxn_field ConfigAssetReserve
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:561
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:606
     // unitName: 'CMPXLR',
     pushbytes "CMPXLR"
     itxn_field ConfigAssetUnitName
     itxn_field Sender
-    frame_dig 1
+    frame_dig 4
     dup
     itxn_field ConfigAssetTotal
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:558
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:603
     // decimals: 0,
     intc_0 // 0
     itxn_field ConfigAssetDecimals
@@ -2819,7 +3081,7 @@ borrow_else_body@4:
     itxn_field ConfigAssetURL
     swap
     itxn_field ConfigAssetName
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:553-567
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:598-612
     // const asset = itxn
     //   .assetConfig({
     //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
@@ -2837,11 +3099,11 @@ borrow_else_body@4:
     //   })
     pushint 3 // 3
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:566
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:611
     // fee: 1000, // Set a small fee for the asset config transaction
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:553-568
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:598-613
     // const asset = itxn
     //   .assetConfig({
     //     assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
@@ -2860,17 +3122,17 @@ borrow_else_body@4:
     //   .submit()
     itxn_submit
     itxn CreatedAssetID
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:573
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:618
     // collateralAmount: new UintN64(collateralAmount),
-    frame_dig 0
+    frame_dig 2
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:574
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:619
     // disbursement: new UintN64(disbursement),
     uncover 2
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:575
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:620
     // scaledDownDisbursement: new UintN64(scaledDownDisbursement),
-    frame_dig 2
+    frame_dig 0
     itob
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
     // base_token_id = GlobalState<UintN64>()
@@ -2878,15 +3140,15 @@ borrow_else_body@4:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:577
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:622
     // loanRecordASAId: new UintN64(asset.createdAsset.id),
     uncover 4
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:578
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:623
     // lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     global LatestTimestamp
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:570-579
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:615-624
     // const loanRecord: LoanRecord = new LoanRecord({
     //   borrowerAddress: new Address(borrowerAddress.bytes),
     //   collateralTokenId: collateralTokenId,
@@ -2917,7 +3179,7 @@ borrow_else_body@4:
     bytec_2 // "loan_record"
     uncover 2
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:580
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:625
     // this.loan_record(borrowerAddress).value = loanRecord.copy()
     swap
     box_put
@@ -2927,23 +3189,23 @@ borrow_else_body@4:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:581
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:626
     // this.active_loan_records.value = this.active_loan_records.value + 1
     intc_1 // 1
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:581
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:626
     // this.active_loan_records.value = this.active_loan_records.value + 1
     swap
     app_global_put
-    b borrow_after_if_else@5
+    b borrow_after_if_else@7
 
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateLoanRecord(scaledDownDisbursement: uint64, disbursement: uint64, collateralTokenId: bytes, borrowerAddress: bytes, collateralAmount: uint64, templateReserveAddress: bytes, assetId: uint64) -> void:
 updateLoanRecord:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:511-519
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:556-564
     // private updateLoanRecord(
     //   scaledDownDisbursement: uint64,
     //   disbursement: uint64,
@@ -2954,7 +3216,7 @@ updateLoanRecord:
     //   assetId: uint64,
     // ): void {
     proto 7 0
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:520-528
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:565-573
     // const asset = itxn
     //   .assetConfig({
     //     manager: Global.currentApplicationAddress,
@@ -2965,10 +3227,10 @@ updateLoanRecord:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:522
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:567
     // manager: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:523
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:568
     // sender: Global.currentApplicationAddress,
     dup
     frame_dig -1
@@ -2977,7 +3239,7 @@ updateLoanRecord:
     itxn_field ConfigAssetReserve
     itxn_field Sender
     itxn_field ConfigAssetManager
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:520-527
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:565-572
     // const asset = itxn
     //   .assetConfig({
     //     manager: Global.currentApplicationAddress,
@@ -2988,11 +3250,11 @@ updateLoanRecord:
     //   })
     pushint 3 // 3
     itxn_field TypeEnum
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:526
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:571
     // fee: 1000,
     intc_3 // 1000
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:520-528
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:565-573
     // const asset = itxn
     //   .assetConfig({
     //     manager: Global.currentApplicationAddress,
@@ -3004,15 +3266,15 @@ updateLoanRecord:
     //   .submit()
     itxn_submit
     itxn CreatedAssetID
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:533
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:578
     // collateralAmount: new UintN64(collateralAmount),
     frame_dig -3
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:534
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:579
     // disbursement: new UintN64(disbursement),
     frame_dig -6
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:535
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:580
     // scaledDownDisbursement: new UintN64(scaledDownDisbursement),
     frame_dig -7
     itob
@@ -3022,15 +3284,15 @@ updateLoanRecord:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:537
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:582
     // loanRecordASAId: new UintN64(asset.createdAsset.id),
     uncover 4
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:538
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:583
     // lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     global LatestTimestamp
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:530-539
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:575-584
     // const loanRecord: LoanRecord = new LoanRecord({
     //   borrowerAddress: new Address(borrowerAddress.bytes),
     //   collateralTokenId: collateralTokenId,
@@ -3061,7 +3323,7 @@ updateLoanRecord:
     bytec_2 // "loan_record"
     frame_dig -4
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:540
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:585
     // this.loan_record(borrowerAddress).value = loanRecord.copy()
     swap
     box_put
@@ -3071,14 +3333,14 @@ updateLoanRecord:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:541
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:586
     // this.active_loan_records.value = this.active_loan_records.value + 1
     intc_1 // 1
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:541
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:586
     // this.active_loan_records.value = this.active_loan_records.value + 1
     swap
     app_global_put
@@ -3087,7 +3349,7 @@ updateLoanRecord:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.claimLoanRecordASA(debtor: bytes, assetId: uint64) -> void:
 claimLoanRecordASA:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:584-585
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:629-630
     // @abimethod({ allowActions: 'NoOp' })
     // claimLoanRecordASA(debtor: Account, assetId: Asset): void {
     proto 2 0
@@ -3096,27 +3358,27 @@ claimLoanRecordASA:
     bytec_2 // "loan_record"
     frame_dig -2
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:586
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:631
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     dup
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:587
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:632
     // const assetExists = Global.currentApplicationAddress.isOptedIn(assetId)
     global CurrentApplicationAddress
     frame_dig -1
     asset_holding_get AssetBalance
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:588
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:633
     // assert(assetExists, 'Loan record ASA does not exist')
     assert // Loan record ASA does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:589
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:634
     // const loanRecord = this.loan_record(debtor).value.copy()
     box_get
     bury 1
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:590-596
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:635-641
     // itxn
     //   .assetTransfer({
     //     assetReceiver: debtor,
@@ -3125,7 +3387,7 @@ claimLoanRecordASA:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:594
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:639
     // assetAmount: 1,
     intc_1 // 1
     itxn_field AssetAmount
@@ -3133,7 +3395,7 @@ claimLoanRecordASA:
     itxn_field XferAsset
     frame_dig -2
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:590-595
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:635-640
     // itxn
     //   .assetTransfer({
     //     assetReceiver: debtor,
@@ -3144,7 +3406,7 @@ claimLoanRecordASA:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:590-596
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:635-641
     // itxn
     //   .assetTransfer({
     //     assetReceiver: debtor,
@@ -3153,7 +3415,7 @@ claimLoanRecordASA:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:599-606
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:644-651
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -3163,19 +3425,19 @@ claimLoanRecordASA:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:601
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:646
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     frame_dig -2
     itxn_field AssetCloseTo
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:603
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:648
     // assetAmount: 0,
     intc_0 // 0
     itxn_field AssetAmount
     frame_dig -1
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:599-605
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:644-650
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -3187,7 +3449,7 @@ claimLoanRecordASA:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:599-606
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:644-651
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -3202,21 +3464,21 @@ claimLoanRecordASA:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest(record: bytes) -> bytes, bytes:
 accrueInterest:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:609
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:654
     // private accrueInterest(record: LoanRecord): LoanRecord {
     proto 1 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:610
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:655
     // const now = Global.latestTimestamp
     global LatestTimestamp
     dup
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:611
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:656
     // const last = record.lastAccrualTimestamp.native
     frame_dig -1
     pushint 80 // 80
     extract_uint64
     dup
     cover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:613
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:658
     // if (now <= last) return record
     <=
     bz accrueInterest_after_if_else@2
@@ -3227,13 +3489,13 @@ accrueInterest:
     retsub
 
 accrueInterest_after_if_else@2:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:615
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:660
     // const deltaT: uint64 = now - last
     frame_dig 0
     dup
     frame_dig 1
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:616
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:661
     // const principal: uint64 = record.scaledDownDisbursement.native
     frame_dig -1
     pushint 56 // 56
@@ -3244,22 +3506,22 @@ accrueInterest_after_if_else@2:
     bytec 15 // "interest_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:620
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:665
     // const [hi1, lo1] = mulw(principal, rateBps)
     dig 1
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:622
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:667
     // const rateScaled: uint64 = divw(hi1, lo1, 10000)
     intc 4 // 10000
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:624
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:669
     // const [hi2, lo2] = mulw(rateScaled, deltaT)
     uncover 2
     mulw
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:28
     // const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
     pushint 31536000 // 31536000
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:626
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:671
     // const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
     divw
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:61
@@ -3268,37 +3530,37 @@ accrueInterest_after_if_else@2:
     bytec 17 // "protocol_interest_fee_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:629
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:674
     // const depositorBps: uint64 = 10000 - protoBps
     intc 4 // 10000
     swap
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:632
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:677
     // const [hiDep, loDep] = mulw(interest, depositorBps)
     dig 1
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:633
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:678
     // const depositorInterest: uint64 = divw(hiDep, loDep, 10000)
     intc 4 // 10000
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:636
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:681
     // const protocolInterest: uint64 = interest - depositorInterest
     dup2
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
     intc_0 // 0
-    bytec 5 // "total_deposits"
+    bytec_3 // "total_deposits"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:640
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:685
     // this.total_deposits.value += depositorInterest
     uncover 2
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44
     // total_deposits = GlobalState<uint64>()
-    bytec 5 // "total_deposits"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:640
+    bytec_3 // "total_deposits"
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:685
     // this.total_deposits.value += depositorInterest
     swap
     app_global_put
@@ -3308,52 +3570,52 @@ accrueInterest_after_if_else@2:
     bytec 9 // "fee_pool"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:642
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:687
     // this.fee_pool.value += protocolInterest
     +
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
     // fee_pool = GlobalState<uint64>()
     bytec 9 // "fee_pool"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:642
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:687
     // this.fee_pool.value += protocolInterest
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:646
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:691
     // const newPrincipal: uint64 = principal + interest
     +
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:650
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:695
     // borrowerAddress: record.borrowerAddress,
     frame_dig -1
     extract 0 32 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:651
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:696
     // collateralTokenId: record.collateralTokenId,
     frame_dig -1
     extract 32 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:652
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:697
     // collateralAmount: record.collateralAmount,
     frame_dig -1
     extract 40 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:653
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:698
     // disbursement: record.disbursement, // original
     frame_dig -1
     extract 48 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:654
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:699
     // scaledDownDisbursement: new UintN64(newPrincipal),
     uncover 4
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:655
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:700
     // borrowedTokenId: record.borrowedTokenId,
     frame_dig -1
     extract 64 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:656
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:701
     // loanRecordASAId: record.loanRecordASAId,
     frame_dig -1
     extract 72 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:657
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:702
     // lastAccrualTimestamp: new UintN64(now),
     uncover 7
     itob
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:649-658
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:694-703
     // return new LoanRecord({
     //   borrowerAddress: record.borrowerAddress,
     //   collateralTokenId: record.collateralTokenId,
@@ -3387,7 +3649,7 @@ accrueInterest_after_if_else@2:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanRecord(borrowerAddress: bytes) -> bytes:
 getLoanRecord:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:661
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:706
     // getLoanRecord(borrowerAddress: Account): LoanRecord {
     proto 1 1
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
@@ -3395,7 +3657,7 @@ getLoanRecord:
     bytec_2 // "loan_record"
     frame_dig -1
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:662
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:707
     // return this.loan_record(borrowerAddress).value
     box_get
     assert // Box must have value
@@ -3404,7 +3666,7 @@ getLoanRecord:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanRecordASAId(borrowerAddress: bytes) -> uint64:
 getLoanRecordASAId:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:665
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:710
     // getLoanRecordASAId(borrowerAddress: Account): uint64 {
     proto 1 1
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
@@ -3412,7 +3674,7 @@ getLoanRecordASAId:
     bytec_2 // "loan_record"
     frame_dig -1
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:666
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:711
     // return this.loan_record(borrowerAddress).value.loanRecordASAId.native
     box_get
     assert // Box must have value
@@ -3423,7 +3685,7 @@ getLoanRecordASAId:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.repayLoanASA(assetTransferTxn: uint64, amount: uint64, templateReserveAddress: bytes) -> void:
 repayLoanASA:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:669-670
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:714-715
     // @abimethod({ allowActions: 'NoOp' })
     // repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, templateReserveAddress: Account): void {
     proto 3 0
@@ -3435,10 +3697,10 @@ repayLoanASA:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:671
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:716
     // const baseToken = Asset(this.base_token_id.value.native)
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:672-676
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:717-721
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
@@ -3446,10 +3708,10 @@ repayLoanASA:
     // })
     frame_dig -3
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:673
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:718
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:672-676
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:717-721
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
@@ -3470,18 +3732,18 @@ repayLoanASA:
     intc_1 // 1
 
 repayLoanASA_bool_merge@5:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:672-676
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:717-721
     // assertMatch(assetTransferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: baseToken,
     //   assetAmount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:678
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:723
     // let loanRecord = this.getLoanRecord(op.Txn.sender)
     txn Sender
     callsub getLoanRecord
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:679
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:724
     // loanRecord = this.accrueInterest(loanRecord)
     callsub accrueInterest
     pop
@@ -3490,41 +3752,41 @@ repayLoanASA_bool_merge@5:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:680
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:725
     // this.loan_record(op.Txn.sender).value = loanRecord.copy()
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:680
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:725
     // this.loan_record(op.Txn.sender).value = loanRecord.copy()
     dig 1
     box_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:682
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:727
     // const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
     txn Sender
     callsub getLoanRecordASAId
     swap
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:684
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:729
     // const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
     pushint 56 // 56
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:685
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:730
     // assert(amount <= currentdebt.native)
     extract_uint64
     frame_dig -2
     dig 1
     <=
     assert
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:686
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:731
     // const remainingDebt: uint64 = currentdebt.native - amount
     frame_dig -2
     -
     dup
     frame_bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:688
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:733
     // if (remainingDebt === 0) {
     bnz repayLoanASA_else_body@9
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:689-694
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:734-739
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3532,12 +3794,12 @@ repayLoanASA_bool_merge@5:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:692
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:737
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:689-693
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:734-738
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3547,7 +3809,7 @@ repayLoanASA_bool_merge@5:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:689-694
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:734-739
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3558,13 +3820,13 @@ repayLoanASA_bool_merge@5:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:698
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:743
     // this.loan_record(op.Txn.sender).delete()
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:698
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:743
     // this.loan_record(op.Txn.sender).delete()
     box_del
     pop
@@ -3574,18 +3836,18 @@ repayLoanASA_bool_merge@5:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:699
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:744
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:699
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:744
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:701-707
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:746-752
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3594,16 +3856,16 @@ repayLoanASA_bool_merge@5:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:703
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:748
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:704
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:749
     // xferAsset: loanRecord.collateralTokenId.native,
     frame_dig 0
     dup
     pushint 32 // 32
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:705
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:750
     // assetAmount: loanRecord.collateralAmount.native,
     swap
     pushint 40 // 40
@@ -3611,7 +3873,7 @@ repayLoanASA_bool_merge@5:
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:701-706
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:746-751
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3622,7 +3884,7 @@ repayLoanASA_bool_merge@5:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:701-707
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:746-752
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3634,25 +3896,25 @@ repayLoanASA_bool_merge@5:
     retsub
 
 repayLoanASA_else_body@9:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:712
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:757
     // loanRecord.disbursement.native, // original disbursement (for metadata)
     frame_dig 0
     dup
     pushint 48 // 48
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:713
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:758
     // loanRecord.collateralTokenId, // collateral type
     dig 1
     extract 32 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:714
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:759
     // op.Txn.sender, // borrower
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:715
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:760
     // loanRecord.collateralAmount.native, // collateral locked
     uncover 3
     pushint 40 // 40
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:710-718
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:755-763
     // this.updateLoanRecord(
     //   remainingDebt, // scaledDownDisbursement
     //   loanRecord.disbursement.native, // original disbursement (for metadata)
@@ -3676,7 +3938,7 @@ repayLoanASA_bool_false@4:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.repayLoanAlgo(paymentTxn: uint64, amount: uint64, templateReserveAddress: bytes) -> void:
 repayLoanAlgo:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:722-723
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:767-768
     // @abimethod({ allowActions: 'NoOp' })
     // repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, templateReserveAddress: Account): void {
     proto 3 0
@@ -3689,17 +3951,17 @@ repayLoanAlgo:
     app_global_get_ex
     bury 1
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:725-728
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:770-773
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: amount,
     // })
     frame_dig -3
     gtxns Receiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:726
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:771
     // receiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:725-728
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:770-773
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: amount,
@@ -3714,17 +3976,17 @@ repayLoanAlgo:
     intc_1 // 1
 
 repayLoanAlgo_bool_merge@4:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:725-728
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:770-773
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: amount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:730
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:775
     // let loanRecord = this.getLoanRecord(op.Txn.sender)
     txn Sender
     callsub getLoanRecord
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:731
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:776
     // loanRecord = this.accrueInterest(loanRecord)
     callsub accrueInterest
     pop
@@ -3733,41 +3995,41 @@ repayLoanAlgo_bool_merge@4:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:732
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:777
     // this.loan_record(op.Txn.sender).value = loanRecord.copy()
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:732
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:777
     // this.loan_record(op.Txn.sender).value = loanRecord.copy()
     dig 1
     box_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:734
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:779
     // const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
     txn Sender
     callsub getLoanRecordASAId
     swap
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:736
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:781
     // const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
     pushint 56 // 56
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:737
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:782
     // assert(amount <= currentdebt.native)
     extract_uint64
     frame_dig -2
     dig 1
     <=
     assert
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:738
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:783
     // const remainingDebt: uint64 = currentdebt.native - amount
     frame_dig -2
     -
     dup
     frame_bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:740
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:785
     // if (remainingDebt === 0) {
     bnz repayLoanAlgo_else_body@8
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:742-747
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:787-792
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3775,12 +4037,12 @@ repayLoanAlgo_bool_merge@4:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:745
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:790
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:742-746
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:787-791
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3790,7 +4052,7 @@ repayLoanAlgo_bool_merge@4:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:742-747
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:787-792
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -3801,13 +4063,13 @@ repayLoanAlgo_bool_merge@4:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     bytec_2 // "loan_record"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:751
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:796
     // this.loan_record(op.Txn.sender).delete()
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:68
     // loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:751
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:796
     // this.loan_record(op.Txn.sender).delete()
     box_del
     pop
@@ -3817,18 +4079,18 @@ repayLoanAlgo_bool_merge@4:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:752
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:797
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:752
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:797
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:754-760
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:799-805
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3837,16 +4099,16 @@ repayLoanAlgo_bool_merge@4:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:756
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:801
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:757
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:802
     // xferAsset: loanRecord.collateralTokenId.native,
     frame_dig 0
     dup
     pushint 32 // 32
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:758
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:803
     // assetAmount: loanRecord.collateralAmount.native,
     swap
     pushint 40 // 40
@@ -3854,7 +4116,7 @@ repayLoanAlgo_bool_merge@4:
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:754-759
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:799-804
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3865,7 +4127,7 @@ repayLoanAlgo_bool_merge@4:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:754-760
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:799-805
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -3877,25 +4139,25 @@ repayLoanAlgo_bool_merge@4:
     retsub
 
 repayLoanAlgo_else_body@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:765
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:810
     // loanRecord.disbursement.native, // original disbursement (for metadata)
     frame_dig 0
     dup
     pushint 48 // 48
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:766
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:811
     // loanRecord.collateralTokenId, // collateral type
     dig 1
     extract 32 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:767
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:812
     // op.Txn.sender, // borrower
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:768
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:813
     // loanRecord.collateralAmount.native, // collateral locked
     uncover 3
     pushint 40 // 40
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:763-771
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:808-816
     // this.updateLoanRecord(
     //   remainingDebt, // scaledDownDisbursement
     //   loanRecord.disbursement.native, // original disbursement (for metadata)
@@ -3919,20 +4181,20 @@ repayLoanAlgo_bool_false@3:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.withdrawFees() -> void:
 withdrawFees:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:777
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:822
     // assert(op.Txn.sender === this.admin_account.value)
     txn Sender
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:777
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:822
     // assert(op.Txn.sender === this.admin_account.value)
     ==
     assert
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:778-784
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:823-829
     // itxn
     //   .assetTransfer({
     //     assetReceiver: this.admin_account.value,
@@ -3944,7 +4206,7 @@ withdrawFees:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:47
     // admin_account = GlobalState<Account>()
     intc_0 // 0
-    bytec_3 // "admin_account"
+    bytec 4 // "admin_account"
     app_global_get_ex
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:35
@@ -3953,7 +4215,7 @@ withdrawFees:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:781
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:826
     // xferAsset: this.base_token_id.value.native,
     btoi
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
@@ -3965,7 +4227,7 @@ withdrawFees:
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:778-783
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:823-828
     // itxn
     //   .assetTransfer({
     //     assetReceiver: this.admin_account.value,
@@ -3976,7 +4238,7 @@ withdrawFees:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:778-784
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:823-829
     // itxn
     //   .assetTransfer({
     //     assetReceiver: this.admin_account.value,
@@ -3988,7 +4250,7 @@ withdrawFees:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:75
     // fee_pool = GlobalState<uint64>()
     bytec 9 // "fee_pool"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:785
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:830
     // this.fee_pool.value = 0
     intc_0 // 0
     app_global_put
@@ -3997,7 +4259,7 @@ withdrawFees:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueLoanInterest(debtor: bytes, templateReserveAddress: bytes) -> void:
 accrueLoanInterest:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:788-789
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:833-834
     // @abimethod({ allowActions: 'NoOp' })
     // accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     proto 2 0
@@ -4006,46 +4268,46 @@ accrueLoanInterest:
     bytec_2 // "loan_record"
     frame_dig -2
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:790
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:835
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     dup
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:791
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:836
     // const currentLoanRecord = this.loan_record(debtor).value.copy()
     dup
     box_get
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:793
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:838
     // this.accrueInterest(currentLoanRecord)
     callsub accrueInterest
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:797
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:842
     // currentLoanRecord.scaledDownDisbursement.native,
     dup
     pushint 56 // 56
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:798
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:843
     // currentLoanRecord.disbursement.native,
     dig 1
     pushint 48 // 48
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:799
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:844
     // currentLoanRecord.collateralTokenId,
     dig 2
     extract 32 8 // on error: Index access is out of bounds
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:801
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:846
     // currentLoanRecord.collateralAmount.native,
     dig 3
     pushint 40 // 40
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:803
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:848
     // currentLoanRecord.loanRecordASAId.native, // existing ASA ID to update
     dig 4
     pushint 72 // 72
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:796-804
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:841-849
     // this.updateLoanRecord(
     //   currentLoanRecord.scaledDownDisbursement.native,
     //   currentLoanRecord.disbursement.native,
@@ -4062,7 +4324,7 @@ accrueLoanInterest:
     frame_dig -1
     uncover 6
     callsub updateLoanRecord
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:806
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:851
     // this.loan_record(debtor).value = currentLoanRecord.copy()
     box_put
     retsub
@@ -4070,7 +4332,7 @@ accrueLoanInterest:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.buyoutASA(buyer: bytes, debtor: bytes, axferTxn: uint64) -> void:
 buyoutASA:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:809-810
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:854-855
     // @abimethod({ allowActions: 'NoOp' })
     // buyoutASA(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     proto 3 0
@@ -4081,12 +4343,12 @@ buyoutASA:
     frame_dig -2
     concat
     dupn 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:811
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:856
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:812
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:857
     // const currentLoanRecord = this.loan_record(debtor).value.copy()
     dup
     box_get
@@ -4095,19 +4357,19 @@ buyoutASA:
     cover 2
     cover 3
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:813
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:858
     // this.loan_record(debtor).value = currentLoanRecord.copy()
     swap
     dig 1
     box_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:815
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:860
     // const collateralAmount = currentLoanRecord.collateralAmount.native
     dup
     pushint 40 // 40
     extract_uint64
     dup
     uncover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:816
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:861
     // const debtAmount = currentLoanRecord.scaledDownDisbursement.native
     dup
     pushint 56 // 56
@@ -4115,7 +4377,7 @@ buyoutASA:
     dup
     cover 3
     cover 3
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:817
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:862
     // const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     pushint 32 // 32
     extract_uint64
@@ -4131,7 +4393,7 @@ buyoutASA:
     // return this.accepted_collaterals(key).value.copy()
     box_get
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:820
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:865
     // assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
     pushint 16 // 16
     extract_uint64
@@ -4140,17 +4402,17 @@ buyoutASA:
     dig 2
     >=
     assert // Collateral amount exceeds current total
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:823
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:868
     // const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:824
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:869
     // const [hU, lU] = mulw(collateralAmount, oraclePrice)
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:825
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:870
     // const collateralUSD: uint64 = divw(hU, lU, 1)
     intc_1 // 1
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:826
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:871
     // const CR: uint64 = collateralUSD / debtAmount
     dup
     uncover 2
@@ -4161,12 +4423,12 @@ buyoutASA:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:827
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:872
     // assert(CR > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
     dig 1
     <
     assert // loan is not eligible for buyout
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:829
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:874
     // const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
     intc 4 // 10000
     *
@@ -4176,19 +4438,19 @@ buyoutASA:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:829
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:874
     // const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
     /
     intc 4 // 10000
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:830
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:875
     // const buyoutPrice: uint64 = collateralUSD * (1 + premiumRate / 10000)
     intc 4 // 10000
     /
     intc_1 // 1
     +
     *
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:832-836
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877-881
     // assertMatch(axferTxn, {
     //   xferAsset: Asset(this.base_token_id.value.native),
     //   assetReceiver: Global.currentApplicationAddress,
@@ -4202,10 +4464,10 @@ buyoutASA:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:833
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:878
     // xferAsset: Asset(this.base_token_id.value.native),
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:832-836
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877-881
     // assertMatch(axferTxn, {
     //   xferAsset: Asset(this.base_token_id.value.native),
     //   assetReceiver: Global.currentApplicationAddress,
@@ -4215,10 +4477,10 @@ buyoutASA:
     bz buyoutASA_bool_false@4
     frame_dig -1
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:834
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:879
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:832-836
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877-881
     // assertMatch(axferTxn, {
     //   xferAsset: Asset(this.base_token_id.value.native),
     //   assetReceiver: Global.currentApplicationAddress,
@@ -4234,14 +4496,14 @@ buyoutASA:
     intc_1 // 1
 
 buyoutASA_bool_merge@5:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:832-836
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877-881
     // assertMatch(axferTxn, {
     //   xferAsset: Asset(this.base_token_id.value.native),
     //   assetReceiver: Global.currentApplicationAddress,
     //   assetAmount: buyoutPrice,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:841
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:886
     // const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
     global CurrentApplicationAddress
     frame_dig 2
@@ -4251,10 +4513,10 @@ buyoutASA_bool_merge@5:
     frame_bury 0
     asset_holding_get AssetBalance
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:842
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:887
     // if (!assetExists) {
     bnz buyoutASA_after_if_else@8
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:843-850
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:888-895
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4264,7 +4526,7 @@ buyoutASA_bool_merge@5:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:845
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:890
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     frame_dig 4
@@ -4274,7 +4536,7 @@ buyoutASA_bool_merge@5:
     frame_dig 0
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:843-849
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:888-894
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4286,7 +4548,7 @@ buyoutASA_bool_merge@5:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:843-850
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:888-895
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4298,7 +4560,7 @@ buyoutASA_bool_merge@5:
     itxn_submit
 
 buyoutASA_after_if_else@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:853-858
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:898-903
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4306,13 +4568,13 @@ buyoutASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:856
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:901
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     frame_dig 0
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:853-857
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:898-902
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4322,7 +4584,7 @@ buyoutASA_after_if_else@8:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:853-858
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:898-903
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4330,7 +4592,7 @@ buyoutASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:861
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:906
     // this.loan_record(debtor).delete()
     frame_dig 1
     box_del
@@ -4341,18 +4603,18 @@ buyoutASA_after_if_else@8:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:862
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:907
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:862
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:907
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:865-871
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-916
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4361,7 +4623,7 @@ buyoutASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:868
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:913
     // xferAsset: collateralTokenId.native,
     frame_dig 5
     dup
@@ -4373,7 +4635,7 @@ buyoutASA_after_if_else@8:
     itxn_field XferAsset
     frame_dig -3
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:865-870
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-915
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4384,7 +4646,7 @@ buyoutASA_after_if_else@8:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:865-871
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-916
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4393,12 +4655,12 @@ buyoutASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:873
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:918
     // const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     frame_dig 6
     swap
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:874
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:919
     // this.updateCollateralTotal(collateralTokenId, newTotal)
     callsub updateCollateralTotal
     retsub
@@ -4410,7 +4672,7 @@ buyoutASA_bool_false@4:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.buyoutAlgo(buyer: bytes, debtor: bytes, paymentTxn: uint64) -> void:
 buyoutAlgo:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:877-878
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:922-923
     // @abimethod({ allowActions: 'NoOp' })
     // buyoutAlgo(buyer: Account, debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     proto 3 0
@@ -4421,12 +4683,12 @@ buyoutAlgo:
     frame_dig -2
     concat
     dupn 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:879
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:924
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:880
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:925
     // const currentLoanRecord = this.loan_record(debtor).value.copy()
     dup
     box_get
@@ -4435,19 +4697,19 @@ buyoutAlgo:
     cover 2
     cover 3
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:881
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:926
     // this.loan_record(debtor).value = currentLoanRecord.copy()
     swap
     dig 1
     box_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:883
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:928
     // const collateralAmount = currentLoanRecord.collateralAmount.native
     dup
     pushint 40 // 40
     extract_uint64
     dup
     uncover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:884
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:929
     // const debtAmount = currentLoanRecord.scaledDownDisbursement.native
     dup
     pushint 56 // 56
@@ -4455,7 +4717,7 @@ buyoutAlgo:
     dup
     cover 3
     cover 3
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:885
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:930
     // const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     pushint 32 // 32
     extract_uint64
@@ -4471,7 +4733,7 @@ buyoutAlgo:
     // return this.accepted_collaterals(key).value.copy()
     box_get
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:888
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:933
     // assert(acceptedCollateral.totalCollateral.native >= collateralAmount, 'Collateral amount exceeds current total')
     pushint 16 // 16
     extract_uint64
@@ -4480,17 +4742,17 @@ buyoutAlgo:
     dig 2
     >=
     assert // Collateral amount exceeds current total
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:891
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:936
     // const oraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:892
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:937
     // const [hU, lU] = mulw(collateralAmount, oraclePrice)
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:893
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:938
     // const collateralUSD: uint64 = divw(hU, lU, 1)
     intc_1 // 1
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:894
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:939
     // const CR: uint64 = collateralUSD / debtAmount
     dup
     uncover 2
@@ -4501,12 +4763,12 @@ buyoutAlgo:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:895
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:940
     // assert(CR > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
     dig 1
     <
     assert // loan is not eligible for buyout
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:897
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:942
     // const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
     intc 4 // 10000
     *
@@ -4516,29 +4778,29 @@ buyoutAlgo:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:897
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:942
     // const premiumRate: uint64 = (CR * 10000) / this.liq_threshold_bps.value - 10000 // in basis points
     /
     intc 4 // 10000
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:898
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:943
     // const buyoutPrice: uint64 = collateralUSD * (1 + premiumRate / 10000)
     intc 4 // 10000
     /
     intc_1 // 1
     +
     *
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:900-903
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:945-948
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: buyoutPrice,
     // })
     frame_dig -1
     gtxns Receiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:901
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:946
     // receiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:900-903
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:945-948
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: buyoutPrice,
@@ -4553,13 +4815,13 @@ buyoutAlgo:
     intc_1 // 1
 
 buyoutAlgo_bool_merge@4:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:900-903
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:945-948
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: buyoutPrice,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:908
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:953
     // const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
     global CurrentApplicationAddress
     frame_dig 2
@@ -4569,10 +4831,10 @@ buyoutAlgo_bool_merge@4:
     frame_bury 0
     asset_holding_get AssetBalance
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:909
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:954
     // if (!assetExists) {
     bnz buyoutAlgo_after_if_else@7
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-917
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:955-962
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4582,7 +4844,7 @@ buyoutAlgo_bool_merge@4:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:912
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:957
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     frame_dig 4
@@ -4592,7 +4854,7 @@ buyoutAlgo_bool_merge@4:
     frame_dig 0
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-916
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:955-961
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4604,7 +4866,7 @@ buyoutAlgo_bool_merge@4:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:910-917
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:955-962
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4616,7 +4878,7 @@ buyoutAlgo_bool_merge@4:
     itxn_submit
 
 buyoutAlgo_after_if_else@7:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:920-925
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:965-970
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4624,13 +4886,13 @@ buyoutAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:923
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:968
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     frame_dig 0
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:920-924
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:965-969
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4640,7 +4902,7 @@ buyoutAlgo_after_if_else@7:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:920-925
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:965-970
     // itxn
     //   .assetConfig({
     //     configAsset: currentLoanRecord.loanRecordASAId.native,
@@ -4648,7 +4910,7 @@ buyoutAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:928
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:973
     // this.loan_record(debtor).delete()
     frame_dig 1
     box_del
@@ -4659,18 +4921,18 @@ buyoutAlgo_after_if_else@7:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:929
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:974
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:929
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:974
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:932-938
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:977-983
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4679,7 +4941,7 @@ buyoutAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:935
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:980
     // xferAsset: collateralTokenId.native,
     frame_dig 5
     dup
@@ -4691,7 +4953,7 @@ buyoutAlgo_after_if_else@7:
     itxn_field XferAsset
     frame_dig -3
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:932-937
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:977-982
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4702,7 +4964,7 @@ buyoutAlgo_after_if_else@7:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:932-938
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:977-983
     // itxn
     //   .assetTransfer({
     //     assetReceiver: buyer,
@@ -4711,12 +4973,12 @@ buyoutAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:940
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:985
     // const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     frame_dig 6
     swap
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:941
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:986
     // this.updateCollateralTotal(collateralTokenId, newTotal)
     callsub updateCollateralTotal
     retsub
@@ -4728,7 +4990,7 @@ buyoutAlgo_bool_false@3:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.liquidateASA(debtor: bytes, axferTxn: uint64) -> void:
 liquidateASA:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:944-945
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:989-990
     // @abimethod({ allowActions: 'NoOp' })
     // liquidateASA(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     proto 2 0
@@ -4739,26 +5001,26 @@ liquidateASA:
     frame_dig -2
     concat
     dupn 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:946
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:991
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:948
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:993
     // const record = this.loan_record(debtor).value.copy()
     box_get
     swap
     dup
     uncover 2
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:949
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:994
     // const collateralAmount = record.collateralAmount.native
     dup
     pushint 40 // 40
     extract_uint64
     dup
     uncover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:950
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:995
     // const debtAmount = record.scaledDownDisbursement.native
     dup
     pushint 56 // 56
@@ -4766,7 +5028,7 @@ liquidateASA:
     dup
     cover 3
     cover 3
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:951
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:996
     // const collateralTokenId = record.collateralTokenId
     extract 32 8 // on error: Index access is out of bounds
     dup
@@ -4782,17 +5044,17 @@ liquidateASA:
     swap
     cover 4
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:954
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:999
     // const oraclePrice = this.getOraclePrice(collateralTokenId)
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:955
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1000
     // const [h, l] = mulw(collateralAmount, oraclePrice)
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:956
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1001
     // const collateralUSD = divw(h, l, 1)
     intc_1 // 1
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:958
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1003
     // const CR: uint64 = collateralUSD / debtAmount
     swap
     /
@@ -4802,11 +5064,11 @@ liquidateASA:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:959
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1004
     // assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
     <=
     assert // loan is not liquidatable
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:962-966
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007-1011
     // assertMatch(axferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: Asset(this.base_token_id.value.native),
@@ -4814,10 +5076,10 @@ liquidateASA:
     // })
     frame_dig -1
     gtxns AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:963
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1008
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:962-966
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007-1011
     // assertMatch(axferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: Asset(this.base_token_id.value.native),
@@ -4833,10 +5095,10 @@ liquidateASA:
     bytec_0 // "base_token_id"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:964
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1009
     // xferAsset: Asset(this.base_token_id.value.native),
     btoi
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:962-966
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007-1011
     // assertMatch(axferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: Asset(this.base_token_id.value.native),
@@ -4852,30 +5114,30 @@ liquidateASA:
     intc_1 // 1
 
 liquidateASA_bool_merge@5:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:962-966
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007-1011
     // assertMatch(axferTxn, {
     //   assetReceiver: Global.currentApplicationAddress,
     //   xferAsset: Asset(this.base_token_id.value.native),
     //   assetAmount: debtAmount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:969
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1014
     // const loanRecordASAId = record.loanRecordASAId.native
     frame_dig 2
     pushint 72 // 72
     extract_uint64
     dup
     frame_bury 0
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:970
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1015
     // const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
     global CurrentApplicationAddress
     swap
     asset_holding_get AssetBalance
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:971
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1016
     // if (!assetExists) {
     bnz liquidateASA_after_if_else@8
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:972-979
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1017-1024
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4885,10 +5147,10 @@ liquidateASA_bool_merge@5:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:974
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1019
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:977
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1022
     // assetAmount: 1,
     intc_1 // 1
     itxn_field AssetAmount
@@ -4897,7 +5159,7 @@ liquidateASA_bool_merge@5:
     frame_dig -2
     itxn_field AssetSender
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:972-978
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1017-1023
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4909,7 +5171,7 @@ liquidateASA_bool_merge@5:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:972-979
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1017-1024
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -4921,7 +5183,7 @@ liquidateASA_bool_merge@5:
     itxn_submit
 
 liquidateASA_after_if_else@8:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:982-987
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1027-1032
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -4929,13 +5191,13 @@ liquidateASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:985
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1030
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     frame_dig 0
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:982-986
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1027-1031
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -4945,7 +5207,7 @@ liquidateASA_after_if_else@8:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:982-987
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1027-1032
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -4953,7 +5215,7 @@ liquidateASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:990
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1035
     // this.loan_record(debtor).delete()
     frame_dig 1
     box_del
@@ -4964,18 +5226,18 @@ liquidateASA_after_if_else@8:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:991
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1036
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:991
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1036
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:994-1000
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1039-1045
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -4984,16 +5246,16 @@ liquidateASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:996
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1041
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:997
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1042
     // xferAsset: collateralTokenId.native,
     frame_dig 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:951
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:996
     // const collateralTokenId = record.collateralTokenId
     pushint 32 // 32
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:997
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1042
     // xferAsset: collateralTokenId.native,
     extract_uint64
     frame_dig 3
@@ -5002,7 +5264,7 @@ liquidateASA_after_if_else@8:
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:994-999
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1039-1044
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -5013,7 +5275,7 @@ liquidateASA_after_if_else@8:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:994-1000
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1039-1045
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -5022,14 +5284,14 @@ liquidateASA_after_if_else@8:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1003
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1048
     // const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     frame_dig 6
     pushint 16 // 16
     extract_uint64
     swap
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1004
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1049
     // this.updateCollateralTotal(collateralTokenId, newTotal)
     frame_dig 5
     swap
@@ -5043,7 +5305,7 @@ liquidateASA_bool_false@4:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.liquidateAlgo(debtor: bytes, paymentTxn: uint64) -> void:
 liquidateAlgo:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1007-1008
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1052-1053
     // @abimethod({ allowActions: 'NoOp' })
     // liquidateAlgo(debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     proto 2 0
@@ -5054,26 +5316,26 @@ liquidateAlgo:
     frame_dig -2
     concat
     dupn 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1009
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1054
     // assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1011
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1056
     // const record = this.loan_record(debtor).value.copy()
     box_get
     swap
     dup
     uncover 2
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1012
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1057
     // const collateralAmount = record.collateralAmount.native
     dup
     pushint 40 // 40
     extract_uint64
     dup
     uncover 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1013
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1058
     // const debtAmount = record.scaledDownDisbursement.native
     dup
     pushint 56 // 56
@@ -5081,7 +5343,7 @@ liquidateAlgo:
     dup
     cover 3
     cover 3
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1014
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1059
     // const collateralTokenId = record.collateralTokenId
     extract 32 8 // on error: Index access is out of bounds
     dup
@@ -5097,17 +5359,17 @@ liquidateAlgo:
     swap
     cover 4
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1017
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1062
     // const oraclePrice = this.getOraclePrice(collateralTokenId)
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1018
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1063
     // const [h, l] = mulw(collateralAmount, oraclePrice)
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1019
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1064
     // const collateralUSD = divw(h, l, 1)
     intc_1 // 1
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1021
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1066
     // const CR: uint64 = collateralUSD / debtAmount
     swap
     /
@@ -5117,21 +5379,21 @@ liquidateAlgo:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1022
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1067
     // assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
     <=
     assert // loan is not liquidatable
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1025-1028
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1070-1073
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: debtAmount,
     // })
     frame_dig -1
     gtxns Receiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1026
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1071
     // receiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1025-1028
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1070-1073
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: debtAmount,
@@ -5146,29 +5408,29 @@ liquidateAlgo:
     intc_1 // 1
 
 liquidateAlgo_bool_merge@4:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1025-1028
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1070-1073
     // assertMatch(paymentTxn, {
     //   receiver: Global.currentApplicationAddress,
     //   amount: debtAmount,
     // })
     assert // assert target is match for conditions
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1031
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1076
     // const loanRecordASAId = record.loanRecordASAId.native
     frame_dig 2
     pushint 72 // 72
     extract_uint64
     dup
     frame_bury 0
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1032
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1077
     // const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
     global CurrentApplicationAddress
     swap
     asset_holding_get AssetBalance
     bury 1
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1033
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1078
     // if (!assetExists) {
     bnz liquidateAlgo_after_if_else@7
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1034-1041
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1079-1086
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -5178,10 +5440,10 @@ liquidateAlgo_bool_merge@4:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1036
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1081
     // assetReceiver: Global.currentApplicationAddress,
     global CurrentApplicationAddress
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1039
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1084
     // assetAmount: 1,
     intc_1 // 1
     itxn_field AssetAmount
@@ -5190,7 +5452,7 @@ liquidateAlgo_bool_merge@4:
     frame_dig -2
     itxn_field AssetSender
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1034-1040
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1079-1085
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -5202,7 +5464,7 @@ liquidateAlgo_bool_merge@4:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1034-1041
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1079-1086
     // itxn
     //   .assetTransfer({
     //     assetReceiver: Global.currentApplicationAddress,
@@ -5214,7 +5476,7 @@ liquidateAlgo_bool_merge@4:
     itxn_submit
 
 liquidateAlgo_after_if_else@7:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1044-1049
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1089-1094
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -5222,13 +5484,13 @@ liquidateAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1047
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1092
     // sender: Global.currentApplicationAddress,
     global CurrentApplicationAddress
     itxn_field Sender
     frame_dig 0
     itxn_field ConfigAsset
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1044-1048
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1089-1093
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -5238,7 +5500,7 @@ liquidateAlgo_after_if_else@7:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1044-1049
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1089-1094
     // itxn
     //   .assetConfig({
     //     configAsset: loanRecordASAId,
@@ -5246,7 +5508,7 @@ liquidateAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1052
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1097
     // this.loan_record(debtor).delete()
     frame_dig 1
     box_del
@@ -5257,18 +5519,18 @@ liquidateAlgo_after_if_else@7:
     bytec_1 // "active_loan_records"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1053
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1098
     // this.active_loan_records.value = this.active_loan_records.value - 1
     intc_1 // 1
     -
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:70
     // active_loan_records = GlobalState<uint64>()
     bytec_1 // "active_loan_records"
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1053
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1098
     // this.active_loan_records.value = this.active_loan_records.value - 1
     swap
     app_global_put
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1056-1062
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1101-1107
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -5277,16 +5539,16 @@ liquidateAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_begin
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1058
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1103
     // assetReceiver: op.Txn.sender,
     txn Sender
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1059
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1104
     // xferAsset: collateralTokenId.native,
     frame_dig 2
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1014
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1059
     // const collateralTokenId = record.collateralTokenId
     pushint 32 // 32
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1059
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1104
     // xferAsset: collateralTokenId.native,
     extract_uint64
     frame_dig 3
@@ -5295,7 +5557,7 @@ liquidateAlgo_after_if_else@7:
     itxn_field AssetAmount
     itxn_field XferAsset
     itxn_field AssetReceiver
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1056-1061
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1101-1106
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -5306,7 +5568,7 @@ liquidateAlgo_after_if_else@7:
     itxn_field TypeEnum
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1056-1062
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1101-1107
     // itxn
     //   .assetTransfer({
     //     assetReceiver: op.Txn.sender,
@@ -5315,14 +5577,14 @@ liquidateAlgo_after_if_else@7:
     //   })
     //   .submit()
     itxn_submit
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1065
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1110
     // const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     frame_dig 6
     pushint 16 // 16
     extract_uint64
     swap
     -
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1066
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1111
     // this.updateCollateralTotal(collateralTokenId, newTotal)
     frame_dig 5
     swap
@@ -5336,7 +5598,7 @@ liquidateAlgo_bool_false@3:
 
 // smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanStatus(borrower: bytes) -> uint64, uint64, uint64, uint64, uint64, uint64, uint64:
 getLoanStatus:
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1069-1078
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1114-1123
     // @abimethod({ allowActions: 'NoOp' })
     // getLoanStatus(borrower: Account): {
     //   outstandingDebt: uint64
@@ -5353,26 +5615,26 @@ getLoanStatus:
     bytec_2 // "loan_record"
     frame_dig -1
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1079
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1124
     // assert(this.loan_record(borrower).exists, 'Loan record does not exist')
     dup
     box_len
     bury 1
     assert // Loan record does not exist
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1080
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1125
     // let record = this.loan_record(borrower).value.copy()
     box_get
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1081
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1126
     // record = this.accrueInterest(record) // simulate interest accrual for latest status
     callsub accrueInterest
     pop
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1083
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1128
     // const debt: uint64 = record.scaledDownDisbursement.native
     dup
     pushint 56 // 56
     extract_uint64
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1084
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1129
     // const collateralAmount: uint64 = record.collateralAmount.native
     dig 1
     pushint 40 // 40
@@ -5383,7 +5645,7 @@ getLoanStatus:
     bytec 7 // "liq_threshold_bps"
     app_global_get_ex
     assert // check GlobalState exists
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1087
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1132
     // const acceptedCollateral = this.getCollateral(record.collateralTokenId)
     uncover 3
     extract 32 8 // on error: Index access is out of bounds
@@ -5397,35 +5659,35 @@ getLoanStatus:
     box_get
     bury 1
     assert // Box must have value
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1088
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1133
     // const oraclePrice = this.getOraclePrice(record.collateralTokenId)
     callsub getOraclePrice
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1089
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1134
     // const [hi, lo] = mulw(collateralAmount, oraclePrice)
     dig 2
     mulw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1090
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1135
     // const collateralValueUSD = divw(hi, lo, 1)
     intc_1 // 1
     divw
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1092
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1137
     // const CR: uint64 = (collateralValueUSD * 10000) / debt
     dup
     intc 4 // 10000
     *
     dig 4
     /
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1093
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1138
     // const eligibleForLiquidation = CR < liqBps
     dup
     dig 3
     <
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1094
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1139
     // const eligibleForBuyout = CR > liqBps
     dig 1
     dig 4
     >
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1096-1104
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1141-1149
     // return {
     //   outstandingDebt: debt,
     //   collateralValueUSD: collateralValueUSD,
