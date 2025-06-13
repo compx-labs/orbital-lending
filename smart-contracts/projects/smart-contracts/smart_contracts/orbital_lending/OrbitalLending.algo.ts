@@ -429,7 +429,6 @@ export class OrbitalLending extends Contract {
     })
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
 
-   
     // ─── 1. Fetch LST stats and collateral info ─────────────────────────────
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -451,34 +450,28 @@ export class OrbitalLending extends Contract {
     const collateralOraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
 
     const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
-    const collateralUSD: uint64 = divw(hU, lU, 1)
+    const collateralUSD: uint64 = divw(hU, lU, 1) // USD micro-units
 
-    // ─── 4. Calculate Max Borrow in USD (Apply LTV) ─────────────────────────
-    const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10000
+    // ─── 4. Calculate Max Borrowable USD via LTV ────────────────────────────
+    const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10_000
 
-    // ─── 5. Convert USD Borrow to Base Token Amount ─────────────────────────
+    // ─── 5. Get Oracle Price of Base Token (borrowed token) ─────────────────
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
 
-    const [bH, bL] = mulw(requestedLoanAmount, 1_000_000) // optional scaling if price is 6-decimal
-    const requestedBaseTokenAmount: uint64 = divw(bH, bL, baseTokenOraclePrice)
+    // ─── 6. Convert Requested Loan to USD Value ─────────────────────────────
+    const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
+    const requestedLoanUSD: uint64 = divw(rH, rL, 1_000_000) // since requestedLoanAmount is in base token micro
 
-    // ─── 6. Apply Origination Fee ───────────────────────────────────────────
-    const fee: uint64 = (requestedBaseTokenAmount * this.origination_fee_bps.value) / 10000
-    const disbursement: uint64 = requestedBaseTokenAmount - fee
+    // ─── 7. Enforce LTV Cap ─────────────────────────────────────────────────
+    assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
+
+    // ─── 8. Apply Origination Fee ───────────────────────────────────────────
+    const fee: uint64 = (requestedLoanAmount * this.origination_fee_bps.value) / 10_000
+    const disbursement: uint64 = requestedLoanAmount - fee
     this.fee_pool.value += fee
 
-    // ─── 7. Scale Disbursement into Asset Microunits ────────────────────────
-    let decimals: uint64 = 6
-    if (this.base_token_id.value.native !== 0) {
-      const assetParams = op.AssetParams.assetDecimals(this.base_token_id.value.native)
-      decimals = assetParams[0]
-    }
-    const assetScale: uint64 = 10 ** decimals
-
-    const [aH, aL] = mulw(disbursement, assetScale)
-    const scaledDown: uint64 = divw(aH, aL, 2 ** 32)
-
-    this.last_scaled_down_disbursement.value = scaledDown
+    // ─── 9. Final Disbursement is Already in Micro Units ────────────────────
+    this.last_scaled_down_disbursement.value = disbursement
 
     // ─── 4. Branch: top-up vs new loan ─────────────────────────────────────
     if (hasLoan) {
@@ -523,7 +516,7 @@ export class OrbitalLending extends Contract {
       // — Brand-New Loan —
       assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
       this.mintLoanRecord(
-        scaledDown,
+        disbursement,
         disbursement,
         collateralTokenId,
         op.Txn.sender,
@@ -538,7 +531,7 @@ export class OrbitalLending extends Contract {
       itxn
         .payment({
           receiver: op.Txn.sender,
-          amount: scaledDown,
+          amount: disbursement,
           fee: 1000,
         })
         .submit()
@@ -547,7 +540,7 @@ export class OrbitalLending extends Contract {
         .assetTransfer({
           assetReceiver: op.Txn.sender,
           xferAsset: this.base_token_id.value.native,
-          assetAmount: scaledDown,
+          assetAmount: disbursement,
           fee: 1000,
         })
         .submit()

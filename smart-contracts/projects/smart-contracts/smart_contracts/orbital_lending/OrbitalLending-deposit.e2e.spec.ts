@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { getBoxValue } from './testing-utils'
+import { calculateDisbursement, getBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -27,7 +27,7 @@ const interest_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 
-const NUM_DEPOSITORS = 1
+const NUM_DEPOSITORS = 2
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 500_000_000n
 const DEPOSITOR_INITIAL_DEPOSIT_AMOUNT = 200_000_050n
 const DEPOSITOR_INITIAL_WITHDRAW_AMOUNT = 50n
@@ -551,10 +551,23 @@ describe('orbital-lending Testing - deposit / borrow', () => {
       console.log('Borrower account balance after borrow:', algoBalanceAfter, 'microAlgos')
       expect(algoBalanceAfter).toBeDefined()
       expect(algoBalanceAfter).toBeGreaterThan(algoBalanceBefore - feeTracker)
+      const diff = algoBalanceAfter - algoBalanceBefore + feeTracker
 
       console.log(
-        `Borrower account difference in Algo balance: ${algoBalanceAfter - algoBalanceBefore + feeTracker} microAlgos`,
+        `Borrower account difference in Algo balance: ${diff} microAlgos`,
       )
+
+      //Confirm it is the correct amount
+      const calculatedDisbursment = calculateDisbursement({
+        collateralAmount,
+        collateralPrice: 1_015_000n, //cxusd price
+        ltvBps: ltv_bps,
+        baseTokenPrice: 215000n, //algo price
+        requestedLoanAmount: borrowAmount,
+        originationFeeBps: origination_fee_bps,
+      })
+      console.log('Calculated disbursement:', calculatedDisbursment)
+      expect(calculatedDisbursment.disbursement).toEqual(diff);
     }
   })
 })

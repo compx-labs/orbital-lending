@@ -8,15 +8,19 @@ export interface getBoxValueReturnType {
   boxRef: algosdk.BoxReference
 }
 
-export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient, appId: bigint): Promise<getBoxValueReturnType> {
+export async function getBoxValue(
+  index: bigint,
+  appClient: OrbitalLendingClient,
+  appId: bigint,
+): Promise<getBoxValueReturnType> {
   const acceptedCollateralType = new algosdk.ABITupleType([
     new algosdk.ABIUintType(64), // assetId
     new algosdk.ABIUintType(64), // baseAssetId
     new algosdk.ABIUintType(64), // totalCollateral
   ])
 
-  const boxNames = await appClient.appClient.getBoxNames();
-  console.log('Box names:', boxNames);
+  const boxNames = await appClient.appClient.getBoxNames()
+  console.log('Box names:', boxNames)
 
   const keyBytes = new Uint8Array(8)
   const view = new DataView(keyBytes.buffer)
@@ -33,7 +37,44 @@ export async function getBoxValue(index: bigint, appClient: OrbitalLendingClient
     totalCollateral,
     boxRef: {
       appIndex: appId,
-      name: new TextEncoder().encode('accepted_collaterals' + index)
-    }
+      name: new TextEncoder().encode('accepted_collaterals' + index),
+    },
   }
+}
+
+export function calculateDisbursement({
+  collateralAmount,
+  collateralPrice,
+  ltvBps,
+  baseTokenPrice,
+  requestedLoanAmount,
+  originationFeeBps,
+}: {
+  collateralAmount: bigint
+  collateralPrice: bigint
+  ltvBps: bigint
+  baseTokenPrice: bigint
+  requestedLoanAmount: bigint
+  originationFeeBps: bigint
+}): {
+  allowed: boolean
+  disbursement: bigint
+  fee: bigint
+} {
+  // Step 1: collateral value in USD
+  const collateralUSD = (collateralAmount * collateralPrice) / 1_000_000n
+
+  // Step 2: max borrow USD
+  const maxBorrowUSD = (collateralUSD * ltvBps) / 10_000n
+
+  // Step 3: requested borrow value in USD
+  const borrowValueUSD = (requestedLoanAmount * baseTokenPrice) / 1_000_000n
+
+  const allowed = borrowValueUSD <= maxBorrowUSD
+
+  // Step 4: fee and disbursement
+  const fee = (requestedLoanAmount * originationFeeBps) / 10_000n
+  const disbursement = requestedLoanAmount - fee
+
+  return { allowed, disbursement, fee }
 }
