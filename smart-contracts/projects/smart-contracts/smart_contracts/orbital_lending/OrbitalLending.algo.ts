@@ -408,6 +408,7 @@ export class OrbitalLending extends Contract {
   borrow(
     assetTransferTxn: gtxn.AssetTransferTxn,
     requestedLoanAmount: uint64,
+    collateralAmount: uint64,
     lstApp: uint64,
     collateralTokenId: UintN64,
     templateReserveAddress: Account,
@@ -423,12 +424,12 @@ export class OrbitalLending extends Contract {
     // ─── 1. Validate the collateral deposit ────────────────────────────────
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
+      assetAmount: collateralAmount,
       // user must transfer LST collateral in this txn…
     })
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
-    const collateralDeposit = assetTransferTxn.assetAmount
 
-    // ─── 2. Price & LTV check (same for both branches) ─────────────────────
+   
     // ─── 1. Fetch LST stats and collateral info ─────────────────────────────
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -443,7 +444,7 @@ export class OrbitalLending extends Contract {
     }).returnValue
 
     // ─── 2. Convert LST → Underlying Collateral ─────────────────────────────
-    const [hC, lC] = mulw(totalDepositsExternal, collateralDeposit)
+    const [hC, lC] = mulw(totalDepositsExternal, collateralAmount)
     const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
 
     // ─── 3. Get Oracle Price of Collateral in USD ───────────────────────────
@@ -490,7 +491,7 @@ export class OrbitalLending extends Contract {
       assert(totalRequested <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
 
       // combine collateral & debt
-      const totalCollateral: uint64 = old.collateralAmount.native + collateralDeposit
+      const totalCollateral: uint64 = old.collateralAmount.native + collateralAmount
       const oldDebt: uint64 = old.scaledDownDisbursement.native
       const newDebt: uint64 = oldDebt + disbursement
       const newTotalDisb: uint64 = old.disbursement.native + disbursement
@@ -517,7 +518,7 @@ export class OrbitalLending extends Contract {
         lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
       }).copy()
       this.active_loan_records.value = this.active_loan_records.value + 1
-      this.updateCollateralTotal(collateralTokenId, collateralDeposit)
+      this.updateCollateralTotal(collateralTokenId, collateralAmount)
     } else {
       // — Brand-New Loan —
       assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
@@ -526,7 +527,7 @@ export class OrbitalLending extends Contract {
         disbursement,
         collateralTokenId,
         op.Txn.sender,
-        collateralDeposit,
+        collateralAmount,
         arc19MetaDataStr,
         templateReserveAddress,
       )

@@ -29,9 +29,10 @@ const protocol_interest_fee_bps = 1000n
 
 const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 500_000_000n
-const DEPOSITOR_INITIAL_DEPOSIT_AMOUNT = 200_000_000n
+const DEPOSITOR_INITIAL_DEPOSIT_AMOUNT = 200_000_050n
 const DEPOSITOR_INITIAL_WITHDRAW_AMOUNT = 50n
 const DEPOSITOR_INITIAL_BORROW_AMOUNT = 20_000_000n
+const DEPOSITOR_INITIAL_COLLATERAL_AMOUNT = 20_000_000n
 
 const ALGO_DEPOSIT_AMOUNT = 500_000_000n
 
@@ -187,7 +188,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
   })
 
   test('Add token price to oracle', async () => {
-    const price = 1_015_000 // Example price for cXusd
+    const price = 1_015_000n // Example price for cXusd
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     const cXusdAssetId = globalState.lstTokenId as bigint
     await oracleAppClient.send.addTokenListing({
@@ -212,14 +213,14 @@ describe('orbital-lending Testing - deposit / borrow', () => {
     })
   })
   test('Add xusd price to oracle', async () => {
-    const price = 1_000_000 // Example price for xusd
+    const price = 1_000_000n // Example price for xusd
     const globalState = await algoLendingContractClient.state.global.getAll()
     await oracleAppClient.send.addTokenListing({
       args: [0, price],
     })
   })
   test('Add calgo price to oracle', async () => {
-    const price = 221500 // Example price for calgo
+    const price = 221500n // Example price for calgo
     const globalState = await algoLendingContractClient.state.global.getAll()
     await oracleAppClient.send.addTokenListing({
       args: [0, price],
@@ -469,6 +470,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
   test('Borrow Algo with cxUSD - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
+    const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
     const borrowerAccount = depositors[0]
     algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
     let feeTracker = 0n
@@ -496,7 +498,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         sender: borrowerAccount.addr,
         receiver: algoLendingContractClient.appClient.appAddress,
         assetId: cxusd,
-        amount: borrowAmount,
+        amount: collateralAmount,
         note: 'Depositing cxUSD collateral for borrowing',
       })
       feeTracker += 1000n
@@ -513,7 +515,16 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         .newGroup()
         .gas()
         .borrow({
-          args: [axferTxn, borrowAmount, lstAppId, cxusd, reserve.addr.publicKey, arc19String, mbrTxn],
+          args: [
+            axferTxn,
+            borrowAmount,
+            collateralAmount,
+            lstAppId,
+            cxusd,
+            reserve.addr.publicKey,
+            arc19String,
+            mbrTxn,
+          ],
           assetReferences: [cxusd],
           appReferences: [lstAppId, oracleAppClient.appId],
           boxReferences: [
@@ -542,7 +553,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
       expect(algoBalanceAfter).toBeGreaterThan(algoBalanceBefore - feeTracker)
 
       console.log(
-        `Borrower account difference in Algo balance: ${algoBalanceAfter - algoBalanceBefore - feeTracker} microAlgos`,
+        `Borrower account difference in Algo balance: ${algoBalanceAfter - algoBalanceBefore + feeTracker} microAlgos`,
       )
     }
   })
