@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { calculateDisbursement, getBoxValue } from './testing-utils'
+import { calculateDisbursement, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -180,7 +180,11 @@ describe('orbital-lending Testing - deposit / borrow', () => {
       assetReferences: [cAlgoAssetId],
     })
 
-    const boxValue = await getBoxValue(cAlgoAssetId, xUSDLendingContractClient, xUSDLendingContractClient.appId)
+    const boxValue = await getCollateralBoxValue(
+      cAlgoAssetId,
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
     expect(boxValue.baseAssetId).toEqual(xUSDAssetId)
@@ -459,7 +463,11 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         assetReferences: [lstTokenId],
       })
 
-      const boxValue = await getBoxValue(lstTokenId, algoLendingContractClient, algoLendingContractClient.appId)
+      const boxValue = await getCollateralBoxValue(
+        lstTokenId,
+        algoLendingContractClient,
+        algoLendingContractClient.appId,
+      )
       expect(boxValue).toBeDefined()
       expect(boxValue.assetId).toEqual(lstTokenId)
       console.log('Box assetId:', boxValue.assetId)
@@ -471,103 +479,119 @@ describe('orbital-lending Testing - deposit / borrow', () => {
   test('Borrow Algo with cxUSD - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
     const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
-    const borrowerAccount = depositors[0]
-    algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
-    let feeTracker = 0n
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+      let feeTracker = 0n
 
-    const globalStateXUSDContract = await xUSDLendingContractClient.state.global.getAll()
-    const cxusd: bigint = globalStateXUSDContract.lstTokenId as bigint
-    console.log('cxusd', cxusd)
-    const lstAppId = xUSDLendingContractClient.appId
-    const arc19String = 'this-is-a-test-arc19-metadata-string'
-    const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
-      .accountInformation(borrowerAccount.addr)
-      .do()
-
-    expect(cxusd).toBeDefined()
-    expect(cxusd).toBeGreaterThan(0n)
-
-    if (cxusd) {
-      const boxValue = await getBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
-      expect(boxValue).toBeDefined()
-      expect(boxValue.assetId).toEqual(cxusd)
-      console.log('Box assetId:', boxValue.assetId)
-      expect(boxValue.baseAssetId).toEqual(0n)
-
-      const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
-        sender: borrowerAccount.addr,
-        receiver: algoLendingContractClient.appClient.appAddress,
-        assetId: cxusd,
-        amount: collateralAmount,
-        note: 'Depositing cxUSD collateral for borrowing',
-      })
-      feeTracker += 1000n
-      const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
-        sender: borrowerAccount.addr,
-        receiver: algoLendingContractClient.appClient.appAddress,
-        amount: microAlgo(4000n),
-        note: 'Funding borrow',
-      })
-      feeTracker += 5000n
-      const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
-
-      await algoLendingContractClient
-        .newGroup()
-        .gas()
-        .borrow({
-          args: [
-            axferTxn,
-            borrowAmount,
-            collateralAmount,
-            lstAppId,
-            cxusd,
-            reserve.addr.publicKey,
-            arc19String,
-            mbrTxn,
-          ],
-          assetReferences: [cxusd],
-          appReferences: [lstAppId, oracleAppClient.appId],
-          boxReferences: [
-            {
-              appId: boxValue.boxRef.appIndex as bigint,
-              name: boxValue.boxRef.name,
-            },
-          ],
-          sender: borrowerAccount.addr,
-        })
-        .send()
-      feeTracker += 1000n
-
-      // Confirm borrow was succesful
-      //Check for algo increase in account
-
-      const globalState = await algoLendingContractClient.state.global.getAll()
-      console.log('last scaled disbursed amount:', globalState.lastScaledDownDisbursement)
-
-      const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+      const globalStateXUSDContract = await xUSDLendingContractClient.state.global.getAll()
+      const cxusd: bigint = globalStateXUSDContract.lstTokenId as bigint
+      console.log('cxusd', cxusd)
+      const lstAppId = xUSDLendingContractClient.appId
+      const arc19String = 'this-is-a-test-arc19-metadata-string'
+      const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
         .accountInformation(borrowerAccount.addr)
         .do()
-      console.log('Borrower account balance before borrow:', algoBalanceBefore - feeTracker, 'microAlgos')
-      console.log('Borrower account balance after borrow:', algoBalanceAfter, 'microAlgos')
-      expect(algoBalanceAfter).toBeDefined()
-      expect(algoBalanceAfter).toBeGreaterThan(algoBalanceBefore - feeTracker)
-      const diff = algoBalanceAfter - algoBalanceBefore + feeTracker
 
-      console.log(
-        `Borrower account difference in Algo balance: ${diff} microAlgos`,
-      )
+      expect(cxusd).toBeDefined()
+      expect(cxusd).toBeGreaterThan(0n)
 
-      //Confirm it is the correct amount
-      const calculatedDisbursment = calculateDisbursement({
-        collateralAmount,
-        collateralPrice: 1_015_000n, //cxusd price
-        ltvBps: ltv_bps,
-        baseTokenPrice: 215000n, //algo price
-        requestedLoanAmount: borrowAmount,
-        originationFeeBps: origination_fee_bps,
-      })
-      console.log('Calculated disbursement:', calculatedDisbursment)
-      expect(calculatedDisbursment.disbursement).toEqual(diff);
+      if (cxusd) {
+        const boxValue = await getCollateralBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
+        expect(boxValue).toBeDefined()
+        expect(boxValue.assetId).toEqual(cxusd)
+        console.log('Box assetId:', boxValue.assetId)
+        expect(boxValue.baseAssetId).toEqual(0n)
+
+        const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+          sender: borrowerAccount.addr,
+          receiver: algoLendingContractClient.appClient.appAddress,
+          assetId: cxusd,
+          amount: collateralAmount,
+          note: 'Depositing cxUSD collateral for borrowing',
+        })
+        feeTracker += 1000n
+        const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+          sender: borrowerAccount.addr,
+          receiver: algoLendingContractClient.appClient.appAddress,
+          amount: microAlgo(4000n),
+          note: 'Funding borrow',
+        })
+        feeTracker += 5000n
+        const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
+
+        await algoLendingContractClient
+          .newGroup()
+          .gas()
+          .borrow({
+            args: [
+              axferTxn,
+              borrowAmount,
+              collateralAmount,
+              lstAppId,
+              cxusd,
+              reserve.addr.publicKey,
+              arc19String,
+              mbrTxn,
+            ],
+            assetReferences: [cxusd],
+            appReferences: [lstAppId, oracleAppClient.appId],
+            boxReferences: [
+              {
+                appId: boxValue.boxRef.appIndex as bigint,
+                name: boxValue.boxRef.name,
+              },
+            ],
+            sender: borrowerAccount.addr,
+          })
+          .send()
+        feeTracker += 1000n
+
+        // Confirm borrow was succesful
+        //Check for algo increase in account
+
+        const globalState = await algoLendingContractClient.state.global.getAll()
+        console.log('last scaled disbursed amount:', globalState.lastScaledDownDisbursement)
+
+        const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+          .accountInformation(borrowerAccount.addr)
+          .do()
+        console.log('Borrower account balance before borrow:', algoBalanceBefore - feeTracker, 'microAlgos')
+        console.log('Borrower account balance after borrow:', algoBalanceAfter, 'microAlgos')
+        expect(algoBalanceAfter).toBeDefined()
+        expect(algoBalanceAfter).toBeGreaterThan(algoBalanceBefore - feeTracker)
+        const diff = algoBalanceAfter - algoBalanceBefore + feeTracker
+
+        console.log(`Borrower account difference in Algo balance: ${diff} microAlgos`)
+
+        //Confirm it is the correct amount
+        const calculatedDisbursment = calculateDisbursement({
+          collateralAmount,
+          collateralPrice: 1_015_000n, //cxusd price
+          ltvBps: ltv_bps,
+          baseTokenPrice: 215000n, //algo price
+          requestedLoanAmount: borrowAmount,
+          originationFeeBps: origination_fee_bps,
+        })
+        console.log('Calculated disbursement:', calculatedDisbursment)
+        expect(calculatedDisbursment.disbursement).toEqual(diff)
+
+        const globalStateAfter = await algoLendingContractClient.state.global.getAll()
+        const coount_loanRecords = globalStateAfter.activeLoanRecords
+        console.log('Active loan records count:', coount_loanRecords)
+
+        //check loan record box
+        const loanRecordBoxValue = await getLoanRecordBoxValue(
+          borrowerAccount.addr.toString(),
+          algoLendingContractClient,
+          algoLendingContractClient.appId,
+        )
+
+        //Check loan record nfts
+        const indexer = algoLendingContractClient.algorand.client.indexer
+        const assetInfo = await algoLendingContractClient.algorand.client.algod.accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId).do()
+        console.log('Loan record asset info:', assetInfo)
+      }
     }
   })
 })

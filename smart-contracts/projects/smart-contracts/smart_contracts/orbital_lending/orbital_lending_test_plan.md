@@ -26,11 +26,11 @@
 - [ ] Test calculateASADue and calculateLSTDue logic  
 
 ## 🏦 4. Borrowing
-- [ ] Attempt borrow with unsupported collateral (fail)  
-- [ ] Successful borrow with supported collateral  
+- [x] Attempt borrow with unsupported collateral (fail)  
+- [x] Successful borrow with supported collateral  
 - [ ] LTV limits enforced on new loan  
-- [ ] Origination fee deducted correctly  
-- [ ] Loan record ASA created (ARC19 metadata correct)  
+- [x] Origination fee deducted correctly  
+- [x] Loan record ASA created (ARC19 metadata correct)  
 - [ ] Borrow multiple times to top up loan  
 - [ ] Old loan record ASA burned and new issued  
 

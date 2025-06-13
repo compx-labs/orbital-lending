@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import algosdk from 'algosdk'
 import { OrbitalLendingClient } from '../artifacts/orbital_lending/orbital-lendingClient'
 
@@ -8,7 +9,7 @@ export interface getBoxValueReturnType {
   boxRef: algosdk.BoxReference
 }
 
-export async function getBoxValue(
+export async function getCollateralBoxValue(
   index: bigint,
   appClient: OrbitalLendingClient,
   appId: bigint,
@@ -38,6 +39,72 @@ export async function getBoxValue(
     boxRef: {
       appIndex: appId,
       name: new TextEncoder().encode('accepted_collaterals' + index),
+    },
+  }
+}
+export interface getLoanRecordReturnType {
+  borrowerAddress: string
+  collateralTokenId: bigint
+  collateralAmount: bigint
+  disbursement: bigint
+  scaledDownDisbursement: bigint
+  borrowedTokenId: bigint
+  loanRecordASAId: bigint
+  lastAccrualTimestamp: bigint
+  boxRef: algosdk.BoxReference
+}
+export async function getLoanRecordBoxValue(
+  borrower: string,
+  appClient: OrbitalLendingClient,
+  appId: bigint,
+): Promise<getLoanRecordReturnType> {
+  const loanRecordType = new algosdk.ABITupleType([
+    new algosdk.ABIAddressType(), // borrowerAddress
+    new algosdk.ABIUintType(64), // collateralTokenId
+    new algosdk.ABIUintType(64), // collateralAmount
+    new algosdk.ABIUintType(64), // disbursement
+    new algosdk.ABIUintType(64), // scaledDownDisbursement
+    new algosdk.ABIUintType(64), // borrowedTokenId
+    new algosdk.ABIUintType(64), // loanRecordASAId
+    new algosdk.ABIUintType(64), // lastAccrualTimestamp
+  ])
+
+  const boxNames = await appClient.appClient.getBoxNames()
+  for (const boxName of boxNames) {
+    console.log('boxname getloanrecord', boxName.name)
+    console.log('Box name (base64):', Buffer.from(boxName.name).toString('base64'))
+  }
+  // Encode the key as "loan_records" + <borrower address as bytes>
+  const prefix = new TextEncoder().encode('loan_record')
+  const addressBytes = algosdk.decodeAddress(borrower).publicKey
+  const boxName = new Uint8Array(prefix.length + addressBytes.length)
+  boxName.set(prefix, 0)
+  boxName.set(addressBytes, prefix.length)
+
+  const value = await appClient.appClient.getBoxValueFromABIType(boxName, loanRecordType)
+  const [
+    borrowerAddress,
+    collateralTokenId,
+    collateralAmount,
+    disbursement,
+    scaledDownDisbursement,
+    borrowedTokenId,
+    loanRecordASAId,
+    lastAccrualTimestamp,
+  ] = value as any[]
+
+  return {
+    borrowerAddress,
+    collateralTokenId,
+    collateralAmount,
+    disbursement,
+    scaledDownDisbursement,
+    borrowedTokenId,
+    loanRecordASAId,
+    lastAccrualTimestamp,
+    boxRef: {
+      appIndex: appId,
+      name: boxName,
     },
   }
 }
