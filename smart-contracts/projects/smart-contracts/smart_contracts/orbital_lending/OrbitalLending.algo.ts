@@ -80,6 +80,8 @@ export class OrbitalLending extends Contract {
 
   last_requested_loan = GlobalState<uint64>()
 
+  debug_diff = GlobalState<uint64>()
+
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
   public createApplication(admin: Account, baseTokenId: uint64): void {
     this.admin_account.value = admin
@@ -467,6 +469,8 @@ export class OrbitalLending extends Contract {
     const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
     const requestedLoanUSD: uint64 = divw(rH, rL, 1_000_000) // since requestedLoanAmount is in base token micro
     this.last_requested_loan.value = requestedLoanUSD
+    const diff: uint64 = maxBorrowUSD - requestedLoanUSD
+    this.debug_diff.value = diff
     // ─── 7. Enforce LTV Cap ─────────────────────────────────────────────────
     assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
 
@@ -485,8 +489,14 @@ export class OrbitalLending extends Contract {
       old = this.accrueInterest(old)
       this.loan_record(op.Txn.sender).value = old.copy()
 
-      const totalRequested: uint64 = old.scaledDownDisbursement.native + requestedLoanAmount
-      assert(totalRequested <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
+      const [h1, l1] = mulw(old.scaledDownDisbursement.native, baseTokenOraclePrice)
+      const oldLoanUSD: uint64 = divw(h1, l1, 1_000_000)
+
+      const [h2, l2] = mulw(requestedLoanAmount, baseTokenOraclePrice)
+      const newLoanUSD: uint64 = divw(h2, l2, 1_000_000)
+
+      const totalRequestedUSD: uint64 = oldLoanUSD + newLoanUSD
+      assert(totalRequestedUSD <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
 
       // combine collateral & debt
       const totalCollateral: uint64 = old.collateralAmount.native + collateralAmount
@@ -519,7 +529,6 @@ export class OrbitalLending extends Contract {
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
     } else {
       // — Brand-New Loan —
-      assert(requestedLoanAmount <= maxBorrowUSD, 'exceeds LTV limit')
       this.mintLoanRecord(
         disbursement,
         disbursement,
