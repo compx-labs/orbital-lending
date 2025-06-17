@@ -76,6 +76,10 @@ export class OrbitalLending extends Contract {
 
   last_scaled_down_disbursement = GlobalState<uint64>()
 
+  last_max_borrow = GlobalState<uint64>()
+
+  last_requested_loan = GlobalState<uint64>()
+
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
   public createApplication(admin: Account, baseTokenId: uint64): void {
     this.admin_account.value = admin
@@ -450,10 +454,11 @@ export class OrbitalLending extends Contract {
     const collateralOraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
 
     const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
-    const collateralUSD: uint64 = divw(hU, lU, 1) // USD micro-units
+    const collateralUSD: uint64 = divw(hU, lU, 1_000_000) // USD micro-units
 
     // ─── 4. Calculate Max Borrowable USD via LTV ────────────────────────────
     const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10_000
+    this.last_max_borrow.value = maxBorrowUSD
 
     // ─── 5. Get Oracle Price of Base Token (borrowed token) ─────────────────
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
@@ -461,7 +466,7 @@ export class OrbitalLending extends Contract {
     // ─── 6. Convert Requested Loan to USD Value ─────────────────────────────
     const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
     const requestedLoanUSD: uint64 = divw(rH, rL, 1_000_000) // since requestedLoanAmount is in base token micro
-
+    this.last_requested_loan.value = requestedLoanUSD
     // ─── 7. Enforce LTV Cap ─────────────────────────────────────────────────
     assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
 

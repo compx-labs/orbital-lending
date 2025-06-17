@@ -34,7 +34,7 @@ const DEPOSITOR_INITIAL_WITHDRAW_AMOUNT = 50n
 const DEPOSITOR_INITIAL_BORROW_AMOUNT = 20_000_000n
 const DEPOSITOR_INITIAL_COLLATERAL_AMOUNT = 20_000_000n
 
-const ALGO_DEPOSIT_AMOUNT = 500_000_000n
+const ALGO_DEPOSIT_AMOUNT = 5_000_000_000n
 
 const depositors: Account[] = []
 
@@ -51,7 +51,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
     registerDebugEventHandlers()
 
     const { generateAccount } = localnet.context
-    managerAccount = await generateAccount({ initialFunds: microAlgo(1_000_000_000) })
+    managerAccount = await generateAccount({ initialFunds: microAlgo(6_000_000_000) })
     xUSDAssetId = await createToken(managerAccount, 'xUSD', 6)
 
     xUSDLendingContractClient = await deploy(xUSDAssetId, managerAccount)
@@ -589,9 +589,127 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
         //Check loan record nfts
         const indexer = algoLendingContractClient.algorand.client.indexer
-        const assetInfo = await algoLendingContractClient.algorand.client.algod.accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId).do()
+        const assetInfo = await algoLendingContractClient.algorand.client.algod
+          .accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId)
+          .do()
         console.log('Loan record asset info:', assetInfo)
       }
     }
+  })
+
+  test('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
+    const borrowerAccount = await localnet.context.generateAccount({ initialFunds: microAlgo(10_000_000) })
+    algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+
+    const xusdContractGlobalState = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd: bigint = xusdContractGlobalState.lstTokenId as bigint
+    const collateralAmount = 20_000_000n
+    const depositAmount = 20_000_000n
+    const borrowAmount = 24_000_000n // This is more than the LTV limit
+    const lstAppId = xUSDLendingContractClient.appId
+    const arc19String = 'this-is-a-test-arc19-metadata-string'
+    const boxValue = await getCollateralBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
+    localnet.algorand.setSignerFromAccount(borrowerAccount)
+    algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+
+    //opt in to xusd and cxusd
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: borrowerAccount.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting in to xUSD asset',
+    })
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: borrowerAccount.addr,
+      assetId: cxusd,
+      note: 'Opting in to cxUSD asset',
+    })
+
+    //transfer small amount of xUSD
+    await localnet.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrowerAccount.addr,
+      assetId: xUSDAssetId,
+      amount: 20_000_000n,
+      note: 'Funding borrower with xUSD',
+    })
+
+    //deposit xUSD
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId
+    expect(lstTokenId).toBeDefined()
+
+    if (lstTokenId) {
+      await xUSDLendingContractClient.algorand.send.assetOptIn({
+        sender: borrowerAccount.addr,
+        assetId: lstTokenId,
+        note: 'Opting in to cxUSD asset',
+      })
+
+      const depositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: borrowerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: depositAmount,
+        note: 'Depositing xUSD',
+      })
+
+      const mbrTxn2 = xUSDLendingContractClient.algorand.createTransaction.payment({
+        sender: borrowerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        amount: microAlgo(1000n),
+        note: 'Funding deposit',
+      })
+
+      await xUSDLendingContractClient.send.depositAsa({
+        args: [depositTxn, depositAmount, mbrTxn2],
+        assetReferences: [xUSDAssetId],
+        sender: borrowerAccount.addr,
+      })
+    }
+
+    const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrowerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: cxusd,
+      amount: collateralAmount,
+      note: 'Depositing cxUSD collateral for borrowing',
+    })
+    const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: borrowerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(4000n),
+      note: 'Funding borrow',
+    })
+    const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .borrow({
+        args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, reserve.addr.publicKey, arc19String, mbrTxn],
+        assetReferences: [cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: boxValue.boxRef.appIndex as bigint,
+            name: boxValue.boxRef.name,
+          },
+        ],
+        sender: borrowerAccount.addr,
+      })
+      .send()
+
+    const globalStateAfter = await algoLendingContractClient.state.global.getAll()
+    const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
+    const maxBorrow = globalStateAfter.lastMaxBorrow;
+    console.log('Max borrow amount:', maxBorrow)
+    const lastRequestedLoan = globalStateAfter.lastRequestedLoan;
+    console.log('Last requested loan amount:', lastRequestedLoan)
+
+    const totalDeposits = xusdGlobalState.totalDeposits;
+    const circulatingcXUSD = xusdGlobalState.circulatingLst;
+    console.log('Total deposits:', totalDeposits)
+    console.log('Circulating cXUSD:', circulatingcXUSD)
   })
 })

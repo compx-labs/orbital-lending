@@ -28,7 +28,7 @@
 ## 🏦 4. Borrowing
 - [x] Attempt borrow with unsupported collateral (fail)  
 - [x] Successful borrow with supported collateral  
-- [ ] LTV limits enforced on new loan  
+- [x] LTV limits enforced on new loan  
 - [x] Origination fee deducted correctly  
 - [x] Loan record ASA created (ARC19 metadata correct)  
 - [ ] Borrow multiple times to top up loan  
