@@ -535,7 +535,7 @@ export class OrbitalLending extends Contract {
         loanRecordASAId: old.loanRecordASAId,
         lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
       }).copy()
-      this.active_loan_records.value = this.active_loan_records.value + 1
+      
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
     } else {
       // — Brand-New Loan —
@@ -585,6 +585,8 @@ export class OrbitalLending extends Contract {
         manager: Global.currentApplicationAddress,
         sender: Global.currentApplicationAddress,
         reserve: templateReserveAddress,
+        freeze: Global.currentApplicationAddress,
+        clawback: Global.currentApplicationAddress,
         configAsset: assetId,
         fee: 1000,
       })
@@ -601,7 +603,6 @@ export class OrbitalLending extends Contract {
       lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
-    this.active_loan_records.value = this.active_loan_records.value + 1
   }
 
   private mintLoanRecord(

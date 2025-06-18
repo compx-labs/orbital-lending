@@ -31,8 +31,7 @@
 - [x] LTV limits enforced on new loan  
 - [x] Origination fee deducted correctly  
 - [x] Loan record ASA created (ARC19 metadata correct)  
-- [ ] Borrow multiple times to top up loan  
-- [ ] Old loan record ASA burned and new issued  
+- [x] Borrow multiple times to top up loan    
 
 ## 📈 5. Interest Accrual
 - [ ] Accrue interest correctly based on delta time  
