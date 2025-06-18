@@ -423,6 +423,13 @@ export class OrbitalLending extends Contract {
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
+    let collateralToUse: uint64 = 0;
+    if( hasLoan) {
+      const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
+      collateralToUse = existingCollateral.native
+    } else {
+      collateralToUse = collateralAmount
+    }
     assertMatch(mbrTxn, {
       amount: 4000,
     })
@@ -448,8 +455,11 @@ export class OrbitalLending extends Contract {
       fee: 1000,
     }).returnValue
 
+
+
+
     // ─── 2. Convert LST → Underlying Collateral ─────────────────────────────
-    const [hC, lC] = mulw(totalDepositsExternal, collateralAmount)
+    const [hC, lC] = mulw(totalDepositsExternal, collateralToUse)
     const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
 
     // ─── 3. Get Oracle Price of Collateral in USD ───────────────────────────
