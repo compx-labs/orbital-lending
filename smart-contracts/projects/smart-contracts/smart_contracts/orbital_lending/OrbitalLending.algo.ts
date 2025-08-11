@@ -23,8 +23,20 @@ import { TokenPrice } from '../Oracle/config.algo'
 
 // Number of seconds in a (e.g.) 365-day year
 const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
-const PROTOCOL_SHARE_BPS: uint64 = 2500 // 25% in basis points
-const DEPOSITOR_SHARE_BPS: uint64 = 10000 - PROTOCOL_SHARE_BPS // 7500
+
+// Instead of scattered magic numbers, centralize them
+const FEES = {
+  MBR_CREATE_APP: 400_000,
+  MBR_INIT_APP: 102_000,
+  MBR_OPT_IN_LST: 2_000,
+  MBR_COLLATERAL: 101_000,
+  STANDARD_TXN_FEE: 1_000,
+} as const
+
+const PRECISION = {
+  BASIS_POINTS: 10_000,
+  USD_MICRO_UNITS: 1_000_000,
+} as const
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -55,7 +67,9 @@ export class OrbitalLending extends Contract {
   //Origination fee in basis points
   origination_fee_bps = GlobalState<uint64>()
 
-  protocol_interest_fee_bps = GlobalState<uint64>()
+  protocol_share_bps = GlobalState<uint64>()
+
+  depositor_share_bps = GlobalState<uint64>()
 
   oracle_app = GlobalState<Application>()
 
@@ -92,14 +106,15 @@ export class OrbitalLending extends Contract {
     liq_threshold_bps: uint64,
     interest_bps: uint64,
     origination_fee_bps: uint64,
-    protocol_interest_fee_bps: uint64,
+    protocol_share_bps: uint64,
+
     oracle_app_id: Application,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
 
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
-      amount: 400000,
+      amount: FEES.MBR_INIT_APP,
     })
 
     this.ltv_bps.value = ltv_bps
@@ -111,7 +126,8 @@ export class OrbitalLending extends Contract {
     this.circulating_lst.value = 0
     this.total_deposits.value = 0
     this.active_loan_records.value = 0
-    this.protocol_interest_fee_bps.value = protocol_interest_fee_bps
+    this.protocol_share_bps.value = protocol_share_bps
+    this.depositor_share_bps.value = PRECISION.BASIS_POINTS - protocol_share_bps
     this.oracle_app.value = oracle_app_id
     this.lst_token_id.value = new UintN64(99)
 
@@ -121,7 +137,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: Global.currentApplicationAddress,
           xferAsset: this.base_token_id.value.native,
           assetAmount: 0,
-          fee: 1000,
+          fee: FEES.STANDARD_TXN_FEE,
         })
         .submit()
     }
@@ -132,7 +148,7 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
-      amount: 102000,
+      amount: FEES.MBR_INIT_APP,
     })
     /// Submit opt-in transaction: 0 asset transfer to self
 
@@ -147,7 +163,7 @@ export class OrbitalLending extends Contract {
         manager: Global.currentApplicationAddress,
         unitName: 'c' + String(baseToken.unitName),
         assetName: 'c' + String(this.base_token_id.value.bytes),
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
     this.lst_token_id.value = new UintN64(result.createdAsset.id)
@@ -158,7 +174,7 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
-      amount: 2000,
+      amount: FEES.MBR_OPT_IN_LST,
     })
     this.lst_token_id.value = new UintN64(lstAssetId)
 
@@ -168,7 +184,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: lstAssetId,
         assetAmount: 0,
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
   }
@@ -204,7 +220,7 @@ export class OrbitalLending extends Contract {
     const result = abiCall(PriceOracleStub.prototype.getTokenPrice, {
       appId: contractAppId,
       args: [tokenId],
-      fee: 1000,
+      fee: FEES.STANDARD_TXN_FEE,
     }).returnValue
 
     return result.price.native
@@ -242,7 +258,7 @@ export class OrbitalLending extends Contract {
     assert(!this.collateralExists(collateralTokenId))
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
-      amount: 101000,
+      amount: FEES.MBR_COLLATERAL,
     })
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
@@ -259,7 +275,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: collateralTokenId.native,
         assetAmount: 0,
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
 
@@ -280,11 +296,11 @@ export class OrbitalLending extends Contract {
   private calculateASADue(amount: uint64, lstApp: uint64): uint64 {
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
-      fee: 1000,
+      fee: FEES.STANDARD_TXN_FEE,
     }).returnValue
     const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
       appId: lstApp,
-      fee: 1000,
+      fee: FEES.STANDARD_TXN_FEE,
     }).returnValue
 
     // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
@@ -311,7 +327,7 @@ export class OrbitalLending extends Contract {
       assetAmount: amount,
     })
     assertMatch(mbrTxn, {
-      amount: 1000,
+      amount: FEES.STANDARD_TXN_FEE,
     })
 
     let lstDue: uint64 = 0
@@ -329,7 +345,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.lst_token_id.value.native,
         assetAmount: lstDue,
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
 
@@ -345,7 +361,7 @@ export class OrbitalLending extends Contract {
       amount: amount,
     })
     assertMatch(mbrTxn, {
-      amount: 1000,
+      amount: FEES.STANDARD_TXN_FEE,
     })
 
     let lstDue: uint64 = 0
@@ -359,7 +375,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.lst_token_id.value.native,
         assetAmount: lstDue,
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
 
@@ -399,7 +415,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.base_token_id.value.native,
         assetAmount: asaDue,
-        fee: 1000,
+        fee: FEES.STANDARD_TXN_FEE,
       })
       .submit()
 
@@ -425,126 +441,29 @@ export class OrbitalLending extends Contract {
     } else {
       collateralToUse = collateralAmount
     }
-    assertMatch(mbrTxn, {
-      amount: 4000,
-    })
-
-    // ─── 1. Validate the collateral deposit ────────────────────────────────
-    assertMatch(assetTransferTxn, {
-      assetReceiver: Global.currentApplicationAddress,
-      assetAmount: collateralAmount,
-      // user must transfer LST collateral in this txn…
-    })
-    assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
-
-    // ─── 1. Fetch LST stats and collateral info ─────────────────────────────
-    const acceptedCollateral = this.getCollateral(collateralTokenId)
-
-    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstApp,
-      fee: 1000,
-    }).returnValue
-
-    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstApp,
-      fee: 1000,
-    }).returnValue
-
-    // ─── 2. Convert LST → Underlying Collateral ─────────────────────────────
-    const [hC, lC] = mulw(totalDepositsExternal, collateralToUse)
-    const underlyingCollateral: uint64 = divw(hC, lC, circulatingExternalLST)
-
-    // ─── 3. Get Oracle Price of Collateral in USD ───────────────────────────
-    const collateralOraclePrice: uint64 = this.getOraclePrice(collateralTokenId)
-
-    const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
-    const collateralUSD: uint64 = divw(hU, lU, 1_000_000) // USD micro-units
-
-    // ─── 4. Calculate Max Borrowable USD via LTV ────────────────────────────
-    const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / 10_000
+    this.validateBorrowRequest(assetTransferTxn, collateralAmount, collateralTokenId, mbrTxn)
+    const collateralUSD = this.calculateCollateralValueUSD(collateralTokenId, collateralToUse, lstApp)
+    const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / PRECISION.BASIS_POINTS
     this.last_max_borrow.value = maxBorrowUSD
-
-    // ─── 5. Get Oracle Price of Base Token (borrowed token) ─────────────────
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
+    this.validateLoanAmount(requestedLoanAmount, maxBorrowUSD, baseTokenOraclePrice)
+    const { disbursement, fee } = this.calculateDisbursement(requestedLoanAmount)
 
-    // ─── 6. Convert Requested Loan to USD Value ─────────────────────────────
-    const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
-    const requestedLoanUSD: uint64 = divw(rH, rL, 1_000_000) // since requestedLoanAmount is in base token micro
-    this.last_requested_loan.value = requestedLoanUSD
-    const diff: uint64 = maxBorrowUSD - requestedLoanUSD
-    this.debug_diff.value = diff
-    // ─── 7. Enforce LTV Cap ─────────────────────────────────────────────────
-    assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
-
-    // ─── 8. Apply Origination Fee ───────────────────────────────────────────
-    const fee: uint64 = (requestedLoanAmount * this.origination_fee_bps.value) / 10_000
-    const disbursement: uint64 = requestedLoanAmount - fee
-    this.fee_pool.value += fee
-
-    // ─── 9. Final Disbursement is Already in Micro Units ────────────────────
-    this.last_scaled_down_disbursement.value = disbursement
-
-    // ─── 4. Branch: top-up vs new loan ─────────────────────────────────────
     if (hasLoan) {
-      // — Top-Up Existing Loan —
-      let old = this.getLoanRecord(op.Txn.sender)
-      old = this.accrueInterest(old).copy()
-      this.loan_record(op.Txn.sender).value = old.copy()
-
-      const [h1, l1] = mulw(old.scaledDownDisbursement.native, baseTokenOraclePrice)
-      const oldLoanUSD: uint64 = divw(h1, l1, 1_000_000)
-
-      const [h2, l2] = mulw(requestedLoanAmount, baseTokenOraclePrice)
-      const newLoanUSD: uint64 = divw(h2, l2, 1_000_000)
-
-      const totalRequestedUSD: uint64 = oldLoanUSD + newLoanUSD
-      assert(totalRequestedUSD <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
-
-      // combine collateral & debt
-      const totalCollateral: uint64 = old.collateralAmount.native + collateralAmount
-      const oldDebt: uint64 = old.scaledDownDisbursement.native
-      const newDebt: uint64 = oldDebt + disbursement
-      const newTotalDisb: uint64 = old.disbursement.native + disbursement
-
-      // mint replacement record ASA
-      this.updateLoanRecord(newDebt, newTotalDisb, old.collateralTokenId, op.Txn.sender, totalCollateral)
-
-      this.loan_record(op.Txn.sender).value = new LoanRecord({
-        borrowerAddress: old.borrowerAddress,
-        collateralTokenId: old.collateralTokenId,
-        collateralAmount: new UintN64(totalCollateral),
-        disbursement: new UintN64(newTotalDisb),
-        scaledDownDisbursement: new UintN64(newDebt),
-        borrowedTokenId: old.borrowedTokenId,
-
-        lastAccrualTimestamp: old.lastAccrualTimestamp,
-      }).copy()
-
-      this.updateCollateralTotal(collateralTokenId, collateralAmount)
+      this.processLoanTopUp(
+        op.Txn.sender,
+        collateralAmount,
+        disbursement,
+        maxBorrowUSD,
+        baseTokenOraclePrice,
+        requestedLoanAmount,
+        collateralTokenId,
+      )
     } else {
-      // — Brand-New Loan —
       this.mintLoanRecord(disbursement, disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
     }
 
-    // ─── 5. Disburse the funds ─────────────────────────────────────────────
-    if (this.base_token_id.value.native === 0) {
-      itxn
-        .payment({
-          receiver: op.Txn.sender,
-          amount: disbursement,
-          fee: 1000,
-        })
-        .submit()
-    } else {
-      itxn
-        .assetTransfer({
-          assetReceiver: op.Txn.sender,
-          xferAsset: this.base_token_id.value.native,
-          assetAmount: disbursement,
-          fee: 1000,
-        })
-        .submit()
-    }
+    this.disburseFunds(op.Txn.sender, disbursement)
   }
 
   private updateLoanRecord(
@@ -586,7 +505,6 @@ export class OrbitalLending extends Contract {
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
 
-
   private accrueInterest(record: LoanRecord): LoanRecord {
     const now = Global.latestTimestamp
     const last = record.lastAccrualTimestamp.native
@@ -600,18 +518,18 @@ export class OrbitalLending extends Contract {
     // 1) Compute principal * rateBps → wide multiply
     const [hi1, lo1] = mulw(principal, rateBps)
     // 2) Convert basis points to fraction: divide by 10_000
-    const rateScaled: uint64 = divw(hi1, lo1, 10000)
+    const rateScaled: uint64 = divw(hi1, lo1, PRECISION.BASIS_POINTS)
     // 3) Multiply by time delta: rateScaled * deltaT  → wide multiply
     const [hi2, lo2] = mulw(rateScaled, deltaT)
     // 4) Divide by seconds_per_year to get interest amount
     const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
 
-    const protoBps: uint64 = this.protocol_interest_fee_bps.value
+    const protoBps: uint64 = this.protocol_share_bps.value
     const depositorBps: uint64 = 10000 - protoBps
 
     // depositor’s share = interest * depositorBps / 10_000
     const [hiDep, loDep] = mulw(interest, depositorBps)
-    const depositorInterest: uint64 = divw(hiDep, loDep, 10000)
+    const depositorInterest: uint64 = divw(hiDep, loDep, PRECISION.BASIS_POINTS)
 
     // protocol’s share = remainder
     const protocolInterest: uint64 = interest - depositorInterest
@@ -972,6 +890,122 @@ export class OrbitalLending extends Contract {
   }
 
   gas(): void {}
+
+  private validateBorrowRequest(
+    assetTransferTxn: gtxn.AssetTransferTxn,
+    collateralAmount: uint64,
+    collateralTokenId: UintN64,
+    mbrTxn: gtxn.PaymentTxn,
+  ): void {
+    assertMatch(mbrTxn, { amount: 4000 })
+
+    assertMatch(assetTransferTxn, {
+      assetReceiver: Global.currentApplicationAddress,
+      assetAmount: collateralAmount,
+    })
+
+    assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
+  }
+
+  private calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
+    // Get LST exchange rate
+    const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstApp,
+      fee: FEES.STANDARD_TXN_FEE,
+    }).returnValue
+
+    const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstApp,
+      fee: FEES.STANDARD_TXN_FEE,
+    }).returnValue
+
+    // Convert LST → Underlying Collateral
+    const [hC, lC] = mulw(totalDepositsExternal, collateralAmount)
+    const underlyingCollateral = divw(hC, lC, circulatingExternalLST)
+
+    // Get Oracle Price and convert to USD
+    const collateralOraclePrice = this.getOraclePrice(collateralTokenId)
+    const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
+    const collateralUSD = divw(hU, lU, PRECISION.USD_MICRO_UNITS)
+
+    return collateralUSD
+  }
+
+  private validateLoanAmount(requestedLoanAmount: uint64, maxBorrowUSD: uint64, baseTokenOraclePrice: uint64): uint64 {
+    // Convert requested loan to USD
+    const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
+    const requestedLoanUSD = divw(rH, rL, PRECISION.USD_MICRO_UNITS)
+
+    // Store for debugging
+    this.last_requested_loan.value = requestedLoanUSD
+    this.debug_diff.value = maxBorrowUSD - requestedLoanUSD
+
+    assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
+
+    return requestedLoanUSD
+  }
+
+  private calculateDisbursement(requestedAmount: uint64): { disbursement: uint64; fee: uint64 } {
+    const fee = (requestedAmount * this.origination_fee_bps.value) / PRECISION.BASIS_POINTS
+    const disbursement = requestedAmount - fee
+
+    this.fee_pool.value += fee
+    this.last_scaled_down_disbursement.value = disbursement
+
+    return { disbursement, fee }
+  }
+
+  private processLoanTopUp(
+    borrower: Account,
+    collateralAmount: uint64,
+    disbursement: uint64,
+    maxBorrowUSD: uint64,
+    baseTokenOraclePrice: uint64,
+    requestedLoanAmount: uint64,
+    collateralTokenId: UintN64,
+  ): void {
+    let existingLoan = this.getLoanRecord(borrower)
+    existingLoan = this.accrueInterest(existingLoan).copy()
+    this.loan_record(borrower).value = existingLoan.copy()
+
+    // Validate total debt doesn't exceed LTV
+    const [h1, l1] = mulw(existingLoan.scaledDownDisbursement.native, baseTokenOraclePrice)
+    const oldLoanUSD = divw(h1, l1, PRECISION.USD_MICRO_UNITS)
+
+    const [h2, l2] = mulw(requestedLoanAmount, baseTokenOraclePrice)
+    const newLoanUSD = divw(h2, l2, PRECISION.USD_MICRO_UNITS)
+
+    const totalRequestedUSD = oldLoanUSD + newLoanUSD
+    assert(totalRequestedUSD <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
+
+    // Combine collateral & debt
+    const totalCollateral = existingLoan.collateralAmount.native + collateralAmount
+    const newDebt = existingLoan.scaledDownDisbursement.native + disbursement
+    const newTotalDisb = existingLoan.disbursement.native + disbursement
+
+    this.updateLoanRecord(newDebt, newTotalDisb, existingLoan.collateralTokenId, borrower, totalCollateral)
+    this.updateCollateralTotal(collateralTokenId, collateralAmount)
+  }
+  private disburseFunds(borrower: Account, amount: uint64): void {
+    if (this.base_token_id.value.native === 0) {
+      itxn
+        .payment({
+          receiver: borrower,
+          amount: amount,
+          fee: FEES.STANDARD_TXN_FEE,
+        })
+        .submit()
+    } else {
+      itxn
+        .assetTransfer({
+          assetReceiver: borrower,
+          xferAsset: this.base_token_id.value.native,
+          assetAmount: amount,
+          fee: FEES.STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
+  }
 }
 
 export abstract class TargetContract extends Contract {
