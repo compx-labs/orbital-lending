@@ -639,6 +639,31 @@ export class OrbitalLending extends Contract {
     this.loan_record(borrowerAddress).value = loanRecord.copy()
   }
 
+   /**
+   * Manually accrues interest on a specific borrower's loan
+   * @param debtor - Account address of the borrower whose loan interest should be accrued
+   * @param templateReserveAddress - Reserve address for potential future use
+   * @dev Updates loan record with latest interest calculations
+   * @dev Can be called by anyone to ensure loan interest is up to date
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
+    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const currentLoanRecord = this.loan_record(debtor).value.copy()
+    //Apply interest
+    const iar = this.accrueInterest(currentLoanRecord)
+
+    //update loan record - nft and box
+    this.updateLoanRecord(
+      iar.change.copy(),
+      iar.totalDebt.native,
+      currentLoanRecord.collateralTokenId,
+      debtor,
+      currentLoanRecord.collateralAmount.native,
+    )
+    this.total_deposits.value += iar.change.amount.native // Update total deposits with interest earned
+  }
+
   private accrueInterest(record: LoanRecord): InterestAccrualReturn {
     const now = Global.latestTimestamp
     const last = record.lastAccrualTimestamp.native

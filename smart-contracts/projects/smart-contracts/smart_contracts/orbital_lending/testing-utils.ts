@@ -42,12 +42,14 @@ export async function getCollateralBoxValue(
     },
   }
 }
+
+
 export interface getLoanRecordReturnType {
   borrowerAddress: string
   collateralTokenId: bigint
   collateralAmount: bigint
-  disbursement: bigint
-  scaledDownDisbursement: bigint
+  lastDebtChange: number[]
+  totalDebt: bigint
   borrowedTokenId: bigint
   lastAccrualTimestamp: bigint
   boxRef: algosdk.BoxReference
@@ -61,8 +63,13 @@ export async function getLoanRecordBoxValue(
     new algosdk.ABIAddressType(), // borrowerAddress
     new algosdk.ABIUintType(64), // collateralTokenId
     new algosdk.ABIUintType(64), // collateralAmount
-    new algosdk.ABIUintType(64), // disbursement
-    new algosdk.ABIUintType(64), // scaledDownDisbursement
+    new algosdk.ABITupleType([
+      // struct
+      new algosdk.ABIUintType(64), // debtChange amount
+      new algosdk.ABIUintType(8), // changeType
+      new algosdk.ABIUintType(64), // timestamp
+    ]),
+    new algosdk.ABIUintType(64), // totalDebt
     new algosdk.ABIUintType(64), // borrowedTokenId
     new algosdk.ABIUintType(64), // lastAccrualTimestamp
   ])
@@ -84,18 +91,20 @@ export async function getLoanRecordBoxValue(
     borrowerAddress,
     collateralTokenId,
     collateralAmount,
-    disbursement,
-    scaledDownDisbursement,
+    lastDebtChange,
+    totalDebt,
     borrowedTokenId,
     lastAccrualTimestamp,
   ] = value as any[]
+
+  console.log('value from box:', value)
 
   return {
     borrowerAddress,
     collateralTokenId,
     collateralAmount,
-    disbursement,
-    scaledDownDisbursement,
+    lastDebtChange,
+    totalDebt,
     borrowedTokenId,
     lastAccrualTimestamp,
     boxRef: {

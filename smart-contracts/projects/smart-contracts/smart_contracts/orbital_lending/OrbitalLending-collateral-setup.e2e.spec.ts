@@ -148,7 +148,7 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
     expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
-    expect(globalState.protocolInterestFeeBps).toEqual(protocol_interest_fee_bps)
+    expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.lstTokenId).toBeDefined()
     cxUSDAssetId = globalState.lstTokenId ? 0n : 0n
@@ -221,7 +221,7 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
     expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
-    expect(globalState.protocolInterestFeeBps).toEqual(protocol_interest_fee_bps)
+    expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.lstTokenId).toEqual(lstId)
     expect(globalState.circulatingLst).toEqual(12000000n)
     cAlgoAssetId = lstId
