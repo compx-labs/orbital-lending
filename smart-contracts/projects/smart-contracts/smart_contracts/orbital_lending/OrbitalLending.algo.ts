@@ -16,9 +16,9 @@ import {
   itxn,
   op,
 } from '@algorandfoundation/algorand-typescript'
-import { abiCall, Address, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
+import { abiCall, Address, DynamicArray, UintN64, UintN8 } from '@algorandfoundation/algorand-typescript/arc4'
 import { divw, mulw } from '@algorandfoundation/algorand-typescript/op'
-import { AcceptedCollateral, AcceptedCollateralKey, LoanRecord } from './config.algo'
+import { AcceptedCollateral, AcceptedCollateralKey, DebtChange, InterestAccrualReturn, LoanRecord } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 
 // Number of seconds in a (e.g.) 365-day year
@@ -31,6 +31,7 @@ const FEES = {
   MBR_OPT_IN_LST: 2_000,
   MBR_COLLATERAL: 101_000,
   STANDARD_TXN_FEE: 1_000,
+  VALIDATE_BORROW_FEE: 4_000,
 } as const
 
 const PRECISION = {
@@ -43,87 +44,87 @@ export class OrbitalLending extends Contract {
   // ═══════════════════════════════════════════════════════════════════════
   // CORE TOKEN CONFIGURATION
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** The main lending token used for deposits and borrowing (0 for ALGO) */
   base_token_id = GlobalState<UintN64>()
-  
+
   /** LST (Liquidity Staking Token) representing depositor shares in the pool */
   lst_token_id = GlobalState<UintN64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // LIQUIDITY POOL TRACKING
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** Total LST tokens currently in circulation (represents depositor claims) */
   circulating_lst = GlobalState<uint64>()
-  
+
   /** Total underlying assets deposited in the protocol */
   total_deposits = GlobalState<uint64>()
-  
+
   /** Protocol fee accumulation pool (admin withdrawable) */
   fee_pool = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // PROTOCOL GOVERNANCE & ACCESS CONTROL
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** Administrative account with privileged access to protocol functions */
   admin_account = GlobalState<Account>()
-  
+
   /** External oracle application for asset price feeds */
   oracle_app = GlobalState<Application>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // LENDING PARAMETERS (ALL IN BASIS POINTS)
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** Loan-to-Value ratio (e.g., 7500 = 75% max borrowing against collateral) */
   ltv_bps = GlobalState<uint64>()
-  
+
   /** Liquidation threshold (e.g., 8500 = 85% - liquidate when CR falls below) */
   liq_threshold_bps = GlobalState<uint64>()
-  
+
   /** Annual interest rate charged to borrowers (e.g., 500 = 5% APR) */
   interest_bps = GlobalState<uint64>()
-  
+
   /** One-time fee charged on loan origination (e.g., 100 = 1%) */
   origination_fee_bps = GlobalState<uint64>()
-  
+
   /** Protocol's share of interest income (e.g., 2000 = 20%) */
   protocol_share_bps = GlobalState<uint64>()
-  
+
   /** Depositors' share of interest income (calculated as 10000 - protocol_share) */
   depositor_share_bps = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // COLLATERAL & LOAN MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** Registry of accepted collateral assets with their metadata */
   accepted_collaterals = BoxMap<AcceptedCollateralKey, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
-  
+
   /** Individual borrower loan records with collateral and debt details */
   loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
-  
+
   /** Total number of active loans in the system */
   active_loan_records = GlobalState<uint64>()
-  
+
   /** Count of different collateral types accepted by the protocol */
   accepted_collaterals_count = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // DEBUG & OPERATIONAL TRACKING
   // ═══════════════════════════════════════════════════════════════════════
-  
+
   /** Last calculated disbursement amount (for debugging/monitoring) */
   last_scaled_down_disbursement = GlobalState<uint64>()
-  
+
   /** Last calculated maximum borrowable amount in USD (for debugging) */
   last_max_borrow = GlobalState<uint64>()
-  
+
   /** Last requested loan amount in USD (for debugging) */
   last_requested_loan = GlobalState<uint64>()
-  
+
   /** Difference between max borrow and requested (for debugging) */
   debug_diff = GlobalState<uint64>()
 
@@ -377,12 +378,12 @@ export class OrbitalLending extends Contract {
   }
 
   private calculateLSTDue(amount: uint64): uint64 {
-    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, 10000)
+    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, PRECISION.BASIS_POINTS)
 
     const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
 
     const [highBits2, lowBits2] = mulw(lstRatio, amount)
-    return divw(highBits2, lowBits2, 10000)
+    return divw(highBits2, lowBits2, PRECISION.BASIS_POINTS)
   }
 
   // Calculate how much underlying ASA to return for a given LST amount,
@@ -591,44 +592,30 @@ export class OrbitalLending extends Contract {
         collateralTokenId,
       )
     } else {
-      this.mintLoanRecord(disbursement, disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
+      this.mintLoanRecord(disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
     }
 
     this.disburseFunds(op.Txn.sender, disbursement)
   }
 
-  private updateLoanRecord(
-    scaledDownDisbursement: uint64,
-    disbursement: uint64,
-    collateralTokenId: UintN64,
-    borrowerAddress: Account,
-    collateralAmount: uint64,
-  ): void {
-    const loanRecord: LoanRecord = new LoanRecord({
-      borrowerAddress: new Address(borrowerAddress.bytes),
-      collateralTokenId: collateralTokenId,
-      collateralAmount: new UintN64(collateralAmount),
-      disbursement: new UintN64(disbursement),
-      scaledDownDisbursement: new UintN64(scaledDownDisbursement),
-      borrowedTokenId: this.base_token_id.value,
-      lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
-    })
-    this.loan_record(borrowerAddress).value = loanRecord.copy()
-  }
-
   private mintLoanRecord(
-    scaledDownDisbursement: uint64,
     disbursement: uint64,
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
   ): void {
+    const debtChangeArray = new DynamicArray<DebtChange>()
+
     const loanRecord: LoanRecord = new LoanRecord({
       borrowerAddress: new Address(borrowerAddress.bytes),
       collateralTokenId: collateralTokenId,
       collateralAmount: new UintN64(collateralAmount),
-      disbursement: new UintN64(disbursement),
-      scaledDownDisbursement: new UintN64(scaledDownDisbursement),
+      lastDebtChange: new DebtChange({
+        amount: new UintN64(disbursement),
+        timestamp: new UintN64(Global.latestTimestamp),
+        changeType: new UintN8(0), // 0 for borrow
+      }),
+      totalDebt: new UintN64(disbursement),
       borrowedTokenId: this.base_token_id.value,
       lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     })
@@ -636,14 +623,41 @@ export class OrbitalLending extends Contract {
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
 
-  private accrueInterest(record: LoanRecord): LoanRecord {
+  private updateLoanRecord(
+    debtChange: DebtChange,
+    totalDebt: uint64,
+    collateralTokenId: UintN64,
+    borrowerAddress: Account,
+    collateralAmount: uint64,
+  ): void {
+    const loanRecord: LoanRecord = new LoanRecord({
+      borrowerAddress: new Address(borrowerAddress.bytes),
+      collateralTokenId: collateralTokenId,
+      collateralAmount: new UintN64(collateralAmount),
+      lastDebtChange: debtChange,
+      totalDebt: new UintN64(totalDebt),
+      borrowedTokenId: this.base_token_id.value,
+      lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
+    })
+    this.loan_record(borrowerAddress).value = loanRecord.copy()
+  }
+
+  private accrueInterest(record: LoanRecord): InterestAccrualReturn {
     const now = Global.latestTimestamp
     const last = record.lastAccrualTimestamp.native
     // If no time has passed, nothing to do
-    if (now <= last) return record
+    if (now <= last)
+      return new InterestAccrualReturn({
+        change: new DebtChange({
+          amount: new UintN64(0),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(1),
+        }),
+        totalDebt: record.totalDebt,
+      })
 
     const deltaT: uint64 = now - last
-    const principal: uint64 = record.scaledDownDisbursement.native
+    const principal: uint64 = record.totalDebt.native
     const rateBps: uint64 = this.interest_bps.value // e.g. 500 = 5%
 
     // 1) Compute principal * rateBps → wide multiply
@@ -656,7 +670,7 @@ export class OrbitalLending extends Contract {
     const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
 
     const protoBps: uint64 = this.protocol_share_bps.value
-    const depositorBps: uint64 = 10000 - protoBps
+    const depositorBps: uint64 = PRECISION.BASIS_POINTS - protoBps
 
     // depositor’s share = interest * depositorBps / 10_000
     const [hiDep, loDep] = mulw(interest, depositorBps)
@@ -675,15 +689,13 @@ export class OrbitalLending extends Contract {
 
     const newPrincipal: uint64 = principal + interest
 
-    // Return an updated LoanRecord object (box write will follow)
-    return new LoanRecord({
-      borrowerAddress: record.borrowerAddress,
-      collateralTokenId: record.collateralTokenId,
-      collateralAmount: record.collateralAmount,
-      disbursement: record.disbursement, // original
-      scaledDownDisbursement: new UintN64(newPrincipal),
-      borrowedTokenId: record.borrowedTokenId,
-      lastAccrualTimestamp: new UintN64(now),
+    return new InterestAccrualReturn({
+      change: new DebtChange({
+        amount: new UintN64(interest),
+        timestamp: new UintN64(Global.latestTimestamp),
+        changeType: new UintN8(1),
+      }),
+      totalDebt: new UintN64(newPrincipal),
     })
   }
 
@@ -701,21 +713,24 @@ export class OrbitalLending extends Contract {
    * @dev Partial repayment updates remaining debt amount
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, templateReserveAddress: Account): void {
+  repayLoanASA(
+    assetTransferTxn: gtxn.AssetTransferTxn,
+    repaymentAmount: uint64,
+    templateReserveAddress: Account,
+  ): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: baseToken,
-      assetAmount: amount,
+      assetAmount: repaymentAmount,
     })
 
-    let loanRecord = this.getLoanRecord(op.Txn.sender)
-    loanRecord = this.accrueInterest(loanRecord)
-    this.loan_record(op.Txn.sender).value = loanRecord.copy()
+    const loanRecord = this.getLoanRecord(op.Txn.sender)
+    const { change, totalDebt } = this.accrueInterest(loanRecord)
 
-    const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
-    assert(amount <= currentdebt.native)
-    const remainingDebt: uint64 = currentdebt.native - amount
+    // Might need to remove this and return any excess
+    assert(repaymentAmount <= totalDebt.native)
+    const remainingDebt: uint64 = totalDebt.native - repaymentAmount
 
     if (remainingDebt === 0) {
       //Delete box reference
@@ -732,8 +747,12 @@ export class OrbitalLending extends Contract {
     } else {
       // Update the record and mint a new ASA
       this.updateLoanRecord(
-        remainingDebt, // scaledDownDisbursement
-        loanRecord.disbursement.native, // original disbursement (for metadata)
+        new DebtChange({
+          amount: new UintN64(repaymentAmount),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(2), // 2 for repayment
+        }), // scaledDownDisbursement
+        remainingDebt, // new debt
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
@@ -751,20 +770,18 @@ export class OrbitalLending extends Contract {
    * @dev Full repayment closes loan and returns all collateral
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, templateReserveAddress: Account): void {
+  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64, templateReserveAddress: Account): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(paymentTxn, {
       receiver: Global.currentApplicationAddress,
-      amount: amount,
+      amount: repaymentAmount,
     })
 
-    let loanRecord = this.getLoanRecord(op.Txn.sender)
-    loanRecord = this.accrueInterest(loanRecord)
-    this.loan_record(op.Txn.sender).value = loanRecord.copy()
+    const loanRecord = this.getLoanRecord(op.Txn.sender)
+    const { change, totalDebt } = this.accrueInterest(loanRecord)
 
-    const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
-    assert(amount <= currentdebt.native)
-    const remainingDebt: uint64 = currentdebt.native - amount
+    assert(repaymentAmount <= totalDebt.native)
+    const remainingDebt: uint64 = totalDebt.native - repaymentAmount
 
     if (remainingDebt === 0) {
       //Delete box reference
@@ -781,8 +798,12 @@ export class OrbitalLending extends Contract {
     } else {
       // Update the record and mint a new ASA
       this.updateLoanRecord(
-        remainingDebt, // scaledDownDisbursement
-        loanRecord.disbursement.native, // original disbursement (for metadata)
+        new DebtChange({
+          amount: new UintN64(repaymentAmount),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(2), // 2 for repayment
+        }),
+        remainingDebt,
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
@@ -809,30 +830,6 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Manually accrues interest on a specific borrower's loan
-   * @param debtor - Account address of the borrower whose loan interest should be accrued
-   * @param templateReserveAddress - Reserve address for potential future use
-   * @dev Updates loan record with latest interest calculations
-   * @dev Can be called by anyone to ensure loan interest is up to date
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-    const currentLoanRecord = this.loan_record(debtor).value.copy()
-    //Apply interest
-    const newLoanRecord = this.accrueInterest(currentLoanRecord)
-
-    //update loan record - nft and box
-    this.updateLoanRecord(
-      newLoanRecord.scaledDownDisbursement.native,
-      newLoanRecord.disbursement.native,
-      newLoanRecord.collateralTokenId,
-      debtor,
-      newLoanRecord.collateralAmount.native,
-    )
-  }
-
-  /**
    * Purchases a borrower's collateral at a premium when loan is above liquidation threshold
    * @param buyer - Account that will receive the collateral
    * @param debtor - Account whose loan is being bought out
@@ -848,7 +845,7 @@ export class OrbitalLending extends Contract {
     this.loan_record(debtor).value = currentLoanRecord.copy()
 
     const collateralAmount = currentLoanRecord.collateralAmount.native
-    const debtAmount = currentLoanRecord.scaledDownDisbursement.native
+    const debtAmount = currentLoanRecord.totalDebt.native
     const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -905,7 +902,7 @@ export class OrbitalLending extends Contract {
     this.loan_record(debtor).value = currentLoanRecord.copy()
 
     const collateralAmount = currentLoanRecord.collateralAmount.native
-    const debtAmount = currentLoanRecord.scaledDownDisbursement.native
+    const debtAmount = currentLoanRecord.totalDebt.native
     const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -959,7 +956,7 @@ export class OrbitalLending extends Contract {
 
     const record = this.loan_record(debtor).value.copy()
     const collateralAmount = record.collateralAmount.native
-    const debtAmount = record.scaledDownDisbursement.native
+    const debtAmount = record.totalDebt.native
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1011,7 +1008,7 @@ export class OrbitalLending extends Contract {
 
     const record = this.loan_record(debtor).value.copy()
     const collateralAmount = record.collateralAmount.native
-    const debtAmount = record.scaledDownDisbursement.native
+    const debtAmount = record.totalDebt.native
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1064,19 +1061,18 @@ export class OrbitalLending extends Contract {
     eligibleForBuyout: boolean
   } {
     assert(this.loan_record(borrower).exists, 'Loan record does not exist')
-    let record = this.loan_record(borrower).value.copy()
-    record = this.accrueInterest(record) // simulate interest accrual for latest status
+    const record = this.loan_record(borrower).value.copy()
+    const { change, totalDebt } = this.accrueInterest(record) // simulate interest accrual for latest status
 
-    const debt: uint64 = record.scaledDownDisbursement.native
+    const debt: uint64 = totalDebt.native
     const collateralAmount: uint64 = record.collateralAmount.native
     const liqBps: uint64 = this.liq_threshold_bps.value
 
-    const acceptedCollateral = this.getCollateral(record.collateralTokenId)
     const oraclePrice = this.getOraclePrice(record.collateralTokenId)
     const [hi, lo] = mulw(collateralAmount, oraclePrice)
     const collateralValueUSD = divw(hi, lo, 1)
 
-    const CR: uint64 = (collateralValueUSD * 10000) / debt
+    const CR: uint64 = (collateralValueUSD * PRECISION.BASIS_POINTS) / debt
     const eligibleForLiquidation = CR < liqBps
     const eligibleForBuyout = CR > liqBps
 
@@ -1091,10 +1087,6 @@ export class OrbitalLending extends Contract {
     }
   }
 
-  /**
-   * Gas optimization method - placeholder for potential future gas management
-   * @dev Currently empty but may be used for gas price calculations or optimizations
-   */
   gas(): void {}
 
   private validateBorrowRequest(
@@ -1103,7 +1095,7 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     mbrTxn: gtxn.PaymentTxn,
   ): void {
-    assertMatch(mbrTxn, { amount: 4000 })
+    assertMatch(mbrTxn, { amount: FEES.VALIDATE_BORROW_FEE })
 
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -1170,12 +1162,11 @@ export class OrbitalLending extends Contract {
     requestedLoanAmount: uint64,
     collateralTokenId: UintN64,
   ): void {
-    let existingLoan = this.getLoanRecord(borrower)
-    existingLoan = this.accrueInterest(existingLoan).copy()
-    this.loan_record(borrower).value = existingLoan.copy()
+    const existingLoan = this.getLoanRecord(borrower)
+    const { change, totalDebt } = this.accrueInterest(existingLoan).copy()
 
     // Validate total debt doesn't exceed LTV
-    const [h1, l1] = mulw(existingLoan.scaledDownDisbursement.native, baseTokenOraclePrice)
+    const [h1, l1] = mulw(totalDebt.native, baseTokenOraclePrice)
     const oldLoanUSD = divw(h1, l1, PRECISION.USD_MICRO_UNITS)
 
     const [h2, l2] = mulw(requestedLoanAmount, baseTokenOraclePrice)
@@ -1186,10 +1177,20 @@ export class OrbitalLending extends Contract {
 
     // Combine collateral & debt
     const totalCollateral = existingLoan.collateralAmount.native + collateralAmount
-    const newDebt = existingLoan.scaledDownDisbursement.native + disbursement
-    const newTotalDisb = existingLoan.disbursement.native + disbursement
+    const newDebt = totalDebt.native + disbursement
+    const newTotalDisb = existingLoan.totalDebt.native + disbursement
 
-    this.updateLoanRecord(newDebt, newTotalDisb, existingLoan.collateralTokenId, borrower, totalCollateral)
+    this.updateLoanRecord(
+      new DebtChange({
+        amount: new UintN64(disbursement),
+        timestamp: new UintN64(Global.latestTimestamp),
+        changeType: new UintN8(0), // 0 for borrow
+      }),
+      newTotalDisb,
+      existingLoan.collateralTokenId,
+      borrower,
+      totalCollateral,
+    )
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
   }
   private disburseFunds(borrower: Account, amount: uint64): void {
