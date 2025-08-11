@@ -49,7 +49,6 @@ export interface getLoanRecordReturnType {
   disbursement: bigint
   scaledDownDisbursement: bigint
   borrowedTokenId: bigint
-  loanRecordASAId: bigint
   lastAccrualTimestamp: bigint
   boxRef: algosdk.BoxReference
 }
@@ -65,7 +64,6 @@ export async function getLoanRecordBoxValue(
     new algosdk.ABIUintType(64), // disbursement
     new algosdk.ABIUintType(64), // scaledDownDisbursement
     new algosdk.ABIUintType(64), // borrowedTokenId
-    new algosdk.ABIUintType(64), // loanRecordASAId
     new algosdk.ABIUintType(64), // lastAccrualTimestamp
   ])
 
@@ -89,7 +87,6 @@ export async function getLoanRecordBoxValue(
     disbursement,
     scaledDownDisbursement,
     borrowedTokenId,
-    loanRecordASAId,
     lastAccrualTimestamp,
   ] = value as any[]
 
@@ -100,7 +97,6 @@ export async function getLoanRecordBoxValue(
     disbursement,
     scaledDownDisbursement,
     borrowedTokenId,
-    loanRecordASAId,
     lastAccrualTimestamp,
     boxRef: {
       appIndex: appId,

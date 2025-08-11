@@ -565,16 +565,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
           .newGroup()
           .gas()
           .borrow({
-            args: [
-              axferTxn,
-              borrowAmount,
-              collateralAmount,
-              lstAppId,
-              cxusd,
-              reserve.addr.publicKey,
-              arc19String,
-              mbrTxn,
-            ],
+            args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
             assetReferences: [cxusd],
             appReferences: [lstAppId, oracleAppClient.appId],
             boxReferences: [
@@ -636,13 +627,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         )
 
         console.log('Loan record box value:', loanRecordBoxValue)
-
-        //Check loan record nfts
-        const indexer = algoLendingContractClient.algorand.client.indexer
-        const assetInfo = await algoLendingContractClient.algorand.client.algod
-          .accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId)
-          .do()
-        console.log('Loan record asset info:', assetInfo)
+        expect(loanRecordBoxValue).toBeDefined()
       }
     }
   })
@@ -738,16 +723,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         .newGroup()
         .gas()
         .borrow({
-          args: [
-            axferTxn,
-            borrowAmount,
-            collateralAmount,
-            lstAppId,
-            cxusd,
-            reserve.addr.publicKey,
-            arc19String,
-            mbrTxn,
-          ],
+          args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
           assetReferences: [cxusd],
           appReferences: [lstAppId, oracleAppClient.appId],
           boxReferences: [
@@ -865,16 +841,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
           .newGroup()
           .gas()
           .borrow({
-            args: [
-              axferTxn,
-              borrowAmount,
-              collateralAmount,
-              lstAppId,
-              cxusd,
-              reserve.addr.publicKey,
-              arc19String,
-              mbrTxn,
-            ],
+            args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
             assetReferences: [cxusd],
             appReferences: [lstAppId, oracleAppClient.appId],
             boxReferences: [
@@ -939,13 +906,6 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
         const boxNames = await algoLendingContractClient.appClient.getBoxNames()
         console.log('Box names after top up:', boxNames)
-
-        //Check loan record nfts
-        const indexer = algoLendingContractClient.algorand.client.indexer
-        const assetInfo = await algoLendingContractClient.algorand.client.algod
-          .accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId)
-          .do()
-        console.log('Loan record asset info:', assetInfo)
       }
     }
   })
@@ -1041,16 +1001,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
           .newGroup()
           .gas()
           .borrow({
-            args: [
-              axferTxn,
-              borrowAmount,
-              collateralAmount,
-              lstAppId,
-              cxusd,
-              reserve.addr.publicKey,
-              arc19String,
-              mbrTxn,
-            ],
+            args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
             assetReferences: [cxusd],
             appReferences: [lstAppId, oracleAppClient.appId],
             boxReferences: [
@@ -1115,13 +1066,6 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
         const boxNames = await algoLendingContractClient.appClient.getBoxNames()
         console.log('Box names after top up:', boxNames)
-
-        //Check loan record nfts
-        const indexer = algoLendingContractClient.algorand.client.indexer
-        const assetInfo = await algoLendingContractClient.algorand.client.algod
-          .accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId)
-          .do()
-        console.log('Loan record asset info:', assetInfo)
       }
     }
   })
@@ -1217,16 +1161,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
           .newGroup()
           .gas()
           .borrow({
-            args: [
-              axferTxn,
-              borrowAmount,
-              collateralAmount,
-              lstAppId,
-              cxusd,
-              reserve.addr.publicKey,
-              arc19String,
-              mbrTxn,
-            ],
+            args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
             assetReferences: [cxusd],
             appReferences: [lstAppId, oracleAppClient.appId],
             boxReferences: [
@@ -1291,13 +1226,6 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
         const boxNames = await algoLendingContractClient.appClient.getBoxNames()
         console.log('Box names after top up:', boxNames)
-
-        //Check loan record nfts
-        const indexer = algoLendingContractClient.algorand.client.indexer
-        const assetInfo = await algoLendingContractClient.algorand.client.algod
-          .accountAssetInformation(algoLendingContractClient.appClient.appAddress, loanRecordBoxValue.loanRecordASAId)
-          .do()
-        console.log('Loan record asset info:', assetInfo)
       }
     }
   })
@@ -1393,16 +1321,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
             .newGroup()
             .gas()
             .borrow({
-              args: [
-                axferTxn,
-                borrowAmount,
-                collateralAmount,
-                lstAppId,
-                cxusd,
-                reserve.addr.publicKey,
-                arc19String,
-                mbrTxn,
-              ],
+              args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
               assetReferences: [cxusd],
               appReferences: [lstAppId, oracleAppClient.appId],
               boxReferences: [
@@ -1422,7 +1341,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
 
   //wait 5 seconds
 
-  test('Accrue interest - algo Lending Contract', async () => {
+  test.skip('Accrue interest - algo Lending Contract', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)

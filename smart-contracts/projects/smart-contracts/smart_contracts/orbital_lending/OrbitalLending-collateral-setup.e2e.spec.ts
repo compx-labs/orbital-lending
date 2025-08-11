@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { getBoxValue } from './testing-utils'
+import { getCollateralBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 let xUSDLendingContractClient: OrbitalLendingClient
 let algoLendingContractClient: OrbitalLendingClient
@@ -244,7 +244,7 @@ describe('orbital-lending Testing - collateral setup', () => {
       assetReferences: [cAlgoAssetId],
     })
 
-    const boxValue = await getBoxValue(cAlgoAssetId, xUSDLendingContractClient)
+    const boxValue = await getCollateralBoxValue(cAlgoAssetId, xUSDLendingContractClient, xUSDLendingContractClient.appClient.appId)
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
     expect(boxValue.baseAssetId).toEqual(xUSDAssetId)

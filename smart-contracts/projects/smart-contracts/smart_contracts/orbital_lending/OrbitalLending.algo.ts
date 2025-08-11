@@ -586,30 +586,6 @@ export class OrbitalLending extends Contract {
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
 
-  @abimethod({ allowActions: 'NoOp' })
-  claimLoanRecordASA(debtor: Account, assetId: Asset): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-    const assetExists = Global.currentApplicationAddress.isOptedIn(assetId)
-    assert(assetExists, 'Loan record ASA does not exist')
-    const loanRecord = this.loan_record(debtor).value.copy()
-    itxn
-      .assetTransfer({
-        assetReceiver: debtor,
-        xferAsset: assetId,
-        assetAmount: 1,
-      })
-      .submit()
-
-    //opt app out of asa
-    itxn
-      .assetTransfer({
-        assetReceiver: Global.currentApplicationAddress,
-        xferAsset: assetId,
-        assetAmount: 0,
-        assetCloseTo: debtor,
-      })
-      .submit()
-  }
 
   private accrueInterest(record: LoanRecord): LoanRecord {
     const now = Global.latestTimestamp
