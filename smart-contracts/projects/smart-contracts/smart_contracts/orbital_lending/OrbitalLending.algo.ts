@@ -1,15 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/explicit-member-accessibility */
-import { Account, bytes, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
+import { Account, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
 import {
   abimethod,
   Application,
-  arc4,
   assert,
   assertMatch,
   Asset,
   BoxMap,
-  Bytes,
   contract,
   Contract,
   err,
@@ -17,11 +15,10 @@ import {
   GlobalState,
   itxn,
   op,
-  Uint64,
 } from '@algorandfoundation/algorand-typescript'
-import { abiCall, Address, Str, UintN128, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
-import { appOptedIn, divw, mulw } from '@algorandfoundation/algorand-typescript/op'
-import { AcceptedCollateral, AcceptedCollateralKey, LoanRecord, Oracle } from './config.algo'
+import { abiCall, Address, UintN64 } from '@algorandfoundation/algorand-typescript/arc4'
+import { divw, mulw } from '@algorandfoundation/algorand-typescript/op'
+import { AcceptedCollateral, AcceptedCollateralKey, LoanRecord } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 
 // Number of seconds in a (e.g.) 365-day year
@@ -417,14 +414,12 @@ export class OrbitalLending extends Contract {
     collateralAmount: uint64,
     lstApp: uint64,
     collateralTokenId: UintN64,
-    templateReserveAddress: Account,
-    arc19MetaDataStr: string,
     mbrTxn: gtxn.PaymentTxn,
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
-    let collateralToUse: uint64 = 0;
-    if( hasLoan) {
+    let collateralToUse: uint64 = 0
+    if (hasLoan) {
       const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
       collateralToUse = existingCollateral.native
     } else {
@@ -454,9 +449,6 @@ export class OrbitalLending extends Contract {
       appId: lstApp,
       fee: 1000,
     }).returnValue
-
-
-
 
     // ─── 2. Convert LST → Underlying Collateral ─────────────────────────────
     const [hC, lC] = mulw(totalDepositsExternal, collateralToUse)
@@ -515,15 +507,7 @@ export class OrbitalLending extends Contract {
       const newTotalDisb: uint64 = old.disbursement.native + disbursement
 
       // mint replacement record ASA
-      this.updateLoanRecord(
-        newDebt,
-        newTotalDisb,
-        old.collateralTokenId,
-        op.Txn.sender,
-        totalCollateral,
-        templateReserveAddress,
-        old.loanRecordASAId.native,
-      )
+      this.updateLoanRecord(newDebt, newTotalDisb, old.collateralTokenId, op.Txn.sender, totalCollateral)
 
       this.loan_record(op.Txn.sender).value = new LoanRecord({
         borrowerAddress: old.borrowerAddress,
@@ -532,22 +516,14 @@ export class OrbitalLending extends Contract {
         disbursement: new UintN64(newTotalDisb),
         scaledDownDisbursement: new UintN64(newDebt),
         borrowedTokenId: old.borrowedTokenId,
-        loanRecordASAId: old.loanRecordASAId,
+
         lastAccrualTimestamp: old.lastAccrualTimestamp,
       }).copy()
-      
+
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
     } else {
       // — Brand-New Loan —
-      this.mintLoanRecord(
-        disbursement,
-        disbursement,
-        collateralTokenId,
-        op.Txn.sender,
-        collateralAmount,
-        arc19MetaDataStr,
-        templateReserveAddress,
-      )
+      this.mintLoanRecord(disbursement, disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
     }
 
     // ─── 5. Disburse the funds ─────────────────────────────────────────────
@@ -577,21 +553,7 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
-    templateReserveAddress: Account,
-    assetId: uint64,
   ): void {
-    const asset = itxn
-      .assetConfig({
-        manager: Global.currentApplicationAddress,
-        sender: Global.currentApplicationAddress,
-        reserve: templateReserveAddress,
-        freeze: Global.currentApplicationAddress,
-        clawback: Global.currentApplicationAddress,
-        configAsset: assetId,
-        fee: 1000,
-      })
-      .submit()
-
     const loanRecord: LoanRecord = new LoanRecord({
       borrowerAddress: new Address(borrowerAddress.bytes),
       collateralTokenId: collateralTokenId,
@@ -599,7 +561,6 @@ export class OrbitalLending extends Contract {
       disbursement: new UintN64(disbursement),
       scaledDownDisbursement: new UintN64(scaledDownDisbursement),
       borrowedTokenId: this.base_token_id.value,
-      loanRecordASAId: new UintN64(asset.createdAsset.id),
       lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
@@ -611,26 +572,7 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     borrowerAddress: Account,
     collateralAmount: uint64,
-    arc19MetadataStr: string,
-    templateReserveAddress: Account,
   ): void {
-    const asset = itxn
-      .assetConfig({
-        assetName: 'r' + String(collateralTokenId.bytes) + 'b' + String(this.base_token_id.value.bytes),
-        url: arc19MetadataStr,
-        manager: Global.currentApplicationAddress,
-        decimals: 0,
-        total: disbursement,
-        sender: Global.currentApplicationAddress,
-        unitName: 'CMPXLR',
-        reserve: templateReserveAddress,
-        freeze: Global.currentApplicationAddress,
-        clawback: Global.currentApplicationAddress,
-        defaultFrozen: false,
-        fee: 1000, // Set a small fee for the asset config transaction
-      })
-      .submit()
-
     const loanRecord: LoanRecord = new LoanRecord({
       borrowerAddress: new Address(borrowerAddress.bytes),
       collateralTokenId: collateralTokenId,
@@ -638,7 +580,6 @@ export class OrbitalLending extends Contract {
       disbursement: new UintN64(disbursement),
       scaledDownDisbursement: new UintN64(scaledDownDisbursement),
       borrowedTokenId: this.base_token_id.value,
-      loanRecordASAId: new UintN64(asset.createdAsset.id),
       lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
@@ -717,17 +658,12 @@ export class OrbitalLending extends Contract {
       disbursement: record.disbursement, // original
       scaledDownDisbursement: new UintN64(newPrincipal),
       borrowedTokenId: record.borrowedTokenId,
-      loanRecordASAId: record.loanRecordASAId,
       lastAccrualTimestamp: new UintN64(now),
     })
   }
 
   getLoanRecord(borrowerAddress: Account): LoanRecord {
     return this.loan_record(borrowerAddress).value
-  }
-
-  getLoanRecordASAId(borrowerAddress: Account): uint64 {
-    return this.loan_record(borrowerAddress).value.loanRecordASAId.native
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -743,21 +679,11 @@ export class OrbitalLending extends Contract {
     loanRecord = this.accrueInterest(loanRecord)
     this.loan_record(op.Txn.sender).value = loanRecord.copy()
 
-    const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
-
     const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
     assert(amount <= currentdebt.native)
     const remainingDebt: uint64 = currentdebt.native - amount
 
     if (remainingDebt === 0) {
-      itxn
-        .assetConfig({
-          configAsset: loanRecordASAId,
-          sender: Global.currentApplicationAddress,
-        })
-        .submit()
-      //return collateral asset
-
       //Delete box reference
       this.loan_record(op.Txn.sender).delete()
       this.active_loan_records.value = this.active_loan_records.value - 1
@@ -777,8 +703,6 @@ export class OrbitalLending extends Contract {
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
-        templateReserveAddress, // arc19 metadata
-        loanRecordASAId, // existing ASA ID to update
       )
     }
   }
@@ -795,22 +719,11 @@ export class OrbitalLending extends Contract {
     loanRecord = this.accrueInterest(loanRecord)
     this.loan_record(op.Txn.sender).value = loanRecord.copy()
 
-    const loanRecordASAId = this.getLoanRecordASAId(op.Txn.sender)
-
     const currentdebt: UintN64 = loanRecord.scaledDownDisbursement
     assert(amount <= currentdebt.native)
     const remainingDebt: uint64 = currentdebt.native - amount
 
     if (remainingDebt === 0) {
-      //destroy asa
-      itxn
-        .assetConfig({
-          configAsset: loanRecordASAId,
-          sender: Global.currentApplicationAddress,
-        })
-        .submit()
-      //return collateral asset
-
       //Delete box reference
       this.loan_record(op.Txn.sender).delete()
       this.active_loan_records.value = this.active_loan_records.value - 1
@@ -830,8 +743,6 @@ export class OrbitalLending extends Contract {
         loanRecord.collateralTokenId, // collateral type
         op.Txn.sender, // borrower
         loanRecord.collateralAmount.native, // collateral locked
-        templateReserveAddress, // arc19 metadata
-        loanRecordASAId, // existing ASA ID to update
       )
     }
   }
@@ -863,10 +774,7 @@ export class OrbitalLending extends Contract {
       newLoanRecord.collateralTokenId,
       debtor,
       newLoanRecord.collateralAmount.native,
-      templateReserveAddress,
-      newLoanRecord.loanRecordASAId.native, // existing ASA ID to update
     )
-
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -899,26 +807,6 @@ export class OrbitalLending extends Contract {
     })
 
     //Buyout can proceed
-
-    //Clawback the loan record ASA
-    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
-    if (!assetExists) {
-      itxn
-        .assetTransfer({
-          assetReceiver: Global.currentApplicationAddress,
-          xferAsset: currentLoanRecord.loanRecordASAId.native,
-          assetSender: debtor,
-          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
-        })
-        .submit()
-    }
-    //Destroy the loan record ASA
-    itxn
-      .assetConfig({
-        configAsset: currentLoanRecord.loanRecordASAId.native,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
 
     //Update the loan record for the debtor
     this.loan_record(debtor).delete()
@@ -967,26 +855,6 @@ export class OrbitalLending extends Contract {
 
     //Buyout can proceed
 
-    //Clawback the loan record ASA
-    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(currentLoanRecord.loanRecordASAId.native))
-    if (!assetExists) {
-      itxn
-        .assetTransfer({
-          assetReceiver: Global.currentApplicationAddress,
-          xferAsset: currentLoanRecord.loanRecordASAId.native,
-          assetSender: debtor,
-          assetAmount: currentLoanRecord.scaledDownDisbursement.native,
-        })
-        .submit()
-    }
-    //Destroy the loan record ASA
-    itxn
-      .assetConfig({
-        configAsset: currentLoanRecord.loanRecordASAId.native,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
-
     //Update the loan record for the debtor
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
@@ -1029,25 +897,6 @@ export class OrbitalLending extends Contract {
     })
 
     //Clawback ASA if needed
-    const loanRecordASAId = record.loanRecordASAId.native
-    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
-    if (!assetExists) {
-      itxn
-        .assetTransfer({
-          assetReceiver: Global.currentApplicationAddress,
-          assetSender: debtor,
-          xferAsset: loanRecordASAId,
-          assetAmount: 1,
-        })
-        .submit()
-    }
-    //Destroy the loan record ASA
-    itxn
-      .assetConfig({
-        configAsset: loanRecordASAId,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
 
     //Delete the loan record
     this.loan_record(debtor).delete()
@@ -1089,27 +938,6 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: debtAmount,
     })
-
-    //Clawback ASA if needed
-    const loanRecordASAId = record.loanRecordASAId.native
-    const assetExists = Global.currentApplicationAddress.isOptedIn(Asset(loanRecordASAId))
-    if (!assetExists) {
-      itxn
-        .assetTransfer({
-          assetReceiver: Global.currentApplicationAddress,
-          assetSender: debtor,
-          xferAsset: loanRecordASAId,
-          assetAmount: 1,
-        })
-        .submit()
-    }
-    //Destroy the loan record ASA
-    itxn
-      .assetConfig({
-        configAsset: loanRecordASAId,
-        sender: Global.currentApplicationAddress,
-      })
-      .submit()
 
     //Delete the loan record
     this.loan_record(debtor).delete()
