@@ -1,6 +1,4 @@
-import { arc4 } from "@algorandfoundation/algorand-typescript"
-
-
+import { arc4 } from '@algorandfoundation/algorand-typescript'
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
@@ -14,7 +12,7 @@ export class AcceptedCollateralKey extends arc4.Struct<{
 
 export class DebtChange extends arc4.Struct<{
   amount: arc4.UintN64
-  changeType: arc4.UintN8  // 0 = borrow, 1 = interest, 2 = repayment
+  changeType: arc4.UintN8 // 0 = borrow, 1 = interest, 2 = repayment
   timestamp: arc4.UintN64
 }> {}
 
@@ -29,7 +27,6 @@ export class LoanRecord extends arc4.Struct<{
 }> {}
 
 export class InterestAccrualReturn extends arc4.Struct<{
-  change: DebtChange,
+  change: DebtChange
   totalDebt: arc4.UintN64
 }> {}
-
