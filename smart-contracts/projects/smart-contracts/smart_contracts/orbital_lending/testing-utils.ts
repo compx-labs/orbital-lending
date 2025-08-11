@@ -145,3 +145,84 @@ export function calculateDisbursement({
 
   return { allowed, disbursement, fee }
 }
+
+export function calculateInterest({
+  disbursement,
+  interestRateBps,
+  lastAccrualTimestamp,
+  currentTimestamp,
+  protocolBPS,
+  totalDeposits,
+}: {
+  disbursement: bigint
+  interestRateBps: bigint
+  lastAccrualTimestamp: bigint
+  currentTimestamp: bigint
+  protocolBPS: bigint
+  totalDeposits: bigint
+}): {
+  newTotalDeposits: bigint
+  protocolFees: bigint
+  interest: bigint
+  newPrincipal: bigint
+} {
+  /* 
+    const deltaT: uint64 = now - last
+      const principal: uint64 = record.scaledDownDisbursement.native
+      const rateBps: uint64 = this.interest_bps.value // e.g. 500 = 5%
+  
+      // 1) Compute principal * rateBps → wide multiply
+      const [hi1, lo1] = mulw(principal, rateBps)
+      // 2) Convert basis points to fraction: divide by 10_000
+      const rateScaled: uint64 = divw(hi1, lo1, 10000)
+      // 3) Multiply by time delta: rateScaled * deltaT  → wide multiply
+      const [hi2, lo2] = mulw(rateScaled, deltaT)
+      // 4) Divide by seconds_per_year to get interest amount
+      const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
+  
+      const protoBps: uint64 = this.protocol_interest_fee_bps.value
+      const depositorBps: uint64 = 10000 - protoBps
+  
+      // depositor’s share = interest * depositorBps / 10_000
+      const [hiDep, loDep] = mulw(interest, depositorBps)
+      const depositorInterest: uint64 = divw(hiDep, loDep, 10000)
+  
+      // protocol’s share = remainder
+      const protocolInterest: uint64 = interest - depositorInterest
+  
+      // 3) Credit the shares
+      // a) Depositors earn yield: bump total_deposits (so LSTs become worth more)
+      this.total_deposits.value += depositorInterest
+      // b) Protocol earnings: add to fee_pool
+      this.fee_pool.value += protocolInterest
+  
+      // 4) Update borrower’s outstanding debt (principal + full interest)
+  
+      const newPrincipal: uint64 = principal + interest */
+
+  const deltaT = currentTimestamp - lastAccrualTimestamp
+  const principal = disbursement
+  const rateBps = interestRateBps
+  const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n
+  // 1) Compute principal * rateBps → wide multiply
+  const principleTimesRate = principal * rateBps
+  // 2) Convert basis points to fraction: divide by 10_000
+  const rateScaled = principleTimesRate / 10_000n
+  // 3) Multiply by time delta: rateScaled * deltaT  → wide multiply
+  const interest = (rateScaled * deltaT) / SECONDS_PER_YEAR
+
+  const protoBps = protocolBPS
+  const depositorBps = 10_000n - protoBps
+
+  // depositor’s share = interest * depositorBps / 10_000
+  const depositorInterest = (interest * depositorBps) / 10_000n
+  // protocol’s share = remainder
+  const protocolInterest = interest - depositorInterest
+
+  return {
+    newTotalDeposits: totalDeposits + interest,
+    protocolFees: protocolInterest,
+    interest: depositorInterest,
+    newPrincipal: principal + interest,
+  }
+}

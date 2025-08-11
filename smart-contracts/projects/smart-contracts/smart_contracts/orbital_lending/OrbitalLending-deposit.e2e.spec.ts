@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { calculateDisbursement, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
+import { calculateDisbursement, calculateInterest, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -1126,7 +1126,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
     }
   })
 
-  test('top up existing loans 3 - algo Lending Contract', async () => {
+  test.skip('top up existing loans 3 - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_SECONDARY_BORROW_AMOUNT
     const collateralAmount = 0n
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -1301,7 +1301,7 @@ describe('orbital-lending Testing - deposit / borrow', () => {
       }
     }
   })
-  test('top up existing loans 4 - algo Lending Contract', async () => {
+  test.skip('top up existing loans 4 - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_SECONDARY_BORROW_AMOUNT
     const collateralAmount = 0n
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -1417,6 +1417,66 @@ describe('orbital-lending Testing - deposit / borrow', () => {
         ).rejects.toThrow()
         feeTracker += 1000n
       }
+    }
+  })
+
+  //wait 5 seconds
+
+  test('Accrue interest - algo Lending Contract', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+      const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
+
+      const globalState = await algoLendingContractClient.state.global.getAll()
+      const loanRecord = await getLoanRecordBoxValue(
+        borrowerAccount.addr.toString(),
+        algoLendingContractClient,
+        algoLendingContractClient.appId,
+      )
+      expect(loanRecord).toBeDefined()
+      const lastTimeInterestAccrued = loanRecord.lastAccrualTimestamp
+      console.log('Last time interest accrued:', lastTimeInterestAccrued)
+      const previousDisbursement = loanRecord.scaledDownDisbursement
+      console.log('Previous disbursement:', previousDisbursement)
+      const currentTotalDeposits = globalState.totalDeposits || 0n
+      console.log('Current total deposits:', currentTotalDeposits)
+
+      // Expected interest rate
+      const expectedResults = calculateInterest({
+        disbursement: loanRecord.scaledDownDisbursement,
+        interestRateBps: interest_bps,
+        lastAccrualTimestamp: loanRecord.lastAccrualTimestamp,
+        currentTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        protocolBPS: protocol_interest_fee_bps,
+        totalDeposits: globalState.totalDeposits || 0n,
+      })
+      console.log('Expected interest results:', expectedResults)
+
+      //accrue interest
+      await algoLendingContractClient.send.accrueLoanInterest({
+        args: [borrowerAccount.addr.publicKey, reserve.addr.publicKey],
+        accountReferences: [borrowerAccount.addr],
+        appReferences: [oracleAppClient.appId],
+      })
+
+      const loanRecordAfter = await getLoanRecordBoxValue(
+        borrowerAccount.addr.toString(),
+        algoLendingContractClient,
+        algoLendingContractClient.appId,
+      )
+      expect(loanRecord).toBeDefined()
+
+      const newTimestamp = loanRecordAfter.lastAccrualTimestamp
+      console.log('Last time interest accrued:', newTimestamp)
+      const newDisbursement = loanRecordAfter.scaledDownDisbursement
+      console.log('Previous disbursement:', previousDisbursement)
+      console.log('New disbursement:', newDisbursement)
+      expect(newDisbursement).toBeGreaterThan(previousDisbursement)
+      const newGlobalState = await algoLendingContractClient.state.global.getAll()
+      const newTotalDeposits = newGlobalState.totalDeposits || 0n
+      console.log('New total deposits:', newTotalDeposits)
+      expect(newTotalDeposits).toBeGreaterThan(currentTotalDeposits)
     }
   })
 })

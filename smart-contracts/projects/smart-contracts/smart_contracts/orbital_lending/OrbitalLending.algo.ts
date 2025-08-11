@@ -496,7 +496,7 @@ export class OrbitalLending extends Contract {
     if (hasLoan) {
       // — Top-Up Existing Loan —
       let old = this.getLoanRecord(op.Txn.sender)
-      old = this.accrueInterest(old)
+      old = this.accrueInterest(old).copy()
       this.loan_record(op.Txn.sender).value = old.copy()
 
       const [h1, l1] = mulw(old.scaledDownDisbursement.native, baseTokenOraclePrice)
@@ -533,7 +533,7 @@ export class OrbitalLending extends Contract {
         scaledDownDisbursement: new UintN64(newDebt),
         borrowedTokenId: old.borrowedTokenId,
         loanRecordASAId: old.loanRecordASAId,
-        lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
+        lastAccrualTimestamp: old.lastAccrualTimestamp,
       }).copy()
       
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
@@ -854,20 +854,19 @@ export class OrbitalLending extends Contract {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     //Apply interest
-    this.accrueInterest(currentLoanRecord)
+    const newLoanRecord = this.accrueInterest(currentLoanRecord)
 
-    //mint new nft
+    //update loan record - nft and box
     this.updateLoanRecord(
-      currentLoanRecord.scaledDownDisbursement.native,
-      currentLoanRecord.disbursement.native,
-      currentLoanRecord.collateralTokenId,
+      newLoanRecord.scaledDownDisbursement.native,
+      newLoanRecord.disbursement.native,
+      newLoanRecord.collateralTokenId,
       debtor,
-      currentLoanRecord.collateralAmount.native,
+      newLoanRecord.collateralAmount.native,
       templateReserveAddress,
-      currentLoanRecord.loanRecordASAId.native, // existing ASA ID to update
+      newLoanRecord.loanRecordASAId.native, // existing ASA ID to update
     )
-    //Update box storage
-    this.loan_record(debtor).value = currentLoanRecord.copy()
+
   }
 
   @abimethod({ allowActions: 'NoOp' })
