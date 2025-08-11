@@ -40,57 +40,91 @@ const PRECISION = {
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
-  // The main lending token of this contract - used for deposit and borrowing
+  // ═══════════════════════════════════════════════════════════════════════
+  // CORE TOKEN CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** The main lending token used for deposits and borrowing (0 for ALGO) */
   base_token_id = GlobalState<UintN64>()
-
-  // LST token of this contract - used for borrowing - generated in the contract at creation time
+  
+  /** LST (Liquidity Staking Token) representing depositor shares in the pool */
   lst_token_id = GlobalState<UintN64>()
 
-  //Total LST currently circulating from this contract
+  // ═══════════════════════════════════════════════════════════════════════
+  // LIQUIDITY POOL TRACKING
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** Total LST tokens currently in circulation (represents depositor claims) */
   circulating_lst = GlobalState<uint64>()
-
-  //Total ASA currently deposited into this contract
+  
+  /** Total underlying assets deposited in the protocol */
   total_deposits = GlobalState<uint64>()
-
-  //Admin account
-  admin_account = GlobalState<Account>()
-
-  //LTV in basis points
-  ltv_bps = GlobalState<uint64>()
-
-  //Liquidation threshold in basis points
-  liq_threshold_bps = GlobalState<uint64>()
-
-  //Interest rate in basis points
-  interest_bps = GlobalState<uint64>()
-
-  //Origination fee in basis points
-  origination_fee_bps = GlobalState<uint64>()
-
-  protocol_share_bps = GlobalState<uint64>()
-
-  depositor_share_bps = GlobalState<uint64>()
-
-  oracle_app = GlobalState<Application>()
-
-  //List of accepted collateral types
-  accepted_collaterals = BoxMap<AcceptedCollateralKey, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
-
-  loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
-
-  active_loan_records = GlobalState<uint64>()
-
-  //Number of accepted collateral types
-  accepted_collaterals_count = GlobalState<uint64>()
-
+  
+  /** Protocol fee accumulation pool (admin withdrawable) */
   fee_pool = GlobalState<uint64>()
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // PROTOCOL GOVERNANCE & ACCESS CONTROL
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** Administrative account with privileged access to protocol functions */
+  admin_account = GlobalState<Account>()
+  
+  /** External oracle application for asset price feeds */
+  oracle_app = GlobalState<Application>()
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // LENDING PARAMETERS (ALL IN BASIS POINTS)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** Loan-to-Value ratio (e.g., 7500 = 75% max borrowing against collateral) */
+  ltv_bps = GlobalState<uint64>()
+  
+  /** Liquidation threshold (e.g., 8500 = 85% - liquidate when CR falls below) */
+  liq_threshold_bps = GlobalState<uint64>()
+  
+  /** Annual interest rate charged to borrowers (e.g., 500 = 5% APR) */
+  interest_bps = GlobalState<uint64>()
+  
+  /** One-time fee charged on loan origination (e.g., 100 = 1%) */
+  origination_fee_bps = GlobalState<uint64>()
+  
+  /** Protocol's share of interest income (e.g., 2000 = 20%) */
+  protocol_share_bps = GlobalState<uint64>()
+  
+  /** Depositors' share of interest income (calculated as 10000 - protocol_share) */
+  depositor_share_bps = GlobalState<uint64>()
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // COLLATERAL & LOAN MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** Registry of accepted collateral assets with their metadata */
+  accepted_collaterals = BoxMap<AcceptedCollateralKey, AcceptedCollateral>({ keyPrefix: 'accepted_collaterals' })
+  
+  /** Individual borrower loan records with collateral and debt details */
+  loan_record = BoxMap<Account, LoanRecord>({ keyPrefix: 'loan_record' })
+  
+  /** Total number of active loans in the system */
+  active_loan_records = GlobalState<uint64>()
+  
+  /** Count of different collateral types accepted by the protocol */
+  accepted_collaterals_count = GlobalState<uint64>()
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DEBUG & OPERATIONAL TRACKING
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /** Last calculated disbursement amount (for debugging/monitoring) */
   last_scaled_down_disbursement = GlobalState<uint64>()
-
+  
+  /** Last calculated maximum borrowable amount in USD (for debugging) */
   last_max_borrow = GlobalState<uint64>()
-
+  
+  /** Last requested loan amount in USD (for debugging) */
   last_requested_loan = GlobalState<uint64>()
-
+  
+  /** Difference between max borrow and requested (for debugging) */
   debug_diff = GlobalState<uint64>()
 
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
