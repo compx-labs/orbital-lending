@@ -127,12 +127,29 @@ export class OrbitalLending extends Contract {
   /** Difference between max borrow and requested (for debugging) */
   debug_diff = GlobalState<uint64>()
 
+  /**
+   * Creates the lending application contract with initial configuration
+   * @param admin - The administrative account that will have privileged access
+   * @param baseTokenId - The asset ID of the base lending token (0 for ALGO)
+   * @dev This method can only be called during contract creation (onCreate: 'require')
+   */
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
   public createApplication(admin: Account, baseTokenId: uint64): void {
     this.admin_account.value = admin
     this.base_token_id.value = new UintN64(baseTokenId)
   }
 
+  /**
+   * Initializes the lending protocol with core parameters and configurations
+   * @param mbrTxn - Payment transaction covering minimum balance requirements
+   * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
+   * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
+   * @param interest_bps - Annual interest rate in basis points (e.g., 500 = 5%)
+   * @param origination_fee_bps - One-time loan origination fee in basis points
+   * @param protocol_share_bps - Protocol's share of interest income in basis points
+   * @param oracle_app_id - Application ID of the price oracle contract
+   * @dev Only callable by admin account. Sets up all lending parameters and opts into base token if needed
+   */
   @abimethod({ allowActions: 'NoOp' })
   public initApplication(
     mbrTxn: gtxn.PaymentTxn,
@@ -177,6 +194,12 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Generates a new LST (Liquidity Staking Token) for the base lending token
+   * @param mbrTxn - Payment transaction covering asset creation minimum balance requirements
+   * @dev Only callable by admin. Creates a new asset with 'c' prefix (e.g., cUSDC for USDC)
+   * @dev The LST represents depositor shares in the lending pool
+   */
   //If generating a new LST for the base token.
   public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -203,6 +226,12 @@ export class OrbitalLending extends Contract {
     this.lst_token_id.value = new UintN64(result.createdAsset.id)
   }
 
+  /**
+   * Opts into an existing LST token created externally
+   * @param lstAssetId - Asset ID of the existing LST token to opt into
+   * @param mbrTxn - Payment transaction covering opt-in minimum balance requirements
+   * @dev Only callable by admin. Use when LST token already exists and needs to be adopted
+   */
   //If LST already created externally.
   public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -223,6 +252,12 @@ export class OrbitalLending extends Contract {
       .submit()
   }
 
+  /**
+   * Configures the LST token by setting initial circulating supply
+   * @param axferTxn - Asset transfer transaction from admin containing LST tokens
+   * @param circulating_lst - Initial amount of LST tokens to mark as circulating
+   * @dev Only callable by admin. Used to bootstrap LST token circulation after creation/opt-in
+   */
   public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
     assert(this.lst_token_id.value.native === axferTxn.xferAsset.id, 'LST token not set')
@@ -234,18 +269,36 @@ export class OrbitalLending extends Contract {
     this.circulating_lst.value = circulating_lst
   }
 
+  /**
+   * Returns the current amount of LST tokens in circulation
+   * @returns Total LST tokens representing all depositor claims
+   */
   getCirculatingLST(): uint64 {
     return this.circulating_lst.value
   }
 
+  /**
+   * Returns the total amount of base assets deposited in the protocol
+   * @returns Total underlying assets available for lending
+   */
   getTotalDeposits(): uint64 {
     return this.total_deposits.value
   }
 
+  /**
+   * Returns the number of different collateral types accepted by the protocol
+   * @returns Count of registered collateral asset types
+   */
   getAcceptedCollateralsCount(): uint64 {
     return this.accepted_collaterals_count.value
   }
 
+  /**
+   * Retrieves current price for a token from the configured oracle
+   * @param tokenId - Asset ID of the token to get price for
+   * @returns Current price of the token from oracle (in USD micro-units)
+   * @dev Calls external oracle contract to fetch real-time price data
+   */
   getOraclePrice(tokenId: UintN64): uint64 {
     const oracle: Application = this.oracle_app.value
     const address = oracle.address
@@ -284,6 +337,13 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Adds a new asset type as accepted collateral for borrowing
+   * @param collateralTokenId - Asset ID of the new collateral type to accept
+   * @param mbrTxn - Payment transaction covering storage minimum balance requirements
+   * @dev Only callable by admin. Registers new collateral type and opts contract into the asset
+   * @dev Collateral cannot be the same as the base lending token
+   */
   @abimethod({ allowActions: 'NoOp' })
   addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
@@ -352,6 +412,14 @@ export class OrbitalLending extends Contract {
     return divw(hi, lo, circulatingExternalLST)
   }
 
+  /**
+   * Deposits base assets (ASA) into the lending pool and receives LST tokens in return
+   * @param assetTransferTxn - Asset transfer transaction depositing base tokens to the contract
+   * @param amount - Amount of base tokens being deposited
+   * @param mbrTxn - Payment transaction covering transaction fees
+   * @dev Mints LST tokens proportional to deposit amount based on current exchange rate
+   * @dev If this is the first deposit, LST:asset ratio is 1:1
+   */
   @abimethod({ allowActions: 'NoOp' })
   depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
@@ -387,6 +455,14 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += amount
   }
 
+  /**
+   * Deposits ALGO into the lending pool and receives LST tokens in return
+   * @param depositTxn - Payment transaction depositing ALGO to the contract
+   * @param amount - Amount of ALGO being deposited (in microALGOs)
+   * @param mbrTxn - Payment transaction covering transaction fees
+   * @dev Similar to depositASA but specifically for ALGO deposits when base_token_id is 0
+   * @dev Mints LST tokens proportional to deposit amount based on current exchange rate
+   */
   @abimethod({ allowActions: 'NoOp' })
   depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
@@ -417,6 +493,15 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += amount
   }
 
+  /**
+   * Withdraws deposited assets by burning LST tokens
+   * @param assetTransferTxn - Asset transfer transaction sending LST tokens to the contract
+   * @param amount - Amount of LST tokens to burn for withdrawal
+   * @param lstAppId - Application ID to determine exchange rate (use current app ID for local rate)
+   * @param mbrTxn - Payment transaction covering transaction fees
+   * @dev Burns LST tokens and returns proportional amount of underlying assets
+   * @dev Exchange rate depends on whether using local or external LST app
+   */
   @abimethod({ allowActions: 'NoOp' })
   withdrawDeposit(
     assetTransferTxn: gtxn.AssetTransferTxn,
@@ -457,6 +542,18 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value -= asaDue // ASA returned
   }
 
+  /**
+   * Borrows base assets against collateral with interest and fees
+   * @param assetTransferTxn - Asset transfer transaction depositing collateral to the contract
+   * @param requestedLoanAmount - Amount of base tokens requested for borrowing
+   * @param collateralAmount - Amount of collateral being deposited
+   * @param lstApp - Application ID for LST exchange rate calculation
+   * @param collateralTokenId - Asset ID of the collateral being deposited
+   * @param mbrTxn - Payment transaction covering transaction fees
+   * @dev Validates LTV ratio, charges origination fee, and disburses loan amount
+   * @dev Supports both new loans and top-ups of existing loans
+   * @dev Collateral value determined via oracle pricing and LST exchange rates
+   */
   @abimethod({ allowActions: 'NoOp' })
   borrow(
     assetTransferTxn: gtxn.AssetTransferTxn,
@@ -594,6 +691,15 @@ export class OrbitalLending extends Contract {
     return this.loan_record(borrowerAddress).value
   }
 
+  /**
+   * Repays a loan using ASA tokens and optionally releases collateral
+   * @param assetTransferTxn - Asset transfer transaction sending repayment tokens to contract
+   * @param amount - Amount of base tokens being repaid
+   * @param templateReserveAddress - Reserve address for potential future use
+   * @dev Accrues interest before processing repayment
+   * @dev Full repayment closes loan and returns all collateral
+   * @dev Partial repayment updates remaining debt amount
+   */
   @abimethod({ allowActions: 'NoOp' })
   repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, templateReserveAddress: Account): void {
     const baseToken = Asset(this.base_token_id.value.native)
@@ -635,6 +741,15 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Repays a loan using ALGO and optionally releases collateral
+   * @param paymentTxn - Payment transaction sending ALGO repayment to contract
+   * @param amount - Amount of ALGO being repaid (in microALGOs)
+   * @param templateReserveAddress - Reserve address for potential future use
+   * @dev Similar to repayLoanASA but specifically for ALGO repayments
+   * @dev Accrues interest before processing repayment
+   * @dev Full repayment closes loan and returns all collateral
+   */
   @abimethod({ allowActions: 'NoOp' })
   repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, amount: uint64, templateReserveAddress: Account): void {
     const baseToken = Asset(this.base_token_id.value.native)
@@ -675,6 +790,11 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Withdraws accumulated protocol fees to admin account
+   * @dev Only callable by admin account
+   * @dev Transfers entire fee pool balance and resets it to zero
+   */
   @abimethod({ allowActions: 'NoOp' })
   withdrawFees(): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -688,6 +808,13 @@ export class OrbitalLending extends Contract {
     this.fee_pool.value = 0
   }
 
+  /**
+   * Manually accrues interest on a specific borrower's loan
+   * @param debtor - Account address of the borrower whose loan interest should be accrued
+   * @param templateReserveAddress - Reserve address for potential future use
+   * @dev Updates loan record with latest interest calculations
+   * @dev Can be called by anyone to ensure loan interest is up to date
+   */
   @abimethod({ allowActions: 'NoOp' })
   accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
@@ -705,6 +832,15 @@ export class OrbitalLending extends Contract {
     )
   }
 
+  /**
+   * Purchases a borrower's collateral at a premium when loan is above liquidation threshold
+   * @param buyer - Account that will receive the collateral
+   * @param debtor - Account whose loan is being bought out
+   * @param axferTxn - Asset transfer transaction with buyout payment
+   * @dev Buyout price includes premium based on how far above liquidation threshold
+   * @dev Only available when collateral ratio exceeds liquidation threshold
+   * @dev Closes the loan and transfers collateral to buyer
+   */
   @abimethod({ allowActions: 'NoOp' })
   buyoutASA(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
@@ -753,6 +889,15 @@ export class OrbitalLending extends Contract {
     this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 
+  /**
+   * Purchases a borrower's collateral at a premium using ALGO payment
+   * @param buyer - Account that will receive the collateral
+   * @param debtor - Account whose loan is being bought out
+   * @param paymentTxn - ALGO payment transaction with buyout payment
+   * @dev Similar to buyoutASA but uses ALGO payment instead of asset transfer
+   * @dev Buyout price includes premium based on how far above liquidation threshold
+   * @dev Only available when collateral ratio exceeds liquidation threshold
+   */
   @abimethod({ allowActions: 'NoOp' })
   buyoutAlgo(buyer: Account, debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
@@ -800,6 +945,14 @@ export class OrbitalLending extends Contract {
     this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 
+  /**
+   * Liquidates an undercollateralized loan by repaying debt and claiming collateral
+   * @param debtor - Account whose loan is being liquidated
+   * @param axferTxn - Asset transfer transaction with full debt repayment
+   * @dev Only available when collateral ratio falls below liquidation threshold
+   * @dev Liquidator must repay full debt amount to claim all collateral
+   * @dev Closes the loan and transfers collateral to liquidator
+   */
   @abimethod({ allowActions: 'NoOp' })
   liquidateASA(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
@@ -844,6 +997,14 @@ export class OrbitalLending extends Contract {
     this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 
+  /**
+   * Liquidates an undercollateralized loan using ALGO payment
+   * @param debtor - Account whose loan is being liquidated
+   * @param paymentTxn - ALGO payment transaction with full debt repayment
+   * @dev Similar to liquidateASA but uses ALGO payment instead of asset transfer
+   * @dev Only available when collateral ratio falls below liquidation threshold
+   * @dev Liquidator must repay full debt amount to claim all collateral
+   */
   @abimethod({ allowActions: 'NoOp' })
   liquidateAlgo(debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
@@ -885,6 +1046,13 @@ export class OrbitalLending extends Contract {
     this.updateCollateralTotal(collateralTokenId, newTotal)
   }
 
+  /**
+   * Retrieves comprehensive status information for a borrower's loan
+   * @param borrower - Account address to get loan status for
+   * @returns Object containing debt amount, collateral value, ratios, and liquidation eligibility
+   * @dev Simulates interest accrual to provide most up-to-date status
+   * @dev Includes eligibility flags for liquidation and buyout actions
+   */
   @abimethod({ allowActions: 'NoOp' })
   getLoanStatus(borrower: Account): {
     outstandingDebt: uint64
@@ -923,6 +1091,10 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Gas optimization method - placeholder for potential future gas management
+   * @dev Currently empty but may be used for gas price calculations or optimizations
+   */
   gas(): void {}
 
   private validateBorrowRequest(
