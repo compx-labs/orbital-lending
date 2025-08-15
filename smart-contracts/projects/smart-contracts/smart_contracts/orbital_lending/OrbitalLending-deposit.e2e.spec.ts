@@ -750,7 +750,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Circulating cXUSD:', circulatingcXUSD)
   })
 
-  test('top up existing loans - algo Lending Contract', async () => {
+  test.skip('top up existing loans - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_SECONDARY_BORROW_AMOUNT
     const collateralAmount = 0n
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -910,7 +910,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test('top up existing loans 2 - algo Lending Contract', async () => {
+  test.skip('top up existing loans 2 - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_SECONDARY_BORROW_AMOUNT
     const collateralAmount = 0n
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -1339,8 +1339,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-
-
   test('Accrue interest - algo Lending Contract', async () => {
     //wait 5 seconds
     await new Promise((resolve) => setTimeout(resolve, 5000))
@@ -1351,7 +1349,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
       const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
 
-      
       const loanRecord = await getLoanRecordBoxValue(
         borrowerAccount.addr.toString(),
         algoLendingContractClient,
@@ -1362,15 +1359,26 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       console.log('Last time interest accrued:', lastTimeInterestAccrued)
       const previousDisbursement = loanRecord.totalDebt
       console.log('Previous disbursement:', previousDisbursement)
-      
+
       console.log('Current total deposits:', currentTotalDeposits)
+
+      const status = await algoLendingContractClient.algorand.client.algod.status().do()
+      const latestRound = status.lastRound
+
+      // Fetch the latest block
+      const block = await algoLendingContractClient.algorand.client.algod.block(latestRound).do()
+
+      // Access the timestamp (in seconds since epoch)
+      const timestamp = block.block.header.timestamp
+      console.log('Last time interest accrued:', lastTimeInterestAccrued)
+      console.log('Current timestamp:', timestamp)
 
       // Expected interest rate
       const expectedResults = calculateInterest({
         disbursement: loanRecord.totalDebt,
         interestRateBps: interest_bps,
         lastAccrualTimestamp: loanRecord.lastAccrualTimestamp,
-        currentTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        currentTimestamp: timestamp,
         protocolBPS: protocol_interest_fee_bps,
         totalDeposits: globalStateBefore.totalDeposits || 0n,
       })

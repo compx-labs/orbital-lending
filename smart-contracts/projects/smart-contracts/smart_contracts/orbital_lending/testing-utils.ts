@@ -43,7 +43,6 @@ export async function getCollateralBoxValue(
   }
 }
 
-
 export interface getLoanRecordReturnType {
   borrowerAddress: string
   collateralTokenId: bigint
@@ -219,15 +218,13 @@ export function calculateInterest({
   const protoBps = protocolBPS
   const depositorBps = 10_000n - protoBps
 
-  // depositor’s share = interest * depositorBps / 10_000
   const depositorInterest = (interest * depositorBps) / 10_000n
-  // protocol’s share = remainder
   const protocolInterest = interest - depositorInterest
 
   return {
-    newTotalDeposits: totalDeposits + interest,
+    newTotalDeposits: totalDeposits + depositorInterest,
     protocolFees: protocolInterest,
-    interest: depositorInterest,
+    interest, // full interest added to borrower’s debt
     newPrincipal: principal + interest,
   }
 }

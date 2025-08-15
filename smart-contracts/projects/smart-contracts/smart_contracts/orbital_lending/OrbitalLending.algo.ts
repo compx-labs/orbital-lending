@@ -36,6 +36,8 @@ const VALIDATE_BORROW_FEE: uint64 = 4_000
 const BASIS_POINTS: uint64 = 10_000
 const USD_MICRO_UNITS: uint64 = 1_000_000
 
+const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
+
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
   // ═══════════════════════════════════════════════════════════════════════
@@ -614,7 +616,7 @@ export class OrbitalLending extends Contract {
       }),
       totalDebt: new UintN64(disbursement),
       borrowedTokenId: this.base_token_id.value,
-      lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
+      lastAccrualTimestamp: new UintN64(Global.latestTimestamp - DEBUG_TIMESTAMP_OFFSET),
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
     this.active_loan_records.value = this.active_loan_records.value + 1

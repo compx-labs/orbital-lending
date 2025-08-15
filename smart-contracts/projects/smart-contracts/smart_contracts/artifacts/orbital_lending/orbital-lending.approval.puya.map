@@ -3,7 +3,7 @@
   "sources": [
     "/Users/kierannelson/Development/orbital-lending/smart-contracts/projects/smart-contracts/smart_contracts/orbital_lending/OrbitalLending.algo.ts"
   ],
-  "mappings": "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",
+  "mappings": "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",
   "op_pc_offset": 0,
   "pc_events": {
     "1": {
@@ -14,7 +14,7 @@
       "op": "intcblock 0 1 4 1000 10000 1000000"
     },
     "13": {
-      "op": "bytecblock \"base_token_id\" \"active_loan_records\" \"total_deposits\" \"admin_account\" \"loan_record\" 0x151f7c75 \"circulating_lst\" \"liq_threshold_bps\" \"fee_pool\" \"lst_token_id\" \"accepted_collaterals\" 0x00 \"accepted_collaterals_count\" 0x09ef525f 0xae859f3b \"ltv_bps\" \"interest_bps\" \"origination_fee_bps\" \"protocol_share_bps\" \"oracle_app\""
+      "op": "bytecblock \"base_token_id\" \"total_deposits\" \"active_loan_records\" \"admin_account\" \"loan_record\" 0x151f7c75 \"circulating_lst\" \"liq_threshold_bps\" \"fee_pool\" \"lst_token_id\" \"accepted_collaterals\" 0x00 \"accepted_collaterals_count\" 0x09ef525f 0xae859f3b \"ltv_bps\" \"interest_bps\" \"origination_fee_bps\" \"protocol_share_bps\" \"oracle_app\""
     },
     "282": {
       "op": "txn NumAppArgs",
@@ -5625,7 +5625,7 @@
       "stack_out": []
     },
     "1289": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\""
       ],
@@ -5645,7 +5645,7 @@
       "stack_out": []
     },
     "1292": {
-      "op": "bytec_1 // \"active_loan_records\"",
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\""
       ],
@@ -7366,7 +7366,7 @@
       ]
     },
     "1623": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0"
@@ -9114,7 +9114,7 @@
       ]
     },
     "1880": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0",
@@ -9534,7 +9534,7 @@
       ]
     },
     "1945": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0"
@@ -9832,7 +9832,7 @@
       ]
     },
     "1988": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0"
@@ -9886,7 +9886,7 @@
       ]
     },
     "1994": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "stack_out": [
         "baseToken#0",
         "new_state_value%1#0",
@@ -10162,7 +10162,7 @@
       ]
     },
     "2049": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0"
@@ -10429,7 +10429,7 @@
       ]
     },
     "2092": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0"
@@ -10478,7 +10478,7 @@
       ]
     },
     "2098": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "stack_out": [
         "new_state_value%1#0",
         "\"total_deposits\""
@@ -10901,7 +10901,7 @@
       ]
     },
     "2178": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0",
@@ -11374,7 +11374,7 @@
       ]
     },
     "2237": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0",
@@ -11429,7 +11429,7 @@
       ]
     },
     "2242": {
-      "op": "bytec_2 // \"total_deposits\"",
+      "op": "bytec_1 // \"total_deposits\"",
       "stack_out": [
         "lstAsset#0",
         "new_state_value%1#0",
@@ -12155,7 +12155,7 @@
     "2360": {
       "op": "==",
       "defined_out": [
-        "tmp%1#3"
+        "tmp%1#4"
       ],
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -12164,7 +12164,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%1#3"
+        "tmp%1#4"
       ]
     },
     "2361": {
@@ -12395,7 +12395,7 @@
     "2388": {
       "op": "concat",
       "defined_out": [
-        "tmp%0#2"
+        "tmp%0#5"
       ],
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -12404,7 +12404,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2"
+        "tmp%0#5"
       ]
     },
     "2389": {
@@ -12600,7 +12600,7 @@
         "requestedLoanUSD#0",
         "hasLoan#0",
         "awst_tmp%0#1",
-        "tmp%0#2"
+        "tmp%0#5"
       ]
     },
     "2416": {
@@ -12612,14 +12612,14 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2",
+        "tmp%0#5",
         "awst_tmp%0#1"
       ]
     },
     "2417": {
       "op": "extract 0 4",
       "defined_out": [
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%1#0"
       ],
       "stack_out": [
@@ -12629,7 +12629,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%1#0"
       ]
     },
@@ -12637,7 +12637,7 @@
       "op": "bytec 5 // 0x151f7c75",
       "defined_out": [
         "0x151f7c75",
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%1#0"
       ],
       "stack_out": [
@@ -12647,7 +12647,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%1#0",
         "0x151f7c75"
       ]
@@ -12655,7 +12655,7 @@
     "2422": {
       "op": "==",
       "defined_out": [
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%2#1"
       ],
       "stack_out": [
@@ -12665,7 +12665,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2",
+        "tmp%0#5",
         "tmp%2#1"
       ]
     },
@@ -12679,7 +12679,7 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2"
+        "tmp%0#5"
       ]
     },
     "2424": {
@@ -14290,7 +14290,7 @@
         "hasLoan#0",
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
-        "tmp%1#2"
+        "tmp%1#3"
       ],
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -14301,7 +14301,7 @@
         "hasLoan#0",
         "borrower#0",
         "existingLoan#0",
-        "tmp%1#2"
+        "tmp%1#3"
       ]
     },
     "2647": {
@@ -14315,7 +14315,7 @@
         "hasLoan#0",
         "borrower#0",
         "existingLoan#0",
-        "tmp%1#2",
+        "tmp%1#3",
         "baseTokenOraclePrice#0"
       ]
     },
@@ -15931,6 +15931,60 @@
         "disbursement#3",
         "encoded_tuple_buffer%3#0",
         "maybe_value%0#1",
+        "tmp%0#1",
+        "val_as_bytes%0#0",
+        "val_as_bytes%1#0"
+      ],
+      "stack_out": [
+        "baseTokenOraclePrice#0",
+        "collateralToUse#1",
+        "disbursement#3",
+        "maxBorrowUSD#0",
+        "requestedLoanUSD#0",
+        "hasLoan#0",
+        "borrowerAddress#0",
+        "val_as_bytes%0#0",
+        "val_as_bytes%1#0",
+        "encoded_tuple_buffer%3#0",
+        "maybe_value%0#1",
+        "tmp%0#1"
+      ]
+    },
+    "2783": {
+      "op": "pushint 1728000 // 1728000",
+      "defined_out": [
+        "1728000",
+        "borrowerAddress#0",
+        "disbursement#3",
+        "encoded_tuple_buffer%3#0",
+        "maybe_value%0#1",
+        "tmp%0#1",
+        "val_as_bytes%0#0",
+        "val_as_bytes%1#0"
+      ],
+      "stack_out": [
+        "baseTokenOraclePrice#0",
+        "collateralToUse#1",
+        "disbursement#3",
+        "maxBorrowUSD#0",
+        "requestedLoanUSD#0",
+        "hasLoan#0",
+        "borrowerAddress#0",
+        "val_as_bytes%0#0",
+        "val_as_bytes%1#0",
+        "encoded_tuple_buffer%3#0",
+        "maybe_value%0#1",
+        "tmp%0#1",
+        "1728000"
+      ]
+    },
+    "2787": {
+      "op": "-",
+      "defined_out": [
+        "borrowerAddress#0",
+        "disbursement#3",
+        "encoded_tuple_buffer%3#0",
+        "maybe_value%0#1",
         "to_encode%1#0",
         "val_as_bytes%0#0",
         "val_as_bytes%1#0"
@@ -15950,7 +16004,7 @@
         "to_encode%1#0"
       ]
     },
-    "2783": {
+    "2788": {
       "op": "itob",
       "defined_out": [
         "borrowerAddress#0",
@@ -15976,7 +16030,7 @@
         "val_as_bytes%4#0"
       ]
     },
-    "2784": {
+    "2789": {
       "op": "dig 5",
       "defined_out": [
         "borrowerAddress#0",
@@ -16004,7 +16058,7 @@
         "borrowerAddress#0 (copy)"
       ]
     },
-    "2786": {
+    "2791": {
       "op": "frame_dig -2",
       "defined_out": [
         "borrowerAddress#0",
@@ -16034,7 +16088,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "2788": {
+    "2793": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16062,7 +16116,7 @@
         "encoded_tuple_buffer%6#0"
       ]
     },
-    "2789": {
+    "2794": {
       "op": "uncover 5",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16080,7 +16134,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "2791": {
+    "2796": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16106,7 +16160,7 @@
         "encoded_tuple_buffer%7#0"
       ]
     },
-    "2792": {
+    "2797": {
       "op": "uncover 3",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16123,7 +16177,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "2794": {
+    "2799": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16147,7 +16201,7 @@
         "encoded_tuple_buffer%8#0"
       ]
     },
-    "2795": {
+    "2800": {
       "op": "uncover 3",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16163,7 +16217,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "2797": {
+    "2802": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16185,7 +16239,7 @@
         "encoded_tuple_buffer%9#0"
       ]
     },
-    "2798": {
+    "2803": {
       "op": "uncover 2",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16200,7 +16254,7 @@
         "maybe_value%0#1"
       ]
     },
-    "2800": {
+    "2805": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16220,7 +16274,7 @@
         "encoded_tuple_buffer%10#0"
       ]
     },
-    "2801": {
+    "2806": {
       "op": "swap",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16234,7 +16288,7 @@
         "val_as_bytes%4#0"
       ]
     },
-    "2802": {
+    "2807": {
       "op": "concat",
       "defined_out": [
         "borrowerAddress#0",
@@ -16252,7 +16306,7 @@
         "loanRecord#0"
       ]
     },
-    "2803": {
+    "2808": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\"",
@@ -16272,7 +16326,7 @@
         "\"loan_record\""
       ]
     },
-    "2805": {
+    "2810": {
       "op": "uncover 2",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16286,12 +16340,12 @@
         "borrowerAddress#0"
       ]
     },
-    "2807": {
+    "2812": {
       "op": "concat",
       "defined_out": [
         "disbursement#3",
         "loanRecord#0",
-        "tmp%0#2"
+        "tmp%1#0"
       ],
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16301,10 +16355,10 @@
         "requestedLoanUSD#0",
         "hasLoan#0",
         "loanRecord#0",
-        "tmp%0#2"
+        "tmp%1#0"
       ]
     },
-    "2808": {
+    "2813": {
       "op": "swap",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16313,11 +16367,11 @@
         "maxBorrowUSD#0",
         "requestedLoanUSD#0",
         "hasLoan#0",
-        "tmp%0#2",
+        "tmp%1#0",
         "loanRecord#0"
       ]
     },
-    "2809": {
+    "2814": {
       "op": "box_put",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16328,7 +16382,7 @@
         "hasLoan#0"
       ]
     },
-    "2810": {
+    "2815": {
       "op": "intc_0 // 0",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16340,8 +16394,8 @@
         "0"
       ]
     },
-    "2811": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "2816": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -16358,7 +16412,7 @@
         "\"active_loan_records\""
       ]
     },
-    "2812": {
+    "2817": {
       "op": "app_global_get_ex",
       "defined_out": [
         "disbursement#3",
@@ -16376,7 +16430,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "2813": {
+    "2818": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -16389,7 +16443,7 @@
         "maybe_value%1#0"
       ]
     },
-    "2814": {
+    "2819": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -16407,7 +16461,7 @@
         "1"
       ]
     },
-    "2815": {
+    "2820": {
       "op": "+",
       "defined_out": [
         "disbursement#3",
@@ -16423,8 +16477,8 @@
         "new_state_value%0#0"
       ]
     },
-    "2816": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "2821": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "baseTokenOraclePrice#0",
         "collateralToUse#1",
@@ -16436,7 +16490,7 @@
         "\"active_loan_records\""
       ]
     },
-    "2817": {
+    "2822": {
       "op": "swap",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16449,7 +16503,7 @@
         "new_state_value%0#0"
       ]
     },
-    "2818": {
+    "2823": {
       "op": "app_global_put",
       "stack_out": [
         "baseTokenOraclePrice#0",
@@ -16460,10 +16514,10 @@
         "hasLoan#0"
       ]
     },
-    "2819": {
+    "2824": {
       "op": "b borrow_after_if_else@6"
     },
-    "2822": {
+    "2827": {
       "block": "borrow_bool_false@21",
       "stack_in": [
         "baseTokenOraclePrice#0",
@@ -16487,10 +16541,10 @@
         "and_result%0#0"
       ]
     },
-    "2823": {
+    "2828": {
       "op": "b borrow_bool_merge@22"
     },
-    "2826": {
+    "2831": {
       "block": "borrow_else_body@2",
       "stack_in": [
         "baseTokenOraclePrice#0",
@@ -16514,7 +16568,7 @@
         "collateralToUse#1"
       ]
     },
-    "2828": {
+    "2833": {
       "op": "frame_bury 1",
       "defined_out": [
         "collateralToUse#1"
@@ -16528,10 +16582,10 @@
         "hasLoan#0"
       ]
     },
-    "2830": {
+    "2835": {
       "op": "b borrow_after_if_else@3"
     },
-    "2833": {
+    "2838": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateLoanRecord",
       "params": {
         "debtChange#0": "bytes",
@@ -16544,7 +16598,7 @@
       "stack_in": [],
       "op": "proto 5 1"
     },
-    "2836": {
+    "2841": {
       "op": "frame_dig -1",
       "defined_out": [
         "collateralAmount#0 (copy)"
@@ -16553,7 +16607,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "2838": {
+    "2843": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0"
@@ -16562,7 +16616,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "2839": {
+    "2844": {
       "op": "frame_dig -4",
       "defined_out": [
         "totalDebt#0 (copy)",
@@ -16573,7 +16627,7 @@
         "totalDebt#0 (copy)"
       ]
     },
-    "2841": {
+    "2846": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0",
@@ -16584,7 +16638,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "2842": {
+    "2847": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -16597,7 +16651,7 @@
         "0"
       ]
     },
-    "2843": {
+    "2848": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -16612,7 +16666,7 @@
         "\"base_token_id\""
       ]
     },
-    "2844": {
+    "2849": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%0#0",
@@ -16627,7 +16681,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "2845": {
+    "2850": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -16636,7 +16690,7 @@
         "maybe_value%0#0"
       ]
     },
-    "2846": {
+    "2851": {
       "op": "global LatestTimestamp",
       "defined_out": [
         "maybe_value%0#0",
@@ -16651,7 +16705,7 @@
         "to_encode%0#0"
       ]
     },
-    "2848": {
+    "2853": {
       "op": "itob",
       "defined_out": [
         "maybe_value%0#0",
@@ -16666,7 +16720,7 @@
         "val_as_bytes%2#0"
       ]
     },
-    "2849": {
+    "2854": {
       "op": "frame_dig -2",
       "defined_out": [
         "borrowerAddress#0 (copy)",
@@ -16683,7 +16737,7 @@
         "borrowerAddress#0 (copy)"
       ]
     },
-    "2851": {
+    "2856": {
       "op": "frame_dig -3",
       "defined_out": [
         "borrowerAddress#0 (copy)",
@@ -16702,7 +16756,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "2853": {
+    "2858": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%2#0",
@@ -16719,7 +16773,7 @@
         "encoded_tuple_buffer%2#0"
       ]
     },
-    "2854": {
+    "2859": {
       "op": "uncover 4",
       "stack_out": [
         "val_as_bytes%1#0",
@@ -16729,7 +16783,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "2856": {
+    "2861": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -16744,7 +16798,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "2857": {
+    "2862": {
       "op": "frame_dig -5",
       "defined_out": [
         "debtChange#0 (copy)",
@@ -16761,7 +16815,7 @@
         "debtChange#0 (copy)"
       ]
     },
-    "2859": {
+    "2864": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%4#0",
@@ -16776,7 +16830,7 @@
         "encoded_tuple_buffer%4#0"
       ]
     },
-    "2860": {
+    "2865": {
       "op": "uncover 3",
       "stack_out": [
         "maybe_value%0#0",
@@ -16785,7 +16839,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "2862": {
+    "2867": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%5#0",
@@ -16798,7 +16852,7 @@
         "encoded_tuple_buffer%5#0"
       ]
     },
-    "2863": {
+    "2868": {
       "op": "uncover 2",
       "stack_out": [
         "val_as_bytes%2#0",
@@ -16806,7 +16860,7 @@
         "maybe_value%0#0"
       ]
     },
-    "2865": {
+    "2870": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%6#0",
@@ -16817,14 +16871,14 @@
         "encoded_tuple_buffer%6#0"
       ]
     },
-    "2866": {
+    "2871": {
       "op": "swap",
       "stack_out": [
         "encoded_tuple_buffer%6#0",
         "val_as_bytes%2#0"
       ]
     },
-    "2867": {
+    "2872": {
       "op": "concat",
       "defined_out": [
         "loanRecord#0"
@@ -16833,7 +16887,7 @@
         "loanRecord#0"
       ]
     },
-    "2868": {
+    "2873": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\"",
@@ -16844,7 +16898,7 @@
         "\"loan_record\""
       ]
     },
-    "2870": {
+    "2875": {
       "op": "frame_dig -2",
       "stack_out": [
         "loanRecord#0",
@@ -16852,7 +16906,7 @@
         "borrowerAddress#0 (copy)"
       ]
     },
-    "2872": {
+    "2877": {
       "op": "concat",
       "defined_out": [
         "loanRecord#0",
@@ -16863,28 +16917,28 @@
         "tmp%0#0"
       ]
     },
-    "2873": {
+    "2878": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
         "loanRecord#0"
       ]
     },
-    "2874": {
+    "2879": {
       "op": "box_put",
       "stack_out": []
     },
-    "2875": {
+    "2880": {
       "op": "frame_dig -5",
       "stack_out": [
         "debtChange#0 (copy)"
       ]
     },
-    "2877": {
+    "2882": {
       "retsub": true,
       "op": "retsub"
     },
-    "2878": {
+    "2883": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueLoanInterest",
       "params": {
         "debtor#0": "bytes",
@@ -16894,7 +16948,7 @@
       "stack_in": [],
       "op": "proto 2 0"
     },
-    "2881": {
+    "2886": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -16903,7 +16957,7 @@
         "\"loan_record\""
       ]
     },
-    "2883": {
+    "2888": {
       "op": "frame_dig -2",
       "defined_out": [
         "\"loan_record\"",
@@ -16914,7 +16968,7 @@
         "debtor#0 (copy)"
       ]
     },
-    "2885": {
+    "2890": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -16923,7 +16977,7 @@
         "tmp%0#0"
       ]
     },
-    "2886": {
+    "2891": {
       "op": "dup",
       "defined_out": [
         "tmp%0#0",
@@ -16934,7 +16988,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "2887": {
+    "2892": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -16947,21 +17001,21 @@
         "maybe_exists%0#0"
       ]
     },
-    "2888": {
+    "2893": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
         "maybe_exists%0#0"
       ]
     },
-    "2890": {
+    "2895": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
         "tmp%0#0"
       ]
     },
-    "2891": {
+    "2896": {
       "op": "box_get",
       "defined_out": [
         "currentLoanRecord#0",
@@ -16972,14 +17026,14 @@
         "maybe_exists%1#0"
       ]
     },
-    "2892": {
+    "2897": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
         "currentLoanRecord#0"
       ]
     },
-    "2893": {
+    "2898": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest",
       "op": "callsub accrueInterest",
       "defined_out": [
@@ -16991,7 +17045,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "2896": {
+    "2901": {
       "op": "dig 1",
       "defined_out": [
         "currentLoanRecord#0",
@@ -17004,7 +17058,7 @@
         "iar#0 (copy)"
       ]
     },
-    "2898": {
+    "2903": {
       "error": "Index access is out of bounds",
       "op": "extract 0 17 // on error: Index access is out of bounds",
       "defined_out": [
@@ -17018,7 +17072,7 @@
         "tmp%2#0"
       ]
     },
-    "2901": {
+    "2906": {
       "op": "uncover 2",
       "stack_out": [
         "currentLoanRecord#0",
@@ -17026,7 +17080,7 @@
         "iar#0"
       ]
     },
-    "2903": {
+    "2908": {
       "op": "pushint 17 // 17",
       "defined_out": [
         "17",
@@ -17041,7 +17095,7 @@
         "17"
       ]
     },
-    "2905": {
+    "2910": {
       "op": "extract_uint64",
       "defined_out": [
         "currentLoanRecord#0",
@@ -17054,7 +17108,7 @@
         "tmp%4#0"
       ]
     },
-    "2906": {
+    "2911": {
       "op": "dig 2",
       "defined_out": [
         "currentLoanRecord#0",
@@ -17069,7 +17123,7 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "2908": {
+    "2913": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -17085,7 +17139,7 @@
         "tmp%5#0"
       ]
     },
-    "2911": {
+    "2916": {
       "op": "uncover 3",
       "stack_out": [
         "tmp%2#0",
@@ -17094,7 +17148,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "2913": {
+    "2918": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -17111,7 +17165,7 @@
         "40"
       ]
     },
-    "2915": {
+    "2920": {
       "op": "extract_uint64",
       "defined_out": [
         "tmp%2#0",
@@ -17126,54 +17180,186 @@
         "tmp%7#0"
       ]
     },
-    "2916": {
-      "op": "cover 3",
-      "stack_out": [
-        "tmp%7#0",
+    "2921": {
+      "op": "dig 3",
+      "defined_out": [
         "tmp%2#0",
+        "tmp%2#0 (copy)",
+        "tmp%4#0",
+        "tmp%5#0",
+        "tmp%7#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%4#0",
+        "tmp%5#0",
+        "tmp%7#0",
+        "tmp%2#0 (copy)"
+      ]
+    },
+    "2923": {
+      "op": "uncover 3",
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%5#0",
+        "tmp%7#0",
+        "tmp%2#0 (copy)",
+        "tmp%4#0"
+      ]
+    },
+    "2925": {
+      "op": "uncover 3",
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%7#0",
+        "tmp%2#0 (copy)",
         "tmp%4#0",
         "tmp%5#0"
       ]
     },
-    "2918": {
+    "2927": {
       "op": "frame_dig -2",
       "stack_out": [
-        "tmp%7#0",
         "tmp%2#0",
+        "tmp%7#0",
+        "tmp%2#0 (copy)",
         "tmp%4#0",
         "tmp%5#0",
         "debtor#0 (copy)"
       ]
     },
-    "2920": {
+    "2929": {
       "op": "uncover 4",
       "stack_out": [
         "tmp%2#0",
+        "tmp%2#0 (copy)",
         "tmp%4#0",
         "tmp%5#0",
         "debtor#0 (copy)",
         "tmp%7#0"
       ]
     },
-    "2922": {
+    "2931": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateLoanRecord",
       "op": "callsub updateLoanRecord",
       "defined_out": [
+        "tmp%2#0",
         "updateLoanRecord%0#0"
       ],
       "stack_out": [
+        "tmp%2#0",
         "updateLoanRecord%0#0"
       ]
     },
-    "2925": {
+    "2934": {
       "op": "pop",
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "2935": {
+      "op": "intc_0 // 0",
+      "defined_out": [
+        "0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "0"
+      ]
+    },
+    "2936": {
+      "op": "bytec_1 // \"total_deposits\"",
+      "defined_out": [
+        "\"total_deposits\"",
+        "0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "0",
+        "\"total_deposits\""
+      ]
+    },
+    "2937": {
+      "op": "app_global_get_ex",
+      "defined_out": [
+        "maybe_exists%2#0",
+        "maybe_value%2#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "maybe_value%2#0",
+        "maybe_exists%2#0"
+      ]
+    },
+    "2938": {
+      "error": "check GlobalState exists",
+      "op": "assert // check GlobalState exists",
+      "stack_out": [
+        "tmp%2#0",
+        "maybe_value%2#0"
+      ]
+    },
+    "2939": {
+      "op": "swap",
+      "stack_out": [
+        "maybe_value%2#0",
+        "tmp%2#0"
+      ]
+    },
+    "2940": {
+      "op": "intc_0 // 0",
+      "stack_out": [
+        "maybe_value%2#0",
+        "tmp%2#0",
+        "0"
+      ]
+    },
+    "2941": {
+      "op": "extract_uint64",
+      "defined_out": [
+        "maybe_value%2#0",
+        "tmp%10#0"
+      ],
+      "stack_out": [
+        "maybe_value%2#0",
+        "tmp%10#0"
+      ]
+    },
+    "2942": {
+      "op": "+",
+      "defined_out": [
+        "new_state_value%0#0"
+      ],
+      "stack_out": [
+        "new_state_value%0#0"
+      ]
+    },
+    "2943": {
+      "op": "bytec_1 // \"total_deposits\"",
+      "stack_out": [
+        "new_state_value%0#0",
+        "\"total_deposits\""
+      ]
+    },
+    "2944": {
+      "op": "swap",
+      "stack_out": [
+        "\"total_deposits\"",
+        "new_state_value%0#0"
+      ]
+    },
+    "2945": {
+      "op": "app_global_put",
       "stack_out": []
     },
-    "2926": {
+    "2946": {
       "retsub": true,
       "op": "retsub"
     },
-    "2927": {
+    "2947": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest",
       "params": {
         "record#0": "bytes"
@@ -17182,16 +17368,16 @@
       "stack_in": [],
       "op": "proto 1 2"
     },
-    "2930": {
+    "2950": {
       "op": "global LatestTimestamp"
     },
-    "2932": {
+    "2952": {
       "op": "dup"
     },
-    "2933": {
+    "2953": {
       "op": "frame_dig -1"
     },
-    "2935": {
+    "2955": {
       "op": "pushint 81 // 81",
       "defined_out": [
         "81",
@@ -17205,7 +17391,7 @@
         "81"
       ]
     },
-    "2937": {
+    "2957": {
       "op": "extract_uint64",
       "defined_out": [
         "last#0",
@@ -17217,7 +17403,7 @@
         "last#0"
       ]
     },
-    "2938": {
+    "2958": {
       "op": "dup",
       "stack_out": [
         "now#0",
@@ -17226,7 +17412,7 @@
         "last#0"
       ]
     },
-    "2939": {
+    "2959": {
       "op": "cover 2",
       "defined_out": [
         "last#0",
@@ -17239,7 +17425,7 @@
         "last#0"
       ]
     },
-    "2941": {
+    "2961": {
       "op": "<=",
       "defined_out": [
         "last#0",
@@ -17252,14 +17438,14 @@
         "tmp%1#0"
       ]
     },
-    "2942": {
+    "2962": {
       "op": "bz accrueInterest_after_if_else@2",
       "stack_out": [
         "now#0",
         "last#0"
       ]
     },
-    "2945": {
+    "2965": {
       "op": "global LatestTimestamp",
       "defined_out": [
         "last#0",
@@ -17272,7 +17458,7 @@
         "to_encode%0#0"
       ]
     },
-    "2947": {
+    "2967": {
       "op": "itob",
       "defined_out": [
         "last#0",
@@ -17285,7 +17471,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "2948": {
+    "2968": {
       "op": "pushbytes 0x000000000000000001",
       "defined_out": [
         "0x000000000000000001",
@@ -17300,7 +17486,7 @@
         "0x000000000000000001"
       ]
     },
-    "2959": {
+    "2979": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -17309,7 +17495,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "2960": {
+    "2980": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -17322,7 +17508,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "2961": {
+    "2981": {
       "op": "frame_dig -1",
       "stack_out": [
         "now#0",
@@ -17331,7 +17517,7 @@
         "record#0 (copy)"
       ]
     },
-    "2963": {
+    "2983": {
       "error": "Index access is out of bounds",
       "op": "extract 65 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -17347,7 +17533,7 @@
         "tmp%2#0"
       ]
     },
-    "2966": {
+    "2986": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%6#0",
@@ -17360,7 +17546,7 @@
         "encoded_tuple_buffer%6#0"
       ]
     },
-    "2967": {
+    "2987": {
       "op": "frame_dig -1",
       "stack_out": [
         "now#0",
@@ -17369,17 +17555,17 @@
         "record#0 (copy)"
       ]
     },
-    "2969": {
+    "2989": {
       "op": "uncover 3"
     },
-    "2971": {
+    "2991": {
       "op": "uncover 3"
     },
-    "2973": {
+    "2993": {
       "retsub": true,
       "op": "retsub"
     },
-    "2974": {
+    "2994": {
       "block": "accrueInterest_after_if_else@2",
       "stack_in": [
         "now#0",
@@ -17395,7 +17581,7 @@
         "now#0"
       ]
     },
-    "2976": {
+    "2996": {
       "op": "frame_dig 1",
       "defined_out": [
         "last#0",
@@ -17408,7 +17594,7 @@
         "last#0"
       ]
     },
-    "2978": {
+    "2998": {
       "op": "-",
       "defined_out": [
         "deltaT#0",
@@ -17421,7 +17607,7 @@
         "deltaT#0"
       ]
     },
-    "2979": {
+    "2999": {
       "op": "frame_dig -1",
       "defined_out": [
         "deltaT#0",
@@ -17436,7 +17622,7 @@
         "record#0 (copy)"
       ]
     },
-    "2981": {
+    "3001": {
       "op": "pushint 65 // 65",
       "defined_out": [
         "65",
@@ -17453,7 +17639,7 @@
         "65"
       ]
     },
-    "2983": {
+    "3003": {
       "op": "extract_uint64",
       "defined_out": [
         "deltaT#0",
@@ -17468,7 +17654,7 @@
         "principal#0"
       ]
     },
-    "2984": {
+    "3004": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -17485,7 +17671,7 @@
         "0"
       ]
     },
-    "2985": {
+    "3005": {
       "op": "bytec 16 // \"interest_bps\"",
       "defined_out": [
         "\"interest_bps\"",
@@ -17504,7 +17690,7 @@
         "\"interest_bps\""
       ]
     },
-    "2987": {
+    "3007": {
       "op": "app_global_get_ex",
       "defined_out": [
         "deltaT#0",
@@ -17523,7 +17709,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "2988": {
+    "3008": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -17534,7 +17720,7 @@
         "rateBps#0"
       ]
     },
-    "2989": {
+    "3009": {
       "op": "dig 1",
       "defined_out": [
         "deltaT#0",
@@ -17553,7 +17739,7 @@
         "principal#0 (copy)"
       ]
     },
-    "2991": {
+    "3011": {
       "op": "mulw",
       "defined_out": [
         "deltaT#0",
@@ -17572,7 +17758,7 @@
         "lo1#0"
       ]
     },
-    "2992": {
+    "3012": {
       "op": "intc 4 // 10000",
       "defined_out": [
         "10000",
@@ -17593,7 +17779,7 @@
         "10000"
       ]
     },
-    "2994": {
+    "3014": {
       "op": "divw",
       "defined_out": [
         "deltaT#0",
@@ -17610,7 +17796,7 @@
         "rateScaled#0"
       ]
     },
-    "2995": {
+    "3015": {
       "op": "uncover 2",
       "stack_out": [
         "now#0",
@@ -17620,7 +17806,7 @@
         "deltaT#0"
       ]
     },
-    "2997": {
+    "3017": {
       "op": "mulw",
       "defined_out": [
         "hi2#0",
@@ -17637,7 +17823,7 @@
         "lo2#0"
       ]
     },
-    "2998": {
+    "3018": {
       "op": "pushint 31536000 // 31536000",
       "defined_out": [
         "31536000",
@@ -17656,7 +17842,7 @@
         "31536000"
       ]
     },
-    "3003": {
+    "3023": {
       "op": "divw",
       "defined_out": [
         "interest#0",
@@ -17671,7 +17857,7 @@
         "interest#0"
       ]
     },
-    "3004": {
+    "3024": {
       "op": "intc_0 // 0",
       "stack_out": [
         "now#0",
@@ -17681,7 +17867,7 @@
         "0"
       ]
     },
-    "3005": {
+    "3025": {
       "op": "bytec 18 // \"protocol_share_bps\"",
       "defined_out": [
         "\"protocol_share_bps\"",
@@ -17700,7 +17886,7 @@
         "\"protocol_share_bps\""
       ]
     },
-    "3007": {
+    "3027": {
       "op": "app_global_get_ex",
       "defined_out": [
         "interest#0",
@@ -17719,7 +17905,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3008": {
+    "3028": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -17730,7 +17916,7 @@
         "protoBps#0"
       ]
     },
-    "3009": {
+    "3029": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "now#0",
@@ -17741,7 +17927,7 @@
         "10000"
       ]
     },
-    "3011": {
+    "3031": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -17752,7 +17938,7 @@
         "protoBps#0"
       ]
     },
-    "3012": {
+    "3032": {
       "op": "-",
       "defined_out": [
         "depositorBps#0",
@@ -17769,7 +17955,7 @@
         "depositorBps#0"
       ]
     },
-    "3013": {
+    "3033": {
       "op": "dig 1",
       "defined_out": [
         "depositorBps#0",
@@ -17788,7 +17974,7 @@
         "interest#0 (copy)"
       ]
     },
-    "3015": {
+    "3035": {
       "op": "mulw",
       "defined_out": [
         "hiDep#0",
@@ -17807,7 +17993,7 @@
         "loDep#0"
       ]
     },
-    "3016": {
+    "3036": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "now#0",
@@ -17819,7 +18005,7 @@
         "10000"
       ]
     },
-    "3018": {
+    "3038": {
       "op": "divw",
       "defined_out": [
         "depositorInterest#0",
@@ -17836,7 +18022,7 @@
         "depositorInterest#0"
       ]
     },
-    "3019": {
+    "3039": {
       "op": "dup2",
       "defined_out": [
         "depositorInterest#0",
@@ -17857,7 +18043,7 @@
         "depositorInterest#0 (copy)"
       ]
     },
-    "3020": {
+    "3040": {
       "op": "-",
       "defined_out": [
         "depositorInterest#0",
@@ -17876,7 +18062,7 @@
         "protocolInterest#0"
       ]
     },
-    "3021": {
+    "3041": {
       "op": "intc_0 // 0",
       "stack_out": [
         "now#0",
@@ -17888,8 +18074,8 @@
         "0"
       ]
     },
-    "3022": {
-      "op": "bytec_2 // \"total_deposits\"",
+    "3042": {
+      "op": "bytec_1 // \"total_deposits\"",
       "defined_out": [
         "\"total_deposits\"",
         "0",
@@ -17911,7 +18097,7 @@
         "\"total_deposits\""
       ]
     },
-    "3023": {
+    "3043": {
       "op": "app_global_get_ex",
       "defined_out": [
         "depositorInterest#0",
@@ -17934,7 +18120,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3024": {
+    "3044": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -17947,7 +18133,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3025": {
+    "3045": {
       "op": "uncover 2",
       "stack_out": [
         "now#0",
@@ -17959,7 +18145,7 @@
         "depositorInterest#0"
       ]
     },
-    "3027": {
+    "3047": {
       "op": "+",
       "defined_out": [
         "interest#0",
@@ -17978,8 +18164,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3028": {
-      "op": "bytec_2 // \"total_deposits\"",
+    "3048": {
+      "op": "bytec_1 // \"total_deposits\"",
       "stack_out": [
         "now#0",
         "last#0",
@@ -17990,7 +18176,7 @@
         "\"total_deposits\""
       ]
     },
-    "3029": {
+    "3049": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18002,7 +18188,7 @@
         "new_state_value%0#0"
       ]
     },
-    "3030": {
+    "3050": {
       "op": "app_global_put",
       "stack_out": [
         "now#0",
@@ -18012,7 +18198,7 @@
         "protocolInterest#0"
       ]
     },
-    "3031": {
+    "3051": {
       "op": "intc_0 // 0",
       "stack_out": [
         "now#0",
@@ -18023,7 +18209,7 @@
         "0"
       ]
     },
-    "3032": {
+    "3052": {
       "op": "bytec 8 // \"fee_pool\"",
       "defined_out": [
         "\"fee_pool\"",
@@ -18044,7 +18230,7 @@
         "\"fee_pool\""
       ]
     },
-    "3034": {
+    "3054": {
       "op": "app_global_get_ex",
       "defined_out": [
         "interest#0",
@@ -18065,7 +18251,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "3035": {
+    "3055": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -18077,7 +18263,7 @@
         "maybe_value%3#0"
       ]
     },
-    "3036": {
+    "3056": {
       "op": "+",
       "defined_out": [
         "interest#0",
@@ -18094,7 +18280,7 @@
         "new_state_value%1#0"
       ]
     },
-    "3037": {
+    "3057": {
       "op": "bytec 8 // \"fee_pool\"",
       "stack_out": [
         "now#0",
@@ -18105,7 +18291,7 @@
         "\"fee_pool\""
       ]
     },
-    "3039": {
+    "3059": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18116,7 +18302,7 @@
         "new_state_value%1#0"
       ]
     },
-    "3040": {
+    "3060": {
       "op": "app_global_put",
       "stack_out": [
         "now#0",
@@ -18125,7 +18311,7 @@
         "interest#0"
       ]
     },
-    "3041": {
+    "3061": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18134,7 +18320,7 @@
         "principal#0"
       ]
     },
-    "3042": {
+    "3062": {
       "op": "dig 1",
       "stack_out": [
         "now#0",
@@ -18144,7 +18330,7 @@
         "interest#0 (copy)"
       ]
     },
-    "3044": {
+    "3064": {
       "op": "+",
       "defined_out": [
         "interest#0",
@@ -18159,7 +18345,7 @@
         "newPrincipal#0"
       ]
     },
-    "3045": {
+    "3065": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18168,7 +18354,7 @@
         "interest#0"
       ]
     },
-    "3046": {
+    "3066": {
       "op": "itob",
       "defined_out": [
         "last#0",
@@ -18183,7 +18369,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3047": {
+    "3067": {
       "op": "global LatestTimestamp",
       "defined_out": [
         "last#0",
@@ -18200,7 +18386,7 @@
         "to_encode%1#0"
       ]
     },
-    "3049": {
+    "3069": {
       "op": "itob",
       "defined_out": [
         "last#0",
@@ -18217,7 +18403,7 @@
         "val_as_bytes%2#0"
       ]
     },
-    "3050": {
+    "3070": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18227,7 +18413,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3051": {
+    "3071": {
       "op": "pushbytes 0x01",
       "defined_out": [
         "0x01",
@@ -18246,7 +18432,7 @@
         "0x01"
       ]
     },
-    "3054": {
+    "3074": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%9#0",
@@ -18263,7 +18449,7 @@
         "encoded_tuple_buffer%9#0"
       ]
     },
-    "3055": {
+    "3075": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18273,7 +18459,7 @@
         "val_as_bytes%2#0"
       ]
     },
-    "3056": {
+    "3076": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%10#0",
@@ -18288,7 +18474,7 @@
         "encoded_tuple_buffer%10#0"
       ]
     },
-    "3057": {
+    "3077": {
       "op": "swap",
       "stack_out": [
         "now#0",
@@ -18297,7 +18483,7 @@
         "newPrincipal#0"
       ]
     },
-    "3058": {
+    "3078": {
       "op": "itob",
       "defined_out": [
         "encoded_tuple_buffer%10#0",
@@ -18312,7 +18498,7 @@
         "val_as_bytes%3#0"
       ]
     },
-    "3059": {
+    "3079": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%13#0",
@@ -18325,7 +18511,7 @@
         "encoded_tuple_buffer%13#0"
       ]
     },
-    "3060": {
+    "3080": {
       "op": "frame_dig -1",
       "stack_out": [
         "now#0",
@@ -18334,17 +18520,17 @@
         "record#0 (copy)"
       ]
     },
-    "3062": {
+    "3082": {
       "op": "uncover 3"
     },
-    "3064": {
+    "3084": {
       "op": "uncover 3"
     },
-    "3066": {
+    "3086": {
       "retsub": true,
       "op": "retsub"
     },
-    "3067": {
+    "3087": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanRecord",
       "params": {
         "borrowerAddress#0": "bytes"
@@ -18353,7 +18539,7 @@
       "stack_in": [],
       "op": "proto 1 1"
     },
-    "3070": {
+    "3090": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -18362,7 +18548,7 @@
         "\"loan_record\""
       ]
     },
-    "3072": {
+    "3092": {
       "op": "frame_dig -1",
       "defined_out": [
         "\"loan_record\"",
@@ -18373,7 +18559,7 @@
         "borrowerAddress#0 (copy)"
       ]
     },
-    "3074": {
+    "3094": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -18382,7 +18568,7 @@
         "tmp%0#0"
       ]
     },
-    "3075": {
+    "3095": {
       "op": "box_get",
       "defined_out": [
         "maybe_exists%0#0",
@@ -18393,18 +18579,18 @@
         "maybe_exists%0#0"
       ]
     },
-    "3076": {
+    "3096": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
         "maybe_value%0#0"
       ]
     },
-    "3077": {
+    "3097": {
       "retsub": true,
       "op": "retsub"
     },
-    "3078": {
+    "3098": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.repayLoanASA",
       "params": {
         "assetTransferTxn#0": "uint64",
@@ -18415,13 +18601,13 @@
       "stack_in": [],
       "op": "proto 3 0"
     },
-    "3081": {
+    "3101": {
       "op": "pushbytes \"\"",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3083": {
+    "3103": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0"
@@ -18431,7 +18617,7 @@
         "0"
       ]
     },
-    "3084": {
+    "3104": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -18443,7 +18629,7 @@
         "\"base_token_id\""
       ]
     },
-    "3085": {
+    "3105": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%0#0",
@@ -18455,7 +18641,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3086": {
+    "3106": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -18463,7 +18649,7 @@
         "maybe_value%0#0"
       ]
     },
-    "3087": {
+    "3107": {
       "op": "btoi",
       "defined_out": [
         "baseToken#0"
@@ -18473,7 +18659,7 @@
         "baseToken#0"
       ]
     },
-    "3088": {
+    "3108": {
       "op": "frame_dig -3",
       "defined_out": [
         "assetTransferTxn#0 (copy)",
@@ -18485,7 +18671,7 @@
         "assetTransferTxn#0 (copy)"
       ]
     },
-    "3090": {
+    "3110": {
       "op": "gtxns AssetReceiver",
       "defined_out": [
         "baseToken#0",
@@ -18497,7 +18683,7 @@
         "tmp%0#0"
       ]
     },
-    "3092": {
+    "3112": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "baseToken#0",
@@ -18511,7 +18697,7 @@
         "tmp%1#0"
       ]
     },
-    "3094": {
+    "3114": {
       "op": "==",
       "defined_out": [
         "baseToken#0",
@@ -18523,14 +18709,14 @@
         "tmp%2#0"
       ]
     },
-    "3095": {
+    "3115": {
       "op": "bz repayLoanASA_bool_false@4",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3098": {
+    "3118": {
       "op": "frame_dig -3",
       "stack_out": [
         "remainingDebt#0",
@@ -18538,7 +18724,7 @@
         "assetTransferTxn#0 (copy)"
       ]
     },
-    "3100": {
+    "3120": {
       "op": "gtxns XferAsset",
       "defined_out": [
         "baseToken#0",
@@ -18550,7 +18736,7 @@
         "tmp%3#0"
       ]
     },
-    "3102": {
+    "3122": {
       "op": "frame_dig 1",
       "stack_out": [
         "remainingDebt#0",
@@ -18559,7 +18745,7 @@
         "baseToken#0"
       ]
     },
-    "3104": {
+    "3124": {
       "op": "==",
       "defined_out": [
         "baseToken#0",
@@ -18571,14 +18757,14 @@
         "tmp%4#0"
       ]
     },
-    "3105": {
+    "3125": {
       "op": "bz repayLoanASA_bool_false@4",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3108": {
+    "3128": {
       "op": "frame_dig -3",
       "stack_out": [
         "remainingDebt#0",
@@ -18586,7 +18772,7 @@
         "assetTransferTxn#0 (copy)"
       ]
     },
-    "3110": {
+    "3130": {
       "op": "gtxns AssetAmount",
       "defined_out": [
         "baseToken#0",
@@ -18598,7 +18784,7 @@
         "tmp%5#0"
       ]
     },
-    "3112": {
+    "3132": {
       "op": "frame_dig -2",
       "defined_out": [
         "baseToken#0",
@@ -18612,7 +18798,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3114": {
+    "3134": {
       "op": "==",
       "defined_out": [
         "baseToken#0",
@@ -18624,14 +18810,14 @@
         "tmp%6#0"
       ]
     },
-    "3115": {
+    "3135": {
       "op": "bz repayLoanASA_bool_false@4",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3118": {
+    "3138": {
       "op": "intc_1 // 1",
       "defined_out": [
         "and_result%0#0",
@@ -18643,7 +18829,7 @@
         "and_result%0#0"
       ]
     },
-    "3119": {
+    "3139": {
       "block": "repayLoanASA_bool_merge@5",
       "stack_in": [
         "remainingDebt#0",
@@ -18658,7 +18844,7 @@
         "baseToken#0"
       ]
     },
-    "3120": {
+    "3140": {
       "op": "txn Sender",
       "defined_out": [
         "tmp%7#0"
@@ -18669,7 +18855,7 @@
         "tmp%7#0"
       ]
     },
-    "3122": {
+    "3142": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanRecord",
       "op": "callsub getLoanRecord",
       "defined_out": [
@@ -18681,7 +18867,7 @@
         "loanRecord#0"
       ]
     },
-    "3125": {
+    "3145": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest",
       "op": "callsub accrueInterest",
       "defined_out": [
@@ -18695,7 +18881,7 @@
         "loanRecord#0"
       ]
     },
-    "3128": {
+    "3148": {
       "op": "swap",
       "defined_out": [
         "iar#0",
@@ -18708,7 +18894,7 @@
         "iar#0"
       ]
     },
-    "3129": {
+    "3149": {
       "op": "pushint 17 // 17",
       "defined_out": [
         "17",
@@ -18723,7 +18909,7 @@
         "17"
       ]
     },
-    "3131": {
+    "3151": {
       "op": "extract_uint64",
       "defined_out": [
         "loanRecord#0",
@@ -18736,7 +18922,7 @@
         "tmp%9#0"
       ]
     },
-    "3132": {
+    "3152": {
       "op": "frame_dig -2",
       "defined_out": [
         "loanRecord#0",
@@ -18751,7 +18937,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3134": {
+    "3154": {
       "op": "dig 1",
       "defined_out": [
         "loanRecord#0",
@@ -18768,7 +18954,7 @@
         "tmp%9#0 (copy)"
       ]
     },
-    "3136": {
+    "3156": {
       "op": "<=",
       "defined_out": [
         "loanRecord#0",
@@ -18783,7 +18969,7 @@
         "tmp%10#0"
       ]
     },
-    "3137": {
+    "3157": {
       "op": "assert",
       "stack_out": [
         "remainingDebt#0",
@@ -18792,7 +18978,7 @@
         "tmp%9#0"
       ]
     },
-    "3138": {
+    "3158": {
       "op": "frame_dig -2",
       "stack_out": [
         "remainingDebt#0",
@@ -18802,7 +18988,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3140": {
+    "3160": {
       "op": "-",
       "defined_out": [
         "loanRecord#0",
@@ -18815,7 +19001,7 @@
         "remainingDebt#0"
       ]
     },
-    "3141": {
+    "3161": {
       "op": "dup",
       "stack_out": [
         "remainingDebt#0",
@@ -18825,7 +19011,7 @@
         "remainingDebt#0"
       ]
     },
-    "3142": {
+    "3162": {
       "op": "frame_bury 0",
       "defined_out": [
         "loanRecord#0",
@@ -18838,7 +19024,7 @@
         "remainingDebt#0"
       ]
     },
-    "3144": {
+    "3164": {
       "op": "bnz repayLoanASA_else_body@8",
       "stack_out": [
         "remainingDebt#0",
@@ -18846,7 +19032,7 @@
         "loanRecord#0"
       ]
     },
-    "3147": {
+    "3167": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\"",
@@ -18860,7 +19046,7 @@
         "\"loan_record\""
       ]
     },
-    "3149": {
+    "3169": {
       "op": "txn Sender",
       "defined_out": [
         "\"loan_record\"",
@@ -18876,7 +19062,7 @@
         "tmp%14#0"
       ]
     },
-    "3151": {
+    "3171": {
       "op": "concat",
       "defined_out": [
         "loanRecord#0",
@@ -18890,7 +19076,7 @@
         "tmp%15#0"
       ]
     },
-    "3152": {
+    "3172": {
       "op": "box_del",
       "defined_out": [
         "loanRecord#0",
@@ -18904,7 +19090,7 @@
         "{box_del}"
       ]
     },
-    "3153": {
+    "3173": {
       "op": "pop",
       "stack_out": [
         "remainingDebt#0",
@@ -18912,7 +19098,7 @@
         "loanRecord#0"
       ]
     },
-    "3154": {
+    "3174": {
       "op": "intc_0 // 0",
       "stack_out": [
         "remainingDebt#0",
@@ -18921,8 +19107,8 @@
         "0"
       ]
     },
-    "3155": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3175": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -18937,7 +19123,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3156": {
+    "3176": {
       "op": "app_global_get_ex",
       "defined_out": [
         "loanRecord#0",
@@ -18953,7 +19139,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3157": {
+    "3177": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -18963,7 +19149,7 @@
         "maybe_value%1#0"
       ]
     },
-    "3158": {
+    "3178": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -18979,7 +19165,7 @@
         "1"
       ]
     },
-    "3159": {
+    "3179": {
       "op": "-",
       "defined_out": [
         "loanRecord#0",
@@ -18993,8 +19179,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3160": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3180": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0",
@@ -19003,7 +19189,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3161": {
+    "3181": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -19013,7 +19199,7 @@
         "new_state_value%0#0"
       ]
     },
-    "3162": {
+    "3182": {
       "op": "app_global_put",
       "stack_out": [
         "remainingDebt#0",
@@ -19021,10 +19207,10 @@
         "loanRecord#0"
       ]
     },
-    "3163": {
+    "3183": {
       "op": "itxn_begin"
     },
-    "3164": {
+    "3184": {
       "op": "txn Sender",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -19038,7 +19224,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3166": {
+    "3186": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -19047,7 +19233,7 @@
         "loanRecord#0"
       ]
     },
-    "3167": {
+    "3187": {
       "op": "dup",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -19063,7 +19249,7 @@
         "loanRecord#0 (copy)"
       ]
     },
-    "3168": {
+    "3188": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -19081,7 +19267,7 @@
         "32"
       ]
     },
-    "3170": {
+    "3190": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -19097,7 +19283,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3171": {
+    "3191": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -19107,7 +19293,7 @@
         "loanRecord#0"
       ]
     },
-    "3172": {
+    "3192": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -19125,7 +19311,7 @@
         "40"
       ]
     },
-    "3174": {
+    "3194": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetAmount_idx_0#0",
@@ -19141,7 +19327,7 @@
         "inner_txn_params%0%%param_AssetAmount_idx_0#0"
       ]
     },
-    "3175": {
+    "3195": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "remainingDebt#0",
@@ -19150,7 +19336,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3177": {
+    "3197": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "remainingDebt#0",
@@ -19158,14 +19344,14 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3179": {
+    "3199": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3181": {
+    "3201": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -19177,14 +19363,14 @@
         "4"
       ]
     },
-    "3182": {
+    "3202": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3184": {
+    "3204": {
       "op": "intc_0 // 0",
       "stack_out": [
         "remainingDebt#0",
@@ -19192,21 +19378,21 @@
         "0"
       ]
     },
-    "3185": {
+    "3205": {
       "op": "itxn_field Fee",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3187": {
+    "3207": {
       "op": "itxn_submit"
     },
-    "3188": {
+    "3208": {
       "retsub": true,
       "op": "retsub"
     },
-    "3189": {
+    "3209": {
       "block": "repayLoanASA_else_body@8",
       "stack_in": [
         "remainingDebt#0",
@@ -19224,7 +19410,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3191": {
+    "3211": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0"
@@ -19236,7 +19422,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "3192": {
+    "3212": {
       "op": "global LatestTimestamp",
       "defined_out": [
         "to_encode%0#0",
@@ -19250,7 +19436,7 @@
         "to_encode%0#0"
       ]
     },
-    "3194": {
+    "3214": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0",
@@ -19264,7 +19450,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3195": {
+    "3215": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -19274,7 +19460,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "3196": {
+    "3216": {
       "op": "pushbytes 0x02",
       "defined_out": [
         "0x02",
@@ -19290,7 +19476,7 @@
         "0x02"
       ]
     },
-    "3199": {
+    "3219": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%2#0",
@@ -19304,7 +19490,7 @@
         "encoded_tuple_buffer%2#0"
       ]
     },
-    "3200": {
+    "3220": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -19314,7 +19500,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3201": {
+    "3221": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%3#0"
@@ -19326,7 +19512,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "3202": {
+    "3222": {
       "op": "swap",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -19339,7 +19525,7 @@
         "loanRecord#0"
       ]
     },
-    "3203": {
+    "3223": {
       "op": "dup",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -19354,7 +19540,7 @@
         "loanRecord#0 (copy)"
       ]
     },
-    "3204": {
+    "3224": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -19370,7 +19556,7 @@
         "tmp%18#0"
       ]
     },
-    "3207": {
+    "3227": {
       "op": "txn Sender",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -19387,7 +19573,7 @@
         "tmp%19#0"
       ]
     },
-    "3209": {
+    "3229": {
       "op": "uncover 2",
       "stack_out": [
         "remainingDebt#0",
@@ -19398,7 +19584,7 @@
         "loanRecord#0"
       ]
     },
-    "3211": {
+    "3231": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -19417,7 +19603,7 @@
         "40"
       ]
     },
-    "3213": {
+    "3233": {
       "op": "extract_uint64",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -19434,7 +19620,7 @@
         "tmp%21#0"
       ]
     },
-    "3214": {
+    "3234": {
       "op": "uncover 3",
       "stack_out": [
         "remainingDebt#0",
@@ -19445,7 +19631,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "3216": {
+    "3236": {
       "op": "frame_dig 0",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -19464,10 +19650,10 @@
         "remainingDebt#0"
       ]
     },
-    "3218": {
+    "3238": {
       "op": "cover 4"
     },
-    "3220": {
+    "3240": {
       "op": "cover 4",
       "stack_out": [
         "remainingDebt#0",
@@ -19479,7 +19665,7 @@
         "tmp%21#0"
       ]
     },
-    "3222": {
+    "3242": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateLoanRecord",
       "op": "callsub updateLoanRecord",
       "defined_out": [
@@ -19492,18 +19678,18 @@
         "updateLoanRecord%0#0"
       ]
     },
-    "3225": {
+    "3245": {
       "op": "pop",
       "stack_out": [
         "remainingDebt#0",
         "baseToken#0"
       ]
     },
-    "3226": {
+    "3246": {
       "retsub": true,
       "op": "retsub"
     },
-    "3227": {
+    "3247": {
       "block": "repayLoanASA_bool_false@4",
       "stack_in": [
         "remainingDebt#0",
@@ -19519,10 +19705,10 @@
         "and_result%0#0"
       ]
     },
-    "3228": {
+    "3248": {
       "op": "b repayLoanASA_bool_merge@5"
     },
-    "3231": {
+    "3251": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.repayLoanAlgo",
       "params": {
         "paymentTxn#0": "uint64",
@@ -19533,13 +19719,13 @@
       "stack_in": [],
       "op": "proto 3 0"
     },
-    "3234": {
+    "3254": {
       "op": "pushbytes \"\"",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3236": {
+    "3256": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0"
@@ -19549,7 +19735,7 @@
         "0"
       ]
     },
-    "3237": {
+    "3257": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -19561,7 +19747,7 @@
         "\"base_token_id\""
       ]
     },
-    "3238": {
+    "3258": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%0#0",
@@ -19573,21 +19759,21 @@
         "maybe_exists%0#0"
       ]
     },
-    "3239": {
+    "3259": {
       "op": "bury 1",
       "stack_out": [
         "remainingDebt#0",
         "maybe_exists%0#0"
       ]
     },
-    "3241": {
+    "3261": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3242": {
+    "3262": {
       "op": "frame_dig -3",
       "defined_out": [
         "paymentTxn#0 (copy)"
@@ -19597,7 +19783,7 @@
         "paymentTxn#0 (copy)"
       ]
     },
-    "3244": {
+    "3264": {
       "op": "gtxns Receiver",
       "defined_out": [
         "tmp%0#0"
@@ -19607,7 +19793,7 @@
         "tmp%0#0"
       ]
     },
-    "3246": {
+    "3266": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "tmp%0#0",
@@ -19619,7 +19805,7 @@
         "tmp%1#0"
       ]
     },
-    "3248": {
+    "3268": {
       "op": "==",
       "defined_out": [
         "tmp%2#0"
@@ -19629,20 +19815,20 @@
         "tmp%2#0"
       ]
     },
-    "3249": {
+    "3269": {
       "op": "bz repayLoanAlgo_bool_false@3",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3252": {
+    "3272": {
       "op": "frame_dig -3",
       "stack_out": [
         "remainingDebt#0",
         "paymentTxn#0 (copy)"
       ]
     },
-    "3254": {
+    "3274": {
       "op": "gtxns Amount",
       "defined_out": [
         "tmp%3#0"
@@ -19652,7 +19838,7 @@
         "tmp%3#0"
       ]
     },
-    "3256": {
+    "3276": {
       "op": "frame_dig -2",
       "defined_out": [
         "repaymentAmount#0 (copy)",
@@ -19664,7 +19850,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3258": {
+    "3278": {
       "op": "==",
       "defined_out": [
         "tmp%4#0"
@@ -19674,13 +19860,13 @@
         "tmp%4#0"
       ]
     },
-    "3259": {
+    "3279": {
       "op": "bz repayLoanAlgo_bool_false@3",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3262": {
+    "3282": {
       "op": "intc_1 // 1",
       "defined_out": [
         "and_result%0#0"
@@ -19690,7 +19876,7 @@
         "and_result%0#0"
       ]
     },
-    "3263": {
+    "3283": {
       "block": "repayLoanAlgo_bool_merge@4",
       "stack_in": [
         "remainingDebt#0",
@@ -19703,7 +19889,7 @@
         "remainingDebt#0"
       ]
     },
-    "3264": {
+    "3284": {
       "op": "txn Sender",
       "defined_out": [
         "tmp%5#0"
@@ -19713,7 +19899,7 @@
         "tmp%5#0"
       ]
     },
-    "3266": {
+    "3286": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanRecord",
       "op": "callsub getLoanRecord",
       "defined_out": [
@@ -19724,7 +19910,7 @@
         "loanRecord#0"
       ]
     },
-    "3269": {
+    "3289": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest",
       "op": "callsub accrueInterest",
       "defined_out": [
@@ -19737,7 +19923,7 @@
         "loanRecord#0"
       ]
     },
-    "3272": {
+    "3292": {
       "op": "swap",
       "defined_out": [
         "iar#0",
@@ -19749,7 +19935,7 @@
         "iar#0"
       ]
     },
-    "3273": {
+    "3293": {
       "op": "pushint 17 // 17",
       "defined_out": [
         "17",
@@ -19763,7 +19949,7 @@
         "17"
       ]
     },
-    "3275": {
+    "3295": {
       "op": "extract_uint64",
       "defined_out": [
         "loanRecord#0",
@@ -19775,7 +19961,7 @@
         "tmp%7#0"
       ]
     },
-    "3276": {
+    "3296": {
       "op": "frame_dig -2",
       "defined_out": [
         "loanRecord#0",
@@ -19789,7 +19975,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3278": {
+    "3298": {
       "op": "dig 1",
       "defined_out": [
         "loanRecord#0",
@@ -19805,7 +19991,7 @@
         "tmp%7#0 (copy)"
       ]
     },
-    "3280": {
+    "3300": {
       "op": "<=",
       "defined_out": [
         "loanRecord#0",
@@ -19819,7 +20005,7 @@
         "tmp%8#0"
       ]
     },
-    "3281": {
+    "3301": {
       "op": "assert",
       "stack_out": [
         "remainingDebt#0",
@@ -19827,7 +20013,7 @@
         "tmp%7#0"
       ]
     },
-    "3282": {
+    "3302": {
       "op": "frame_dig -2",
       "stack_out": [
         "remainingDebt#0",
@@ -19836,7 +20022,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3284": {
+    "3304": {
       "op": "-",
       "defined_out": [
         "loanRecord#0",
@@ -19848,7 +20034,7 @@
         "remainingDebt#0"
       ]
     },
-    "3285": {
+    "3305": {
       "op": "dup",
       "stack_out": [
         "remainingDebt#0",
@@ -19857,7 +20043,7 @@
         "remainingDebt#0"
       ]
     },
-    "3286": {
+    "3306": {
       "op": "frame_bury 0",
       "defined_out": [
         "loanRecord#0",
@@ -19869,14 +20055,14 @@
         "remainingDebt#0"
       ]
     },
-    "3288": {
+    "3308": {
       "op": "bnz repayLoanAlgo_else_body@7",
       "stack_out": [
         "remainingDebt#0",
         "loanRecord#0"
       ]
     },
-    "3291": {
+    "3311": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\"",
@@ -19889,7 +20075,7 @@
         "\"loan_record\""
       ]
     },
-    "3293": {
+    "3313": {
       "op": "txn Sender",
       "defined_out": [
         "\"loan_record\"",
@@ -19904,7 +20090,7 @@
         "tmp%12#0"
       ]
     },
-    "3295": {
+    "3315": {
       "op": "concat",
       "defined_out": [
         "loanRecord#0",
@@ -19917,7 +20103,7 @@
         "tmp%13#0"
       ]
     },
-    "3296": {
+    "3316": {
       "op": "box_del",
       "defined_out": [
         "loanRecord#0",
@@ -19930,14 +20116,14 @@
         "{box_del}"
       ]
     },
-    "3297": {
+    "3317": {
       "op": "pop",
       "stack_out": [
         "remainingDebt#0",
         "loanRecord#0"
       ]
     },
-    "3298": {
+    "3318": {
       "op": "intc_0 // 0",
       "stack_out": [
         "remainingDebt#0",
@@ -19945,8 +20131,8 @@
         "0"
       ]
     },
-    "3299": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3319": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -19960,7 +20146,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3300": {
+    "3320": {
       "op": "app_global_get_ex",
       "defined_out": [
         "loanRecord#0",
@@ -19975,7 +20161,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3301": {
+    "3321": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -19984,7 +20170,7 @@
         "maybe_value%1#0"
       ]
     },
-    "3302": {
+    "3322": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -19999,7 +20185,7 @@
         "1"
       ]
     },
-    "3303": {
+    "3323": {
       "op": "-",
       "defined_out": [
         "loanRecord#0",
@@ -20012,8 +20198,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3304": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3324": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "remainingDebt#0",
         "loanRecord#0",
@@ -20021,7 +20207,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3305": {
+    "3325": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -20030,17 +20216,17 @@
         "new_state_value%0#0"
       ]
     },
-    "3306": {
+    "3326": {
       "op": "app_global_put",
       "stack_out": [
         "remainingDebt#0",
         "loanRecord#0"
       ]
     },
-    "3307": {
+    "3327": {
       "op": "itxn_begin"
     },
-    "3308": {
+    "3328": {
       "op": "txn Sender",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -20053,7 +20239,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3310": {
+    "3330": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -20061,7 +20247,7 @@
         "loanRecord#0"
       ]
     },
-    "3311": {
+    "3331": {
       "op": "dup",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -20076,7 +20262,7 @@
         "loanRecord#0 (copy)"
       ]
     },
-    "3312": {
+    "3332": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -20093,7 +20279,7 @@
         "32"
       ]
     },
-    "3314": {
+    "3334": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -20108,7 +20294,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3315": {
+    "3335": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -20117,7 +20303,7 @@
         "loanRecord#0"
       ]
     },
-    "3316": {
+    "3336": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -20134,7 +20320,7 @@
         "40"
       ]
     },
-    "3318": {
+    "3338": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetAmount_idx_0#0",
@@ -20149,7 +20335,7 @@
         "inner_txn_params%0%%param_AssetAmount_idx_0#0"
       ]
     },
-    "3319": {
+    "3339": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "remainingDebt#0",
@@ -20157,20 +20343,20 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3321": {
+    "3341": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "remainingDebt#0",
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3323": {
+    "3343": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3325": {
+    "3345": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -20181,33 +20367,33 @@
         "4"
       ]
     },
-    "3326": {
+    "3346": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3328": {
+    "3348": {
       "op": "intc_0 // 0",
       "stack_out": [
         "remainingDebt#0",
         "0"
       ]
     },
-    "3329": {
+    "3349": {
       "op": "itxn_field Fee",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3331": {
+    "3351": {
       "op": "itxn_submit"
     },
-    "3332": {
+    "3352": {
       "retsub": true,
       "op": "retsub"
     },
-    "3333": {
+    "3353": {
       "block": "repayLoanAlgo_else_body@7",
       "stack_in": [
         "remainingDebt#0",
@@ -20223,7 +20409,7 @@
         "repaymentAmount#0 (copy)"
       ]
     },
-    "3335": {
+    "3355": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0"
@@ -20234,7 +20420,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "3336": {
+    "3356": {
       "op": "global LatestTimestamp",
       "defined_out": [
         "to_encode%0#0",
@@ -20247,7 +20433,7 @@
         "to_encode%0#0"
       ]
     },
-    "3338": {
+    "3358": {
       "op": "itob",
       "defined_out": [
         "val_as_bytes%0#0",
@@ -20260,7 +20446,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3339": {
+    "3359": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -20269,7 +20455,7 @@
         "val_as_bytes%0#0"
       ]
     },
-    "3340": {
+    "3360": {
       "op": "pushbytes 0x02",
       "defined_out": [
         "0x02",
@@ -20284,7 +20470,7 @@
         "0x02"
       ]
     },
-    "3343": {
+    "3363": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%2#0",
@@ -20297,7 +20483,7 @@
         "encoded_tuple_buffer%2#0"
       ]
     },
-    "3344": {
+    "3364": {
       "op": "swap",
       "stack_out": [
         "remainingDebt#0",
@@ -20306,7 +20492,7 @@
         "val_as_bytes%1#0"
       ]
     },
-    "3345": {
+    "3365": {
       "op": "concat",
       "defined_out": [
         "encoded_tuple_buffer%3#0"
@@ -20317,7 +20503,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "3346": {
+    "3366": {
       "op": "swap",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -20329,7 +20515,7 @@
         "loanRecord#0"
       ]
     },
-    "3347": {
+    "3367": {
       "op": "dup",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -20343,7 +20529,7 @@
         "loanRecord#0 (copy)"
       ]
     },
-    "3348": {
+    "3368": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -20358,7 +20544,7 @@
         "tmp%16#0"
       ]
     },
-    "3351": {
+    "3371": {
       "op": "txn Sender",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -20374,7 +20560,7 @@
         "tmp%17#0"
       ]
     },
-    "3353": {
+    "3373": {
       "op": "uncover 2",
       "stack_out": [
         "remainingDebt#0",
@@ -20384,7 +20570,7 @@
         "loanRecord#0"
       ]
     },
-    "3355": {
+    "3375": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -20402,7 +20588,7 @@
         "40"
       ]
     },
-    "3357": {
+    "3377": {
       "op": "extract_uint64",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -20418,7 +20604,7 @@
         "tmp%19#0"
       ]
     },
-    "3358": {
+    "3378": {
       "op": "uncover 3",
       "stack_out": [
         "remainingDebt#0",
@@ -20428,7 +20614,7 @@
         "encoded_tuple_buffer%3#0"
       ]
     },
-    "3360": {
+    "3380": {
       "op": "frame_dig 0",
       "defined_out": [
         "encoded_tuple_buffer%3#0",
@@ -20446,10 +20632,10 @@
         "remainingDebt#0"
       ]
     },
-    "3362": {
+    "3382": {
       "op": "cover 4"
     },
-    "3364": {
+    "3384": {
       "op": "cover 4",
       "stack_out": [
         "remainingDebt#0",
@@ -20460,7 +20646,7 @@
         "tmp%19#0"
       ]
     },
-    "3366": {
+    "3386": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateLoanRecord",
       "op": "callsub updateLoanRecord",
       "defined_out": [
@@ -20472,17 +20658,17 @@
         "updateLoanRecord%0#0"
       ]
     },
-    "3369": {
+    "3389": {
       "op": "pop",
       "stack_out": [
         "remainingDebt#0"
       ]
     },
-    "3370": {
+    "3390": {
       "retsub": true,
       "op": "retsub"
     },
-    "3371": {
+    "3391": {
       "block": "repayLoanAlgo_bool_false@3",
       "stack_in": [
         "remainingDebt#0"
@@ -20496,10 +20682,10 @@
         "and_result%0#0"
       ]
     },
-    "3372": {
+    "3392": {
       "op": "b repayLoanAlgo_bool_merge@4"
     },
-    "3375": {
+    "3395": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.withdrawFees",
       "params": {},
       "block": "withdrawFees",
@@ -20512,7 +20698,7 @@
         "tmp%0#0"
       ]
     },
-    "3377": {
+    "3397": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -20523,7 +20709,7 @@
         "0"
       ]
     },
-    "3378": {
+    "3398": {
       "op": "bytec_3 // \"admin_account\"",
       "defined_out": [
         "\"admin_account\"",
@@ -20536,7 +20722,7 @@
         "\"admin_account\""
       ]
     },
-    "3379": {
+    "3399": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%0#0",
@@ -20549,7 +20735,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3380": {
+    "3400": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -20557,7 +20743,7 @@
         "maybe_value%0#0"
       ]
     },
-    "3381": {
+    "3401": {
       "op": "==",
       "defined_out": [
         "tmp%1#0"
@@ -20566,27 +20752,27 @@
         "tmp%1#0"
       ]
     },
-    "3382": {
+    "3402": {
       "op": "assert",
       "stack_out": []
     },
-    "3383": {
+    "3403": {
       "op": "itxn_begin"
     },
-    "3384": {
+    "3404": {
       "op": "intc_0 // 0",
       "stack_out": [
         "0"
       ]
     },
-    "3385": {
+    "3405": {
       "op": "bytec_3 // \"admin_account\"",
       "stack_out": [
         "0",
         "\"admin_account\""
       ]
     },
-    "3386": {
+    "3406": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%1#0",
@@ -20597,21 +20783,21 @@
         "maybe_exists%1#0"
       ]
     },
-    "3387": {
+    "3407": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
         "maybe_value%1#0"
       ]
     },
-    "3388": {
+    "3408": {
       "op": "intc_0 // 0",
       "stack_out": [
         "maybe_value%1#0",
         "0"
       ]
     },
-    "3389": {
+    "3409": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -20624,7 +20810,7 @@
         "\"base_token_id\""
       ]
     },
-    "3390": {
+    "3410": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%2#0",
@@ -20637,7 +20823,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3391": {
+    "3411": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -20645,7 +20831,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3392": {
+    "3412": {
       "op": "btoi",
       "defined_out": [
         "inner_txn_params%0%%param_XferAsset_idx_0#0",
@@ -20656,7 +20842,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3393": {
+    "3413": {
       "op": "intc_0 // 0",
       "stack_out": [
         "maybe_value%1#0",
@@ -20664,7 +20850,7 @@
         "0"
       ]
     },
-    "3394": {
+    "3414": {
       "op": "bytec 8 // \"fee_pool\"",
       "defined_out": [
         "\"fee_pool\"",
@@ -20679,7 +20865,7 @@
         "\"fee_pool\""
       ]
     },
-    "3396": {
+    "3416": {
       "op": "app_global_get_ex",
       "defined_out": [
         "inner_txn_params%0%%param_XferAsset_idx_0#0",
@@ -20694,7 +20880,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "3397": {
+    "3417": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -20703,24 +20889,24 @@
         "maybe_value%3#0"
       ]
     },
-    "3398": {
+    "3418": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "maybe_value%1#0",
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3400": {
+    "3420": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "maybe_value%1#0"
       ]
     },
-    "3402": {
+    "3422": {
       "op": "itxn_field AssetReceiver",
       "stack_out": []
     },
-    "3404": {
+    "3424": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4"
@@ -20729,45 +20915,45 @@
         "4"
       ]
     },
-    "3405": {
+    "3425": {
       "op": "itxn_field TypeEnum",
       "stack_out": []
     },
-    "3407": {
+    "3427": {
       "op": "intc_0 // 0",
       "stack_out": [
         "0"
       ]
     },
-    "3408": {
+    "3428": {
       "op": "itxn_field Fee",
       "stack_out": []
     },
-    "3410": {
+    "3430": {
       "op": "itxn_submit"
     },
-    "3411": {
+    "3431": {
       "op": "bytec 8 // \"fee_pool\"",
       "stack_out": [
         "\"fee_pool\""
       ]
     },
-    "3413": {
+    "3433": {
       "op": "intc_0 // 0",
       "stack_out": [
         "\"fee_pool\"",
         "0"
       ]
     },
-    "3414": {
+    "3434": {
       "op": "app_global_put",
       "stack_out": []
     },
-    "3415": {
+    "3435": {
       "retsub": true,
       "op": "retsub"
     },
-    "3416": {
+    "3436": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.buyoutASA",
       "params": {
         "buyer#0": "bytes",
@@ -20778,7 +20964,7 @@
       "stack_in": [],
       "op": "proto 3 0"
     },
-    "3419": {
+    "3439": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -20787,7 +20973,7 @@
         "\"loan_record\""
       ]
     },
-    "3421": {
+    "3441": {
       "op": "frame_dig -2",
       "defined_out": [
         "\"loan_record\"",
@@ -20798,7 +20984,7 @@
         "debtor#0 (copy)"
       ]
     },
-    "3423": {
+    "3443": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -20807,7 +20993,7 @@
         "tmp%0#0"
       ]
     },
-    "3424": {
+    "3444": {
       "op": "dupn 2",
       "defined_out": [
         "tmp%0#0",
@@ -20819,7 +21005,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3426": {
+    "3446": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -20833,7 +21019,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3427": {
+    "3447": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
@@ -20841,7 +21027,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3429": {
+    "3449": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
@@ -20849,7 +21035,7 @@
         "tmp%0#0"
       ]
     },
-    "3430": {
+    "3450": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -20857,7 +21043,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3431": {
+    "3451": {
       "op": "box_get",
       "defined_out": [
         "currentLoanRecord#0",
@@ -20871,7 +21057,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3432": {
+    "3452": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -20880,7 +21066,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3433": {
+    "3453": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -20888,7 +21074,7 @@
         "tmp%0#0"
       ]
     },
-    "3434": {
+    "3454": {
       "op": "dig 1",
       "defined_out": [
         "currentLoanRecord#0",
@@ -20902,14 +21088,14 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3436": {
+    "3456": {
       "op": "box_put",
       "stack_out": [
         "tmp%0#0",
         "currentLoanRecord#0"
       ]
     },
-    "3437": {
+    "3457": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -20917,7 +21103,7 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3438": {
+    "3458": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -20932,7 +21118,7 @@
         "40"
       ]
     },
-    "3440": {
+    "3460": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -20945,7 +21131,7 @@
         "collateralAmount#0"
       ]
     },
-    "3441": {
+    "3461": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -20954,7 +21140,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3442": {
+    "3462": {
       "op": "uncover 2",
       "defined_out": [
         "collateralAmount#0",
@@ -20968,7 +21154,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3444": {
+    "3464": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -20978,7 +21164,7 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3445": {
+    "3465": {
       "op": "pushint 65 // 65",
       "defined_out": [
         "65",
@@ -20996,7 +21182,7 @@
         "65"
       ]
     },
-    "3447": {
+    "3467": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -21012,7 +21198,7 @@
         "debtAmount#0"
       ]
     },
-    "3448": {
+    "3468": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -21022,7 +21208,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3449": {
+    "3469": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -21040,7 +21226,7 @@
         "32"
       ]
     },
-    "3451": {
+    "3471": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -21056,7 +21242,7 @@
         "to_encode%0#0"
       ]
     },
-    "3452": {
+    "3472": {
       "op": "itob",
       "defined_out": [
         "collateralAmount#0",
@@ -21072,7 +21258,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3453": {
+    "3473": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -21083,7 +21269,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3454": {
+    "3474": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -21100,7 +21286,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3456": {
+    "3476": {
       "op": "bytec 10 // \"accepted_collaterals\"",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -21119,7 +21305,7 @@
         "\"accepted_collaterals\""
       ]
     },
-    "3458": {
+    "3478": {
       "op": "dig 1",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -21140,7 +21326,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3460": {
+    "3480": {
       "op": "concat",
       "defined_out": [
         "collateralAmount#0",
@@ -21159,7 +21345,7 @@
         "tmp%0#1"
       ]
     },
-    "3461": {
+    "3481": {
       "op": "box_get",
       "defined_out": [
         "acceptedCollateral#0",
@@ -21180,7 +21366,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3462": {
+    "3482": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -21193,7 +21379,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3463": {
+    "3483": {
       "op": "pushint 16 // 16",
       "defined_out": [
         "16",
@@ -21214,7 +21400,7 @@
         "16"
       ]
     },
-    "3465": {
+    "3485": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -21233,7 +21419,7 @@
         "tmp%7#0"
       ]
     },
-    "3466": {
+    "3486": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -21246,7 +21432,7 @@
         "tmp%7#0"
       ]
     },
-    "3467": {
+    "3487": {
       "op": "cover 4",
       "defined_out": [
         "collateralAmount#0",
@@ -21266,7 +21452,7 @@
         "tmp%7#0"
       ]
     },
-    "3469": {
+    "3489": {
       "op": "dig 3",
       "defined_out": [
         "collateralAmount#0",
@@ -21288,7 +21474,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3471": {
+    "3491": {
       "op": ">=",
       "defined_out": [
         "collateralAmount#0",
@@ -21309,7 +21495,7 @@
         "tmp%8#0"
       ]
     },
-    "3472": {
+    "3492": {
       "error": "Collateral amount exceeds current total",
       "op": "assert // Collateral amount exceeds current total",
       "stack_out": [
@@ -21322,7 +21508,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3473": {
+    "3493": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getOraclePrice",
       "op": "callsub getOraclePrice",
       "defined_out": [
@@ -21343,7 +21529,7 @@
         "oraclePrice#0"
       ]
     },
-    "3476": {
+    "3496": {
       "op": "uncover 2",
       "stack_out": [
         "tmp%0#0",
@@ -21355,7 +21541,7 @@
         "collateralAmount#0"
       ]
     },
-    "3478": {
+    "3498": {
       "op": "mulw",
       "defined_out": [
         "collateralAmount#0",
@@ -21376,7 +21562,7 @@
         "lU#0"
       ]
     },
-    "3479": {
+    "3499": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -21399,7 +21585,7 @@
         "1"
       ]
     },
-    "3480": {
+    "3500": {
       "op": "divw",
       "defined_out": [
         "collateralAmount#0",
@@ -21418,7 +21604,7 @@
         "collateralUSD#0"
       ]
     },
-    "3481": {
+    "3501": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -21439,7 +21625,7 @@
         "collateralUSD#0 (copy)"
       ]
     },
-    "3482": {
+    "3502": {
       "op": "uncover 2",
       "stack_out": [
         "tmp%0#0",
@@ -21451,7 +21637,7 @@
         "debtAmount#0"
       ]
     },
-    "3484": {
+    "3504": {
       "op": "/",
       "defined_out": [
         "CR#0",
@@ -21470,7 +21656,7 @@
         "CR#0"
       ]
     },
-    "3485": {
+    "3505": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -21482,7 +21668,7 @@
         "0"
       ]
     },
-    "3486": {
+    "3506": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "defined_out": [
         "\"liq_threshold_bps\"",
@@ -21505,7 +21691,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3488": {
+    "3508": {
       "op": "app_global_get_ex",
       "defined_out": [
         "CR#0",
@@ -21528,7 +21714,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3489": {
+    "3509": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -21541,7 +21727,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3490": {
+    "3510": {
       "op": "dig 1",
       "defined_out": [
         "CR#0",
@@ -21564,7 +21750,7 @@
         "CR#0 (copy)"
       ]
     },
-    "3492": {
+    "3512": {
       "op": "<",
       "defined_out": [
         "CR#0",
@@ -21585,7 +21771,7 @@
         "tmp%9#0"
       ]
     },
-    "3493": {
+    "3513": {
       "error": "loan is not eligible for buyout",
       "op": "assert // loan is not eligible for buyout",
       "stack_out": [
@@ -21597,7 +21783,7 @@
         "CR#0"
       ]
     },
-    "3494": {
+    "3514": {
       "op": "intc 4 // 10000",
       "defined_out": [
         "10000",
@@ -21618,7 +21804,7 @@
         "10000"
       ]
     },
-    "3496": {
+    "3516": {
       "op": "*",
       "defined_out": [
         "collateralAmount#0",
@@ -21637,7 +21823,7 @@
         "tmp%10#0"
       ]
     },
-    "3497": {
+    "3517": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -21649,7 +21835,7 @@
         "0"
       ]
     },
-    "3498": {
+    "3518": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "stack_out": [
         "tmp%0#0",
@@ -21662,7 +21848,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3500": {
+    "3520": {
       "op": "app_global_get_ex",
       "defined_out": [
         "collateralAmount#0",
@@ -21685,7 +21871,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "3501": {
+    "3521": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -21698,7 +21884,7 @@
         "maybe_value%3#0"
       ]
     },
-    "3502": {
+    "3522": {
       "op": "/",
       "defined_out": [
         "collateralAmount#0",
@@ -21717,7 +21903,7 @@
         "tmp%11#0"
       ]
     },
-    "3503": {
+    "3523": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "tmp%0#0",
@@ -21729,7 +21915,7 @@
         "10000"
       ]
     },
-    "3505": {
+    "3525": {
       "op": "-",
       "defined_out": [
         "collateralAmount#0",
@@ -21748,7 +21934,7 @@
         "premiumRate#0"
       ]
     },
-    "3506": {
+    "3526": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "tmp%0#0",
@@ -21760,7 +21946,7 @@
         "10000"
       ]
     },
-    "3508": {
+    "3528": {
       "op": "/",
       "defined_out": [
         "collateralAmount#0",
@@ -21779,7 +21965,7 @@
         "tmp%12#0"
       ]
     },
-    "3509": {
+    "3529": {
       "op": "intc_1 // 1",
       "stack_out": [
         "tmp%0#0",
@@ -21791,7 +21977,7 @@
         "1"
       ]
     },
-    "3510": {
+    "3530": {
       "op": "+",
       "defined_out": [
         "collateralAmount#0",
@@ -21810,7 +21996,7 @@
         "tmp%13#0"
       ]
     },
-    "3511": {
+    "3531": {
       "op": "*",
       "defined_out": [
         "buyoutPrice#0",
@@ -21827,7 +22013,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3512": {
+    "3532": {
       "op": "frame_dig -1",
       "defined_out": [
         "axferTxn#0 (copy)",
@@ -21846,7 +22032,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3514": {
+    "3534": {
       "op": "gtxns XferAsset",
       "defined_out": [
         "buyoutPrice#0",
@@ -21865,7 +22051,7 @@
         "tmp%14#0"
       ]
     },
-    "3516": {
+    "3536": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -21877,7 +22063,7 @@
         "0"
       ]
     },
-    "3517": {
+    "3537": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -21900,7 +22086,7 @@
         "\"base_token_id\""
       ]
     },
-    "3518": {
+    "3538": {
       "op": "app_global_get_ex",
       "defined_out": [
         "buyoutPrice#0",
@@ -21923,7 +22109,7 @@
         "maybe_exists%4#0"
       ]
     },
-    "3519": {
+    "3539": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -21936,7 +22122,7 @@
         "maybe_value%4#0"
       ]
     },
-    "3520": {
+    "3540": {
       "op": "btoi",
       "defined_out": [
         "buyoutPrice#0",
@@ -21957,7 +22143,7 @@
         "tmp%15#0"
       ]
     },
-    "3521": {
+    "3541": {
       "op": "==",
       "defined_out": [
         "buyoutPrice#0",
@@ -21976,7 +22162,7 @@
         "tmp%16#0"
       ]
     },
-    "3522": {
+    "3542": {
       "op": "bz buyoutASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -21986,7 +22172,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3525": {
+    "3545": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -21997,7 +22183,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3527": {
+    "3547": {
       "op": "gtxns AssetReceiver",
       "defined_out": [
         "buyoutPrice#0",
@@ -22016,7 +22202,7 @@
         "tmp%17#0"
       ]
     },
-    "3529": {
+    "3549": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "buyoutPrice#0",
@@ -22037,7 +22223,7 @@
         "tmp%18#0"
       ]
     },
-    "3531": {
+    "3551": {
       "op": "==",
       "defined_out": [
         "buyoutPrice#0",
@@ -22056,7 +22242,7 @@
         "tmp%19#0"
       ]
     },
-    "3532": {
+    "3552": {
       "op": "bz buyoutASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -22066,7 +22252,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3535": {
+    "3555": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -22077,7 +22263,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3537": {
+    "3557": {
       "op": "gtxns AssetAmount",
       "defined_out": [
         "buyoutPrice#0",
@@ -22096,7 +22282,7 @@
         "tmp%20#0"
       ]
     },
-    "3539": {
+    "3559": {
       "op": "frame_dig 4",
       "stack_out": [
         "tmp%0#0",
@@ -22108,7 +22294,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3541": {
+    "3561": {
       "op": "==",
       "defined_out": [
         "buyoutPrice#0",
@@ -22127,7 +22313,7 @@
         "tmp%21#0"
       ]
     },
-    "3542": {
+    "3562": {
       "op": "bz buyoutASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -22137,7 +22323,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3545": {
+    "3565": {
       "op": "intc_1 // 1",
       "defined_out": [
         "and_result%0#0",
@@ -22156,7 +22342,7 @@
         "and_result%0#0"
       ]
     },
-    "3546": {
+    "3566": {
       "block": "buyoutASA_bool_merge@5",
       "stack_in": [
         "tmp%0#0",
@@ -22177,7 +22363,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3547": {
+    "3567": {
       "op": "frame_dig 0",
       "defined_out": [
         "tmp%0#0"
@@ -22191,7 +22377,7 @@
         "tmp%0#0"
       ]
     },
-    "3549": {
+    "3569": {
       "op": "box_del",
       "defined_out": [
         "tmp%0#0",
@@ -22206,7 +22392,7 @@
         "{box_del}"
       ]
     },
-    "3550": {
+    "3570": {
       "op": "pop",
       "stack_out": [
         "tmp%0#0",
@@ -22216,7 +22402,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3551": {
+    "3571": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -22231,8 +22417,8 @@
         "0"
       ]
     },
-    "3552": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3572": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -22248,7 +22434,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3553": {
+    "3573": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%5#0",
@@ -22265,7 +22451,7 @@
         "maybe_exists%5#0"
       ]
     },
-    "3554": {
+    "3574": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -22277,7 +22463,7 @@
         "maybe_value%5#0"
       ]
     },
-    "3555": {
+    "3575": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -22294,7 +22480,7 @@
         "1"
       ]
     },
-    "3556": {
+    "3576": {
       "op": "-",
       "defined_out": [
         "new_state_value%0#0",
@@ -22309,8 +22495,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3557": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3577": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "tmp%0#0",
         "collateralAmount#0",
@@ -22321,7 +22507,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3558": {
+    "3578": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -22333,7 +22519,7 @@
         "new_state_value%0#0"
       ]
     },
-    "3559": {
+    "3579": {
       "op": "app_global_put",
       "stack_out": [
         "tmp%0#0",
@@ -22343,10 +22529,10 @@
         "buyoutPrice#0"
       ]
     },
-    "3560": {
+    "3580": {
       "op": "itxn_begin"
     },
-    "3561": {
+    "3581": {
       "op": "frame_dig 2",
       "defined_out": [
         "collateralTokenId#0",
@@ -22361,7 +22547,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3563": {
+    "3583": {
       "op": "dup",
       "defined_out": [
         "collateralTokenId#0",
@@ -22378,7 +22564,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3564": {
+    "3584": {
       "op": "btoi",
       "defined_out": [
         "collateralTokenId#0",
@@ -22395,7 +22581,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3565": {
+    "3585": {
       "op": "frame_dig 1",
       "defined_out": [
         "collateralAmount#0",
@@ -22414,7 +22600,7 @@
         "collateralAmount#0"
       ]
     },
-    "3567": {
+    "3587": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -22435,7 +22621,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3568": {
+    "3588": {
       "op": "cover 2",
       "stack_out": [
         "tmp%0#0",
@@ -22449,7 +22635,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3570": {
+    "3590": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "tmp%0#0",
@@ -22462,7 +22648,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3572": {
+    "3592": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "tmp%0#0",
@@ -22474,7 +22660,7 @@
         "collateralAmount#0"
       ]
     },
-    "3574": {
+    "3594": {
       "op": "frame_dig -3",
       "defined_out": [
         "buyer#0 (copy)",
@@ -22493,7 +22679,7 @@
         "buyer#0 (copy)"
       ]
     },
-    "3576": {
+    "3596": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "tmp%0#0",
@@ -22505,7 +22691,7 @@
         "collateralAmount#0"
       ]
     },
-    "3578": {
+    "3598": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -22524,7 +22710,7 @@
         "4"
       ]
     },
-    "3579": {
+    "3599": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "tmp%0#0",
@@ -22536,7 +22722,7 @@
         "collateralAmount#0"
       ]
     },
-    "3581": {
+    "3601": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -22549,7 +22735,7 @@
         "0"
       ]
     },
-    "3582": {
+    "3602": {
       "op": "itxn_field Fee",
       "stack_out": [
         "tmp%0#0",
@@ -22561,10 +22747,10 @@
         "collateralAmount#0"
       ]
     },
-    "3584": {
+    "3604": {
       "op": "itxn_submit"
     },
-    "3585": {
+    "3605": {
       "op": "frame_dig 3",
       "defined_out": [
         "collateralAmount#0",
@@ -22583,7 +22769,7 @@
         "tmp%7#0"
       ]
     },
-    "3587": {
+    "3607": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -22596,7 +22782,7 @@
         "collateralAmount#0"
       ]
     },
-    "3588": {
+    "3608": {
       "op": "-",
       "defined_out": [
         "collateralAmount#0",
@@ -22615,7 +22801,7 @@
         "newTotal#0"
       ]
     },
-    "3589": {
+    "3609": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateCollateralTotal",
       "op": "callsub updateCollateralTotal",
       "stack_out": [
@@ -22626,11 +22812,11 @@
         "buyoutPrice#0"
       ]
     },
-    "3592": {
+    "3612": {
       "retsub": true,
       "op": "retsub"
     },
-    "3593": {
+    "3613": {
       "block": "buyoutASA_bool_false@4",
       "stack_in": [
         "tmp%0#0",
@@ -22652,10 +22838,10 @@
         "and_result%0#0"
       ]
     },
-    "3594": {
+    "3614": {
       "op": "b buyoutASA_bool_merge@5"
     },
-    "3597": {
+    "3617": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.buyoutAlgo",
       "params": {
         "buyer#0": "bytes",
@@ -22666,7 +22852,7 @@
       "stack_in": [],
       "op": "proto 3 0"
     },
-    "3600": {
+    "3620": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -22675,7 +22861,7 @@
         "\"loan_record\""
       ]
     },
-    "3602": {
+    "3622": {
       "op": "frame_dig -2",
       "defined_out": [
         "\"loan_record\"",
@@ -22686,7 +22872,7 @@
         "debtor#0 (copy)"
       ]
     },
-    "3604": {
+    "3624": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -22695,7 +22881,7 @@
         "tmp%0#0"
       ]
     },
-    "3605": {
+    "3625": {
       "op": "dupn 2",
       "defined_out": [
         "tmp%0#0",
@@ -22707,7 +22893,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3607": {
+    "3627": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -22721,7 +22907,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3608": {
+    "3628": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
@@ -22729,7 +22915,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3610": {
+    "3630": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
@@ -22737,7 +22923,7 @@
         "tmp%0#0"
       ]
     },
-    "3611": {
+    "3631": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -22745,7 +22931,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3612": {
+    "3632": {
       "op": "box_get",
       "defined_out": [
         "currentLoanRecord#0",
@@ -22759,7 +22945,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3613": {
+    "3633": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -22768,7 +22954,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3614": {
+    "3634": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -22776,7 +22962,7 @@
         "tmp%0#0"
       ]
     },
-    "3615": {
+    "3635": {
       "op": "dig 1",
       "defined_out": [
         "currentLoanRecord#0",
@@ -22790,14 +22976,14 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3617": {
+    "3637": {
       "op": "box_put",
       "stack_out": [
         "tmp%0#0",
         "currentLoanRecord#0"
       ]
     },
-    "3618": {
+    "3638": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -22805,7 +22991,7 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3619": {
+    "3639": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -22820,7 +23006,7 @@
         "40"
       ]
     },
-    "3621": {
+    "3641": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -22833,7 +23019,7 @@
         "collateralAmount#0"
       ]
     },
-    "3622": {
+    "3642": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -22842,7 +23028,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3623": {
+    "3643": {
       "op": "uncover 2",
       "defined_out": [
         "collateralAmount#0",
@@ -22856,7 +23042,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3625": {
+    "3645": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -22866,7 +23052,7 @@
         "currentLoanRecord#0 (copy)"
       ]
     },
-    "3626": {
+    "3646": {
       "op": "pushint 65 // 65",
       "defined_out": [
         "65",
@@ -22884,7 +23070,7 @@
         "65"
       ]
     },
-    "3628": {
+    "3648": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -22900,7 +23086,7 @@
         "debtAmount#0"
       ]
     },
-    "3629": {
+    "3649": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -22910,7 +23096,7 @@
         "currentLoanRecord#0"
       ]
     },
-    "3630": {
+    "3650": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -22928,7 +23114,7 @@
         "32"
       ]
     },
-    "3632": {
+    "3652": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -22944,7 +23130,7 @@
         "to_encode%0#0"
       ]
     },
-    "3633": {
+    "3653": {
       "op": "itob",
       "defined_out": [
         "collateralAmount#0",
@@ -22960,7 +23146,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3634": {
+    "3654": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -22971,7 +23157,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3635": {
+    "3655": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -22988,7 +23174,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3637": {
+    "3657": {
       "op": "bytec 10 // \"accepted_collaterals\"",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -23007,7 +23193,7 @@
         "\"accepted_collaterals\""
       ]
     },
-    "3639": {
+    "3659": {
       "op": "dig 1",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -23028,7 +23214,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3641": {
+    "3661": {
       "op": "concat",
       "defined_out": [
         "collateralAmount#0",
@@ -23047,7 +23233,7 @@
         "tmp%0#1"
       ]
     },
-    "3642": {
+    "3662": {
       "op": "box_get",
       "defined_out": [
         "acceptedCollateral#0",
@@ -23068,7 +23254,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3643": {
+    "3663": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -23081,7 +23267,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3644": {
+    "3664": {
       "op": "pushint 16 // 16",
       "defined_out": [
         "16",
@@ -23102,7 +23288,7 @@
         "16"
       ]
     },
-    "3646": {
+    "3666": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -23121,7 +23307,7 @@
         "tmp%7#0"
       ]
     },
-    "3647": {
+    "3667": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -23134,7 +23320,7 @@
         "tmp%7#0"
       ]
     },
-    "3648": {
+    "3668": {
       "op": "cover 4",
       "defined_out": [
         "collateralAmount#0",
@@ -23154,7 +23340,7 @@
         "tmp%7#0"
       ]
     },
-    "3650": {
+    "3670": {
       "op": "dig 3",
       "defined_out": [
         "collateralAmount#0",
@@ -23176,7 +23362,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3652": {
+    "3672": {
       "op": ">=",
       "defined_out": [
         "collateralAmount#0",
@@ -23197,7 +23383,7 @@
         "tmp%8#0"
       ]
     },
-    "3653": {
+    "3673": {
       "error": "Collateral amount exceeds current total",
       "op": "assert // Collateral amount exceeds current total",
       "stack_out": [
@@ -23210,7 +23396,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3654": {
+    "3674": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getOraclePrice",
       "op": "callsub getOraclePrice",
       "defined_out": [
@@ -23231,7 +23417,7 @@
         "oraclePrice#0"
       ]
     },
-    "3657": {
+    "3677": {
       "op": "uncover 2",
       "stack_out": [
         "tmp%0#0",
@@ -23243,7 +23429,7 @@
         "collateralAmount#0"
       ]
     },
-    "3659": {
+    "3679": {
       "op": "mulw",
       "defined_out": [
         "collateralAmount#0",
@@ -23264,7 +23450,7 @@
         "lU#0"
       ]
     },
-    "3660": {
+    "3680": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -23287,7 +23473,7 @@
         "1"
       ]
     },
-    "3661": {
+    "3681": {
       "op": "divw",
       "defined_out": [
         "collateralAmount#0",
@@ -23306,7 +23492,7 @@
         "collateralUSD#0"
       ]
     },
-    "3662": {
+    "3682": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -23327,7 +23513,7 @@
         "collateralUSD#0 (copy)"
       ]
     },
-    "3663": {
+    "3683": {
       "op": "uncover 2",
       "stack_out": [
         "tmp%0#0",
@@ -23339,7 +23525,7 @@
         "debtAmount#0"
       ]
     },
-    "3665": {
+    "3685": {
       "op": "/",
       "defined_out": [
         "CR#0",
@@ -23358,7 +23544,7 @@
         "CR#0"
       ]
     },
-    "3666": {
+    "3686": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -23370,7 +23556,7 @@
         "0"
       ]
     },
-    "3667": {
+    "3687": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "defined_out": [
         "\"liq_threshold_bps\"",
@@ -23393,7 +23579,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3669": {
+    "3689": {
       "op": "app_global_get_ex",
       "defined_out": [
         "CR#0",
@@ -23416,7 +23602,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3670": {
+    "3690": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -23429,7 +23615,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3671": {
+    "3691": {
       "op": "dig 1",
       "defined_out": [
         "CR#0",
@@ -23452,7 +23638,7 @@
         "CR#0 (copy)"
       ]
     },
-    "3673": {
+    "3693": {
       "op": "<",
       "defined_out": [
         "CR#0",
@@ -23473,7 +23659,7 @@
         "tmp%9#0"
       ]
     },
-    "3674": {
+    "3694": {
       "error": "loan is not eligible for buyout",
       "op": "assert // loan is not eligible for buyout",
       "stack_out": [
@@ -23485,7 +23671,7 @@
         "CR#0"
       ]
     },
-    "3675": {
+    "3695": {
       "op": "intc 4 // 10000",
       "defined_out": [
         "10000",
@@ -23506,7 +23692,7 @@
         "10000"
       ]
     },
-    "3677": {
+    "3697": {
       "op": "*",
       "defined_out": [
         "collateralAmount#0",
@@ -23525,7 +23711,7 @@
         "tmp%10#0"
       ]
     },
-    "3678": {
+    "3698": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -23537,7 +23723,7 @@
         "0"
       ]
     },
-    "3679": {
+    "3699": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "stack_out": [
         "tmp%0#0",
@@ -23550,7 +23736,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3681": {
+    "3701": {
       "op": "app_global_get_ex",
       "defined_out": [
         "collateralAmount#0",
@@ -23573,7 +23759,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "3682": {
+    "3702": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -23586,7 +23772,7 @@
         "maybe_value%3#0"
       ]
     },
-    "3683": {
+    "3703": {
       "op": "/",
       "defined_out": [
         "collateralAmount#0",
@@ -23605,7 +23791,7 @@
         "tmp%11#0"
       ]
     },
-    "3684": {
+    "3704": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "tmp%0#0",
@@ -23617,7 +23803,7 @@
         "10000"
       ]
     },
-    "3686": {
+    "3706": {
       "op": "-",
       "defined_out": [
         "collateralAmount#0",
@@ -23636,7 +23822,7 @@
         "premiumRate#0"
       ]
     },
-    "3687": {
+    "3707": {
       "op": "intc 4 // 10000",
       "stack_out": [
         "tmp%0#0",
@@ -23648,7 +23834,7 @@
         "10000"
       ]
     },
-    "3689": {
+    "3709": {
       "op": "/",
       "defined_out": [
         "collateralAmount#0",
@@ -23667,7 +23853,7 @@
         "tmp%12#0"
       ]
     },
-    "3690": {
+    "3710": {
       "op": "intc_1 // 1",
       "stack_out": [
         "tmp%0#0",
@@ -23679,7 +23865,7 @@
         "1"
       ]
     },
-    "3691": {
+    "3711": {
       "op": "+",
       "defined_out": [
         "collateralAmount#0",
@@ -23698,7 +23884,7 @@
         "tmp%13#0"
       ]
     },
-    "3692": {
+    "3712": {
       "op": "*",
       "defined_out": [
         "buyoutPrice#0",
@@ -23715,7 +23901,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3693": {
+    "3713": {
       "op": "frame_dig -1",
       "defined_out": [
         "buyoutPrice#0",
@@ -23734,7 +23920,7 @@
         "paymentTxn#0 (copy)"
       ]
     },
-    "3695": {
+    "3715": {
       "op": "gtxns Receiver",
       "defined_out": [
         "buyoutPrice#0",
@@ -23753,7 +23939,7 @@
         "tmp%14#0"
       ]
     },
-    "3697": {
+    "3717": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "buyoutPrice#0",
@@ -23774,7 +23960,7 @@
         "tmp%15#0"
       ]
     },
-    "3699": {
+    "3719": {
       "op": "==",
       "defined_out": [
         "buyoutPrice#0",
@@ -23793,7 +23979,7 @@
         "tmp%16#0"
       ]
     },
-    "3700": {
+    "3720": {
       "op": "bz buyoutAlgo_bool_false@3",
       "stack_out": [
         "tmp%0#0",
@@ -23803,7 +23989,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3703": {
+    "3723": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -23814,7 +24000,7 @@
         "paymentTxn#0 (copy)"
       ]
     },
-    "3705": {
+    "3725": {
       "op": "gtxns Amount",
       "defined_out": [
         "buyoutPrice#0",
@@ -23833,7 +24019,7 @@
         "tmp%17#0"
       ]
     },
-    "3707": {
+    "3727": {
       "op": "frame_dig 4",
       "stack_out": [
         "tmp%0#0",
@@ -23845,7 +24031,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3709": {
+    "3729": {
       "op": "==",
       "defined_out": [
         "buyoutPrice#0",
@@ -23864,7 +24050,7 @@
         "tmp%18#0"
       ]
     },
-    "3710": {
+    "3730": {
       "op": "bz buyoutAlgo_bool_false@3",
       "stack_out": [
         "tmp%0#0",
@@ -23874,7 +24060,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3713": {
+    "3733": {
       "op": "intc_1 // 1",
       "defined_out": [
         "and_result%0#0",
@@ -23893,7 +24079,7 @@
         "and_result%0#0"
       ]
     },
-    "3714": {
+    "3734": {
       "block": "buyoutAlgo_bool_merge@4",
       "stack_in": [
         "tmp%0#0",
@@ -23914,7 +24100,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3715": {
+    "3735": {
       "op": "frame_dig 0",
       "defined_out": [
         "tmp%0#0"
@@ -23928,7 +24114,7 @@
         "tmp%0#0"
       ]
     },
-    "3717": {
+    "3737": {
       "op": "box_del",
       "defined_out": [
         "tmp%0#0",
@@ -23943,7 +24129,7 @@
         "{box_del}"
       ]
     },
-    "3718": {
+    "3738": {
       "op": "pop",
       "stack_out": [
         "tmp%0#0",
@@ -23953,7 +24139,7 @@
         "buyoutPrice#0"
       ]
     },
-    "3719": {
+    "3739": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -23968,8 +24154,8 @@
         "0"
       ]
     },
-    "3720": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3740": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -23985,7 +24171,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3721": {
+    "3741": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%4#0",
@@ -24002,7 +24188,7 @@
         "maybe_exists%4#0"
       ]
     },
-    "3722": {
+    "3742": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -24014,7 +24200,7 @@
         "maybe_value%4#0"
       ]
     },
-    "3723": {
+    "3743": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -24031,7 +24217,7 @@
         "1"
       ]
     },
-    "3724": {
+    "3744": {
       "op": "-",
       "defined_out": [
         "new_state_value%0#0",
@@ -24046,8 +24232,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3725": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3745": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "tmp%0#0",
         "collateralAmount#0",
@@ -24058,7 +24244,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3726": {
+    "3746": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -24070,7 +24256,7 @@
         "new_state_value%0#0"
       ]
     },
-    "3727": {
+    "3747": {
       "op": "app_global_put",
       "stack_out": [
         "tmp%0#0",
@@ -24080,10 +24266,10 @@
         "buyoutPrice#0"
       ]
     },
-    "3728": {
+    "3748": {
       "op": "itxn_begin"
     },
-    "3729": {
+    "3749": {
       "op": "frame_dig 2",
       "defined_out": [
         "collateralTokenId#0",
@@ -24098,7 +24284,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3731": {
+    "3751": {
       "op": "dup",
       "defined_out": [
         "collateralTokenId#0",
@@ -24115,7 +24301,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3732": {
+    "3752": {
       "op": "btoi",
       "defined_out": [
         "collateralTokenId#0",
@@ -24132,7 +24318,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3733": {
+    "3753": {
       "op": "frame_dig 1",
       "defined_out": [
         "collateralAmount#0",
@@ -24151,7 +24337,7 @@
         "collateralAmount#0"
       ]
     },
-    "3735": {
+    "3755": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -24172,7 +24358,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3736": {
+    "3756": {
       "op": "cover 2",
       "stack_out": [
         "tmp%0#0",
@@ -24186,7 +24372,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3738": {
+    "3758": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "tmp%0#0",
@@ -24199,7 +24385,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3740": {
+    "3760": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "tmp%0#0",
@@ -24211,7 +24397,7 @@
         "collateralAmount#0"
       ]
     },
-    "3742": {
+    "3762": {
       "op": "frame_dig -3",
       "defined_out": [
         "buyer#0 (copy)",
@@ -24230,7 +24416,7 @@
         "buyer#0 (copy)"
       ]
     },
-    "3744": {
+    "3764": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "tmp%0#0",
@@ -24242,7 +24428,7 @@
         "collateralAmount#0"
       ]
     },
-    "3746": {
+    "3766": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -24261,7 +24447,7 @@
         "4"
       ]
     },
-    "3747": {
+    "3767": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "tmp%0#0",
@@ -24273,7 +24459,7 @@
         "collateralAmount#0"
       ]
     },
-    "3749": {
+    "3769": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -24286,7 +24472,7 @@
         "0"
       ]
     },
-    "3750": {
+    "3770": {
       "op": "itxn_field Fee",
       "stack_out": [
         "tmp%0#0",
@@ -24298,10 +24484,10 @@
         "collateralAmount#0"
       ]
     },
-    "3752": {
+    "3772": {
       "op": "itxn_submit"
     },
-    "3753": {
+    "3773": {
       "op": "frame_dig 3",
       "defined_out": [
         "collateralAmount#0",
@@ -24320,7 +24506,7 @@
         "tmp%7#0"
       ]
     },
-    "3755": {
+    "3775": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -24333,7 +24519,7 @@
         "collateralAmount#0"
       ]
     },
-    "3756": {
+    "3776": {
       "op": "-",
       "defined_out": [
         "collateralAmount#0",
@@ -24352,7 +24538,7 @@
         "newTotal#0"
       ]
     },
-    "3757": {
+    "3777": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateCollateralTotal",
       "op": "callsub updateCollateralTotal",
       "stack_out": [
@@ -24363,11 +24549,11 @@
         "buyoutPrice#0"
       ]
     },
-    "3760": {
+    "3780": {
       "retsub": true,
       "op": "retsub"
     },
-    "3761": {
+    "3781": {
       "block": "buyoutAlgo_bool_false@3",
       "stack_in": [
         "tmp%0#0",
@@ -24389,10 +24575,10 @@
         "and_result%0#0"
       ]
     },
-    "3762": {
+    "3782": {
       "op": "b buyoutAlgo_bool_merge@4"
     },
-    "3765": {
+    "3785": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.liquidateASA",
       "params": {
         "debtor#0": "bytes",
@@ -24402,7 +24588,7 @@
       "stack_in": [],
       "op": "proto 2 0"
     },
-    "3768": {
+    "3788": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -24411,7 +24597,7 @@
         "\"loan_record\""
       ]
     },
-    "3770": {
+    "3790": {
       "op": "frame_dig -2",
       "defined_out": [
         "\"loan_record\"",
@@ -24422,7 +24608,7 @@
         "debtor#0 (copy)"
       ]
     },
-    "3772": {
+    "3792": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -24431,7 +24617,7 @@
         "tmp%0#0"
       ]
     },
-    "3773": {
+    "3793": {
       "op": "dupn 2",
       "defined_out": [
         "tmp%0#0",
@@ -24443,7 +24629,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3775": {
+    "3795": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -24457,7 +24643,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3776": {
+    "3796": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
@@ -24465,7 +24651,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3778": {
+    "3798": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
@@ -24473,7 +24659,7 @@
         "tmp%0#0"
       ]
     },
-    "3779": {
+    "3799": {
       "op": "box_get",
       "defined_out": [
         "maybe_exists%1#0",
@@ -24486,7 +24672,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3780": {
+    "3800": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -24494,7 +24680,7 @@
         "record#0"
       ]
     },
-    "3781": {
+    "3801": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -24503,7 +24689,7 @@
         "record#0 (copy)"
       ]
     },
-    "3782": {
+    "3802": {
       "op": "uncover 2",
       "defined_out": [
         "maybe_exists%1#0",
@@ -24517,7 +24703,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3784": {
+    "3804": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -24526,7 +24712,7 @@
         "record#0"
       ]
     },
-    "3785": {
+    "3805": {
       "op": "dup",
       "defined_out": [
         "record#0",
@@ -24540,7 +24726,7 @@
         "record#0 (copy)"
       ]
     },
-    "3786": {
+    "3806": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -24556,7 +24742,7 @@
         "40"
       ]
     },
-    "3788": {
+    "3808": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -24570,7 +24756,7 @@
         "collateralAmount#0"
       ]
     },
-    "3789": {
+    "3809": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -24580,7 +24766,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3790": {
+    "3810": {
       "op": "uncover 2",
       "defined_out": [
         "collateralAmount#0",
@@ -24595,7 +24781,7 @@
         "record#0"
       ]
     },
-    "3792": {
+    "3812": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -24606,7 +24792,7 @@
         "record#0 (copy)"
       ]
     },
-    "3793": {
+    "3813": {
       "op": "pushint 65 // 65",
       "defined_out": [
         "65",
@@ -24625,7 +24811,7 @@
         "65"
       ]
     },
-    "3795": {
+    "3815": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -24642,7 +24828,7 @@
         "debtAmount#0"
       ]
     },
-    "3796": {
+    "3816": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -24654,7 +24840,7 @@
         "debtAmount#0 (copy)"
       ]
     },
-    "3797": {
+    "3817": {
       "op": "cover 3",
       "stack_out": [
         "tmp%0#0",
@@ -24666,7 +24852,7 @@
         "debtAmount#0"
       ]
     },
-    "3799": {
+    "3819": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -24684,7 +24870,7 @@
         "record#0"
       ]
     },
-    "3801": {
+    "3821": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -24704,7 +24890,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3804": {
+    "3824": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -24717,7 +24903,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3805": {
+    "3825": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -24737,7 +24923,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3807": {
+    "3827": {
       "op": "bytec 10 // \"accepted_collaterals\"",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -24759,7 +24945,7 @@
         "\"accepted_collaterals\""
       ]
     },
-    "3809": {
+    "3829": {
       "op": "dig 1",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -24783,7 +24969,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3811": {
+    "3831": {
       "op": "concat",
       "defined_out": [
         "collateralAmount#0",
@@ -24805,7 +24991,7 @@
         "tmp%0#1"
       ]
     },
-    "3812": {
+    "3832": {
       "op": "box_get",
       "defined_out": [
         "acceptedCollateral#0",
@@ -24829,7 +25015,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3813": {
+    "3833": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -24844,7 +25030,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3814": {
+    "3834": {
       "op": "cover 4",
       "defined_out": [
         "acceptedCollateral#0",
@@ -24868,7 +25054,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3816": {
+    "3836": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -24883,7 +25069,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3817": {
+    "3837": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getOraclePrice",
       "op": "callsub getOraclePrice",
       "defined_out": [
@@ -24907,7 +25093,7 @@
         "oraclePrice#0"
       ]
     },
-    "3820": {
+    "3840": {
       "op": "mulw",
       "defined_out": [
         "acceptedCollateral#0",
@@ -24931,7 +25117,7 @@
         "l#0"
       ]
     },
-    "3821": {
+    "3841": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -24957,7 +25143,7 @@
         "1"
       ]
     },
-    "3822": {
+    "3842": {
       "op": "divw",
       "defined_out": [
         "acceptedCollateral#0",
@@ -24979,7 +25165,7 @@
         "collateralUSD#0"
       ]
     },
-    "3823": {
+    "3843": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -24992,7 +25178,7 @@
         "debtAmount#0"
       ]
     },
-    "3824": {
+    "3844": {
       "op": "/",
       "defined_out": [
         "CR#0",
@@ -25013,7 +25199,7 @@
         "CR#0"
       ]
     },
-    "3825": {
+    "3845": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -25026,7 +25212,7 @@
         "0"
       ]
     },
-    "3826": {
+    "3846": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "defined_out": [
         "\"liq_threshold_bps\"",
@@ -25051,7 +25237,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3828": {
+    "3848": {
       "op": "app_global_get_ex",
       "defined_out": [
         "CR#0",
@@ -25076,7 +25262,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3829": {
+    "3849": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -25090,7 +25276,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3830": {
+    "3850": {
       "op": "<=",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25111,7 +25297,7 @@
         "tmp%4#0"
       ]
     },
-    "3831": {
+    "3851": {
       "error": "loan is not liquidatable",
       "op": "assert // loan is not liquidatable",
       "stack_out": [
@@ -25123,7 +25309,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3832": {
+    "3852": {
       "op": "frame_dig -1",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25144,7 +25330,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3834": {
+    "3854": {
       "op": "gtxns AssetReceiver",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25165,7 +25351,7 @@
         "tmp%5#0"
       ]
     },
-    "3836": {
+    "3856": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25188,7 +25374,7 @@
         "tmp%6#0"
       ]
     },
-    "3838": {
+    "3858": {
       "op": "==",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25209,7 +25395,7 @@
         "tmp%7#0"
       ]
     },
-    "3839": {
+    "3859": {
       "op": "bz liquidateASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -25220,7 +25406,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3842": {
+    "3862": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -25232,7 +25418,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3844": {
+    "3864": {
       "op": "gtxns XferAsset",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25253,7 +25439,7 @@
         "tmp%8#0"
       ]
     },
-    "3846": {
+    "3866": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -25266,7 +25452,7 @@
         "0"
       ]
     },
-    "3847": {
+    "3867": {
       "op": "bytec_0 // \"base_token_id\"",
       "defined_out": [
         "\"base_token_id\"",
@@ -25291,7 +25477,7 @@
         "\"base_token_id\""
       ]
     },
-    "3848": {
+    "3868": {
       "op": "app_global_get_ex",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25316,7 +25502,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "3849": {
+    "3869": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -25330,7 +25516,7 @@
         "maybe_value%3#0"
       ]
     },
-    "3850": {
+    "3870": {
       "op": "btoi",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25353,7 +25539,7 @@
         "tmp%9#0"
       ]
     },
-    "3851": {
+    "3871": {
       "op": "==",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25374,7 +25560,7 @@
         "tmp%10#0"
       ]
     },
-    "3852": {
+    "3872": {
       "op": "bz liquidateASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -25385,7 +25571,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3855": {
+    "3875": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -25397,7 +25583,7 @@
         "axferTxn#0 (copy)"
       ]
     },
-    "3857": {
+    "3877": {
       "op": "gtxns AssetAmount",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25418,7 +25604,7 @@
         "tmp%11#0"
       ]
     },
-    "3859": {
+    "3879": {
       "op": "frame_dig 3",
       "stack_out": [
         "tmp%0#0",
@@ -25431,7 +25617,7 @@
         "debtAmount#0"
       ]
     },
-    "3861": {
+    "3881": {
       "op": "==",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25452,7 +25638,7 @@
         "tmp%12#0"
       ]
     },
-    "3862": {
+    "3882": {
       "op": "bz liquidateASA_bool_false@4",
       "stack_out": [
         "tmp%0#0",
@@ -25463,7 +25649,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3865": {
+    "3885": {
       "op": "intc_1 // 1",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25484,7 +25670,7 @@
         "and_result%0#0"
       ]
     },
-    "3866": {
+    "3886": {
       "block": "liquidateASA_bool_merge@5",
       "stack_in": [
         "tmp%0#0",
@@ -25507,7 +25693,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3867": {
+    "3887": {
       "op": "frame_dig 0",
       "defined_out": [
         "tmp%0#0"
@@ -25522,7 +25708,7 @@
         "tmp%0#0"
       ]
     },
-    "3869": {
+    "3889": {
       "op": "box_del",
       "defined_out": [
         "tmp%0#0",
@@ -25538,7 +25724,7 @@
         "{box_del}"
       ]
     },
-    "3870": {
+    "3890": {
       "op": "pop",
       "stack_out": [
         "tmp%0#0",
@@ -25549,7 +25735,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3871": {
+    "3891": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -25565,8 +25751,8 @@
         "0"
       ]
     },
-    "3872": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3892": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -25583,7 +25769,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3873": {
+    "3893": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%4#0",
@@ -25601,7 +25787,7 @@
         "maybe_exists%4#0"
       ]
     },
-    "3874": {
+    "3894": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -25614,7 +25800,7 @@
         "maybe_value%4#0"
       ]
     },
-    "3875": {
+    "3895": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -25632,7 +25818,7 @@
         "1"
       ]
     },
-    "3876": {
+    "3896": {
       "op": "-",
       "defined_out": [
         "new_state_value%0#0",
@@ -25648,8 +25834,8 @@
         "new_state_value%0#0"
       ]
     },
-    "3877": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "3897": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "tmp%0#0",
         "record#0",
@@ -25661,7 +25847,7 @@
         "\"active_loan_records\""
       ]
     },
-    "3878": {
+    "3898": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -25674,7 +25860,7 @@
         "new_state_value%0#0"
       ]
     },
-    "3879": {
+    "3899": {
       "op": "app_global_put",
       "stack_out": [
         "tmp%0#0",
@@ -25685,10 +25871,10 @@
         "acceptedCollateral#0"
       ]
     },
-    "3880": {
+    "3900": {
       "op": "itxn_begin"
     },
-    "3881": {
+    "3901": {
       "op": "txn Sender",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -25704,7 +25890,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3883": {
+    "3903": {
       "op": "frame_dig 1",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -25722,7 +25908,7 @@
         "record#0"
       ]
     },
-    "3885": {
+    "3905": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -25742,7 +25928,7 @@
         "32"
       ]
     },
-    "3887": {
+    "3907": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -25761,7 +25947,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3888": {
+    "3908": {
       "op": "frame_dig 2",
       "defined_out": [
         "collateralAmount#0",
@@ -25782,7 +25968,7 @@
         "collateralAmount#0"
       ]
     },
-    "3890": {
+    "3910": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -25805,7 +25991,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3891": {
+    "3911": {
       "op": "cover 3",
       "stack_out": [
         "tmp%0#0",
@@ -25820,7 +26006,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3893": {
+    "3913": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "tmp%0#0",
@@ -25834,7 +26020,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "3895": {
+    "3915": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "tmp%0#0",
@@ -25847,7 +26033,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "3897": {
+    "3917": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "tmp%0#0",
@@ -25859,7 +26045,7 @@
         "collateralAmount#0"
       ]
     },
-    "3899": {
+    "3919": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -25878,7 +26064,7 @@
         "4"
       ]
     },
-    "3900": {
+    "3920": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "tmp%0#0",
@@ -25890,7 +26076,7 @@
         "collateralAmount#0"
       ]
     },
-    "3902": {
+    "3922": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -25903,7 +26089,7 @@
         "0"
       ]
     },
-    "3903": {
+    "3923": {
       "op": "itxn_field Fee",
       "stack_out": [
         "tmp%0#0",
@@ -25915,10 +26101,10 @@
         "collateralAmount#0"
       ]
     },
-    "3905": {
+    "3925": {
       "op": "itxn_submit"
     },
-    "3906": {
+    "3926": {
       "op": "frame_dig 5",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25937,7 +26123,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3908": {
+    "3928": {
       "op": "pushint 16 // 16",
       "defined_out": [
         "16",
@@ -25958,7 +26144,7 @@
         "16"
       ]
     },
-    "3910": {
+    "3930": {
       "op": "extract_uint64",
       "defined_out": [
         "acceptedCollateral#0",
@@ -25978,7 +26164,7 @@
         "tmp%15#0"
       ]
     },
-    "3911": {
+    "3931": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -25991,7 +26177,7 @@
         "collateralAmount#0"
       ]
     },
-    "3912": {
+    "3932": {
       "op": "-",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26010,7 +26196,7 @@
         "newTotal#0"
       ]
     },
-    "3913": {
+    "3933": {
       "op": "frame_dig 4",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26031,7 +26217,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3915": {
+    "3935": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -26044,7 +26230,7 @@
         "newTotal#0"
       ]
     },
-    "3916": {
+    "3936": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateCollateralTotal",
       "op": "callsub updateCollateralTotal",
       "stack_out": [
@@ -26056,11 +26242,11 @@
         "acceptedCollateral#0"
       ]
     },
-    "3919": {
+    "3939": {
       "retsub": true,
       "op": "retsub"
     },
-    "3920": {
+    "3940": {
       "block": "liquidateASA_bool_false@4",
       "stack_in": [
         "tmp%0#0",
@@ -26084,10 +26270,10 @@
         "and_result%0#0"
       ]
     },
-    "3921": {
+    "3941": {
       "op": "b liquidateASA_bool_merge@5"
     },
-    "3924": {
+    "3944": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.liquidateAlgo",
       "params": {
         "debtor#0": "bytes",
@@ -26097,7 +26283,7 @@
       "stack_in": [],
       "op": "proto 2 0"
     },
-    "3927": {
+    "3947": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -26106,7 +26292,7 @@
         "\"loan_record\""
       ]
     },
-    "3929": {
+    "3949": {
       "op": "frame_dig -2",
       "defined_out": [
         "\"loan_record\"",
@@ -26117,7 +26303,7 @@
         "debtor#0 (copy)"
       ]
     },
-    "3931": {
+    "3951": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -26126,7 +26312,7 @@
         "tmp%0#0"
       ]
     },
-    "3932": {
+    "3952": {
       "op": "dupn 2",
       "defined_out": [
         "tmp%0#0",
@@ -26138,7 +26324,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "3934": {
+    "3954": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -26152,7 +26338,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3935": {
+    "3955": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
@@ -26160,7 +26346,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3937": {
+    "3957": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
@@ -26168,7 +26354,7 @@
         "tmp%0#0"
       ]
     },
-    "3938": {
+    "3958": {
       "op": "box_get",
       "defined_out": [
         "maybe_exists%1#0",
@@ -26181,7 +26367,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3939": {
+    "3959": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -26189,7 +26375,7 @@
         "record#0"
       ]
     },
-    "3940": {
+    "3960": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -26198,7 +26384,7 @@
         "record#0 (copy)"
       ]
     },
-    "3941": {
+    "3961": {
       "op": "uncover 2",
       "defined_out": [
         "maybe_exists%1#0",
@@ -26212,7 +26398,7 @@
         "maybe_exists%1#0"
       ]
     },
-    "3943": {
+    "3963": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -26221,7 +26407,7 @@
         "record#0"
       ]
     },
-    "3944": {
+    "3964": {
       "op": "dup",
       "defined_out": [
         "record#0",
@@ -26235,7 +26421,7 @@
         "record#0 (copy)"
       ]
     },
-    "3945": {
+    "3965": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -26251,7 +26437,7 @@
         "40"
       ]
     },
-    "3947": {
+    "3967": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -26265,7 +26451,7 @@
         "collateralAmount#0"
       ]
     },
-    "3948": {
+    "3968": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -26275,7 +26461,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "3949": {
+    "3969": {
       "op": "uncover 2",
       "defined_out": [
         "collateralAmount#0",
@@ -26290,7 +26476,7 @@
         "record#0"
       ]
     },
-    "3951": {
+    "3971": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -26301,7 +26487,7 @@
         "record#0 (copy)"
       ]
     },
-    "3952": {
+    "3972": {
       "op": "pushint 65 // 65",
       "defined_out": [
         "65",
@@ -26320,7 +26506,7 @@
         "65"
       ]
     },
-    "3954": {
+    "3974": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -26337,7 +26523,7 @@
         "debtAmount#0"
       ]
     },
-    "3955": {
+    "3975": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -26349,7 +26535,7 @@
         "debtAmount#0 (copy)"
       ]
     },
-    "3956": {
+    "3976": {
       "op": "cover 3",
       "stack_out": [
         "tmp%0#0",
@@ -26361,7 +26547,7 @@
         "debtAmount#0"
       ]
     },
-    "3958": {
+    "3978": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -26379,7 +26565,7 @@
         "record#0"
       ]
     },
-    "3960": {
+    "3980": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -26399,7 +26585,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3963": {
+    "3983": {
       "op": "dup",
       "stack_out": [
         "tmp%0#0",
@@ -26412,7 +26598,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3964": {
+    "3984": {
       "op": "cover 3",
       "defined_out": [
         "collateralAmount#0",
@@ -26432,7 +26618,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3966": {
+    "3986": {
       "op": "bytec 10 // \"accepted_collaterals\"",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -26454,7 +26640,7 @@
         "\"accepted_collaterals\""
       ]
     },
-    "3968": {
+    "3988": {
       "op": "dig 1",
       "defined_out": [
         "\"accepted_collaterals\"",
@@ -26478,7 +26664,7 @@
         "collateralTokenId#0 (copy)"
       ]
     },
-    "3970": {
+    "3990": {
       "op": "concat",
       "defined_out": [
         "collateralAmount#0",
@@ -26500,7 +26686,7 @@
         "tmp%0#1"
       ]
     },
-    "3971": {
+    "3991": {
       "op": "box_get",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26524,7 +26710,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3972": {
+    "3992": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -26539,7 +26725,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3973": {
+    "3993": {
       "op": "cover 4",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26563,7 +26749,7 @@
         "maybe_exists%0#0"
       ]
     },
-    "3975": {
+    "3995": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
@@ -26578,7 +26764,7 @@
         "collateralTokenId#0"
       ]
     },
-    "3976": {
+    "3996": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getOraclePrice",
       "op": "callsub getOraclePrice",
       "defined_out": [
@@ -26602,7 +26788,7 @@
         "oraclePrice#0"
       ]
     },
-    "3979": {
+    "3999": {
       "op": "mulw",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26626,7 +26812,7 @@
         "l#0"
       ]
     },
-    "3980": {
+    "4000": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -26652,7 +26838,7 @@
         "1"
       ]
     },
-    "3981": {
+    "4001": {
       "op": "divw",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26674,7 +26860,7 @@
         "collateralUSD#0"
       ]
     },
-    "3982": {
+    "4002": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -26687,7 +26873,7 @@
         "debtAmount#0"
       ]
     },
-    "3983": {
+    "4003": {
       "op": "/",
       "defined_out": [
         "CR#0",
@@ -26708,7 +26894,7 @@
         "CR#0"
       ]
     },
-    "3984": {
+    "4004": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -26721,7 +26907,7 @@
         "0"
       ]
     },
-    "3985": {
+    "4005": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "defined_out": [
         "\"liq_threshold_bps\"",
@@ -26746,7 +26932,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "3987": {
+    "4007": {
       "op": "app_global_get_ex",
       "defined_out": [
         "CR#0",
@@ -26771,7 +26957,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "3988": {
+    "4008": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -26785,7 +26971,7 @@
         "maybe_value%2#0"
       ]
     },
-    "3989": {
+    "4009": {
       "op": "<=",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26806,7 +26992,7 @@
         "tmp%4#0"
       ]
     },
-    "3990": {
+    "4010": {
       "error": "loan is not liquidatable",
       "op": "assert // loan is not liquidatable",
       "stack_out": [
@@ -26818,7 +27004,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "3991": {
+    "4011": {
       "op": "frame_dig -1",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26839,7 +27025,7 @@
         "paymentTxn#0 (copy)"
       ]
     },
-    "3993": {
+    "4013": {
       "op": "gtxns Receiver",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26860,7 +27046,7 @@
         "tmp%5#0"
       ]
     },
-    "3995": {
+    "4015": {
       "op": "global CurrentApplicationAddress",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26883,7 +27069,7 @@
         "tmp%6#0"
       ]
     },
-    "3997": {
+    "4017": {
       "op": "==",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26904,7 +27090,7 @@
         "tmp%7#0"
       ]
     },
-    "3998": {
+    "4018": {
       "op": "bz liquidateAlgo_bool_false@3",
       "stack_out": [
         "tmp%0#0",
@@ -26915,7 +27101,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "4001": {
+    "4021": {
       "op": "frame_dig -1",
       "stack_out": [
         "tmp%0#0",
@@ -26927,7 +27113,7 @@
         "paymentTxn#0 (copy)"
       ]
     },
-    "4003": {
+    "4023": {
       "op": "gtxns Amount",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26948,7 +27134,7 @@
         "tmp%8#0"
       ]
     },
-    "4005": {
+    "4025": {
       "op": "frame_dig 3",
       "stack_out": [
         "tmp%0#0",
@@ -26961,7 +27147,7 @@
         "debtAmount#0"
       ]
     },
-    "4007": {
+    "4027": {
       "op": "==",
       "defined_out": [
         "acceptedCollateral#0",
@@ -26982,7 +27168,7 @@
         "tmp%9#0"
       ]
     },
-    "4008": {
+    "4028": {
       "op": "bz liquidateAlgo_bool_false@3",
       "stack_out": [
         "tmp%0#0",
@@ -26993,7 +27179,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "4011": {
+    "4031": {
       "op": "intc_1 // 1",
       "defined_out": [
         "acceptedCollateral#0",
@@ -27014,7 +27200,7 @@
         "and_result%0#0"
       ]
     },
-    "4012": {
+    "4032": {
       "block": "liquidateAlgo_bool_merge@4",
       "stack_in": [
         "tmp%0#0",
@@ -27037,7 +27223,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "4013": {
+    "4033": {
       "op": "frame_dig 0",
       "defined_out": [
         "tmp%0#0"
@@ -27052,7 +27238,7 @@
         "tmp%0#0"
       ]
     },
-    "4015": {
+    "4035": {
       "op": "box_del",
       "defined_out": [
         "tmp%0#0",
@@ -27068,7 +27254,7 @@
         "{box_del}"
       ]
     },
-    "4016": {
+    "4036": {
       "op": "pop",
       "stack_out": [
         "tmp%0#0",
@@ -27079,7 +27265,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "4017": {
+    "4037": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -27095,8 +27281,8 @@
         "0"
       ]
     },
-    "4018": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "4038": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "defined_out": [
         "\"active_loan_records\"",
         "0",
@@ -27113,7 +27299,7 @@
         "\"active_loan_records\""
       ]
     },
-    "4019": {
+    "4039": {
       "op": "app_global_get_ex",
       "defined_out": [
         "maybe_exists%3#0",
@@ -27131,7 +27317,7 @@
         "maybe_exists%3#0"
       ]
     },
-    "4020": {
+    "4040": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -27144,7 +27330,7 @@
         "maybe_value%3#0"
       ]
     },
-    "4021": {
+    "4041": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -27162,7 +27348,7 @@
         "1"
       ]
     },
-    "4022": {
+    "4042": {
       "op": "-",
       "defined_out": [
         "new_state_value%0#0",
@@ -27178,8 +27364,8 @@
         "new_state_value%0#0"
       ]
     },
-    "4023": {
-      "op": "bytec_1 // \"active_loan_records\"",
+    "4043": {
+      "op": "bytec_2 // \"active_loan_records\"",
       "stack_out": [
         "tmp%0#0",
         "record#0",
@@ -27191,7 +27377,7 @@
         "\"active_loan_records\""
       ]
     },
-    "4024": {
+    "4044": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -27204,7 +27390,7 @@
         "new_state_value%0#0"
       ]
     },
-    "4025": {
+    "4045": {
       "op": "app_global_put",
       "stack_out": [
         "tmp%0#0",
@@ -27215,10 +27401,10 @@
         "acceptedCollateral#0"
       ]
     },
-    "4026": {
+    "4046": {
       "op": "itxn_begin"
     },
-    "4027": {
+    "4047": {
       "op": "txn Sender",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -27234,7 +27420,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "4029": {
+    "4049": {
       "op": "frame_dig 1",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -27252,7 +27438,7 @@
         "record#0"
       ]
     },
-    "4031": {
+    "4051": {
       "op": "pushint 32 // 32",
       "defined_out": [
         "32",
@@ -27272,7 +27458,7 @@
         "32"
       ]
     },
-    "4033": {
+    "4053": {
       "op": "extract_uint64",
       "defined_out": [
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0",
@@ -27291,7 +27477,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "4034": {
+    "4054": {
       "op": "frame_dig 2",
       "defined_out": [
         "collateralAmount#0",
@@ -27312,7 +27498,7 @@
         "collateralAmount#0"
       ]
     },
-    "4036": {
+    "4056": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -27335,7 +27521,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "4037": {
+    "4057": {
       "op": "cover 3",
       "stack_out": [
         "tmp%0#0",
@@ -27350,7 +27536,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "4039": {
+    "4059": {
       "op": "itxn_field AssetAmount",
       "stack_out": [
         "tmp%0#0",
@@ -27364,7 +27550,7 @@
         "inner_txn_params%0%%param_XferAsset_idx_0#0"
       ]
     },
-    "4041": {
+    "4061": {
       "op": "itxn_field XferAsset",
       "stack_out": [
         "tmp%0#0",
@@ -27377,7 +27563,7 @@
         "inner_txn_params%0%%param_AssetReceiver_idx_0#0"
       ]
     },
-    "4043": {
+    "4063": {
       "op": "itxn_field AssetReceiver",
       "stack_out": [
         "tmp%0#0",
@@ -27389,7 +27575,7 @@
         "collateralAmount#0"
       ]
     },
-    "4045": {
+    "4065": {
       "op": "intc_2 // 4",
       "defined_out": [
         "4",
@@ -27408,7 +27594,7 @@
         "4"
       ]
     },
-    "4046": {
+    "4066": {
       "op": "itxn_field TypeEnum",
       "stack_out": [
         "tmp%0#0",
@@ -27420,7 +27606,7 @@
         "collateralAmount#0"
       ]
     },
-    "4048": {
+    "4068": {
       "op": "intc_0 // 0",
       "stack_out": [
         "tmp%0#0",
@@ -27433,7 +27619,7 @@
         "0"
       ]
     },
-    "4049": {
+    "4069": {
       "op": "itxn_field Fee",
       "stack_out": [
         "tmp%0#0",
@@ -27445,10 +27631,10 @@
         "collateralAmount#0"
       ]
     },
-    "4051": {
+    "4071": {
       "op": "itxn_submit"
     },
-    "4052": {
+    "4072": {
       "op": "frame_dig 5",
       "defined_out": [
         "acceptedCollateral#0",
@@ -27467,7 +27653,7 @@
         "acceptedCollateral#0"
       ]
     },
-    "4054": {
+    "4074": {
       "op": "pushint 16 // 16",
       "defined_out": [
         "16",
@@ -27488,7 +27674,7 @@
         "16"
       ]
     },
-    "4056": {
+    "4076": {
       "op": "extract_uint64",
       "defined_out": [
         "acceptedCollateral#0",
@@ -27508,7 +27694,7 @@
         "tmp%12#0"
       ]
     },
-    "4057": {
+    "4077": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -27521,7 +27707,7 @@
         "collateralAmount#0"
       ]
     },
-    "4058": {
+    "4078": {
       "op": "-",
       "defined_out": [
         "acceptedCollateral#0",
@@ -27540,7 +27726,7 @@
         "newTotal#0"
       ]
     },
-    "4059": {
+    "4079": {
       "op": "frame_dig 4",
       "defined_out": [
         "acceptedCollateral#0",
@@ -27561,7 +27747,7 @@
         "collateralTokenId#0"
       ]
     },
-    "4061": {
+    "4081": {
       "op": "swap",
       "stack_out": [
         "tmp%0#0",
@@ -27574,7 +27760,7 @@
         "newTotal#0"
       ]
     },
-    "4062": {
+    "4082": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.updateCollateralTotal",
       "op": "callsub updateCollateralTotal",
       "stack_out": [
@@ -27586,11 +27772,11 @@
         "acceptedCollateral#0"
       ]
     },
-    "4065": {
+    "4085": {
       "retsub": true,
       "op": "retsub"
     },
-    "4066": {
+    "4086": {
       "block": "liquidateAlgo_bool_false@3",
       "stack_in": [
         "tmp%0#0",
@@ -27614,10 +27800,10 @@
         "and_result%0#0"
       ]
     },
-    "4067": {
+    "4087": {
       "op": "b liquidateAlgo_bool_merge@4"
     },
-    "4070": {
+    "4090": {
       "subroutine": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getLoanStatus",
       "params": {
         "borrower#0": "bytes"
@@ -27626,7 +27812,7 @@
       "stack_in": [],
       "op": "proto 1 7"
     },
-    "4073": {
+    "4093": {
       "op": "bytec 4 // \"loan_record\"",
       "defined_out": [
         "\"loan_record\""
@@ -27635,7 +27821,7 @@
         "\"loan_record\""
       ]
     },
-    "4075": {
+    "4095": {
       "op": "frame_dig -1",
       "defined_out": [
         "\"loan_record\"",
@@ -27646,7 +27832,7 @@
         "borrower#0 (copy)"
       ]
     },
-    "4077": {
+    "4097": {
       "op": "concat",
       "defined_out": [
         "tmp%0#0"
@@ -27655,7 +27841,7 @@
         "tmp%0#0"
       ]
     },
-    "4078": {
+    "4098": {
       "op": "dup",
       "defined_out": [
         "tmp%0#0",
@@ -27666,7 +27852,7 @@
         "tmp%0#0 (copy)"
       ]
     },
-    "4079": {
+    "4099": {
       "op": "box_len",
       "defined_out": [
         "maybe_exists%0#0",
@@ -27679,21 +27865,21 @@
         "maybe_exists%0#0"
       ]
     },
-    "4080": {
+    "4100": {
       "op": "bury 1",
       "stack_out": [
         "tmp%0#0",
         "maybe_exists%0#0"
       ]
     },
-    "4082": {
+    "4102": {
       "error": "Loan record does not exist",
       "op": "assert // Loan record does not exist",
       "stack_out": [
         "tmp%0#0"
       ]
     },
-    "4083": {
+    "4103": {
       "op": "box_get",
       "defined_out": [
         "maybe_exists%1#0",
@@ -27704,14 +27890,14 @@
         "maybe_exists%1#0"
       ]
     },
-    "4084": {
+    "4104": {
       "error": "Box must have value",
       "op": "assert // Box must have value",
       "stack_out": [
         "record#0"
       ]
     },
-    "4085": {
+    "4105": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.accrueInterest",
       "op": "callsub accrueInterest",
       "defined_out": [
@@ -27723,14 +27909,14 @@
         "record#0"
       ]
     },
-    "4088": {
+    "4108": {
       "op": "swap",
       "stack_out": [
         "record#0",
         "iar#0"
       ]
     },
-    "4089": {
+    "4109": {
       "op": "pushint 17 // 17",
       "defined_out": [
         "17",
@@ -27743,7 +27929,7 @@
         "17"
       ]
     },
-    "4091": {
+    "4111": {
       "op": "extract_uint64",
       "defined_out": [
         "debt#0",
@@ -27754,7 +27940,7 @@
         "debt#0"
       ]
     },
-    "4092": {
+    "4112": {
       "op": "dig 1",
       "defined_out": [
         "debt#0",
@@ -27767,7 +27953,7 @@
         "record#0 (copy)"
       ]
     },
-    "4094": {
+    "4114": {
       "op": "pushint 40 // 40",
       "defined_out": [
         "40",
@@ -27782,7 +27968,7 @@
         "40"
       ]
     },
-    "4096": {
+    "4116": {
       "op": "extract_uint64",
       "defined_out": [
         "collateralAmount#0",
@@ -27795,7 +27981,7 @@
         "collateralAmount#0"
       ]
     },
-    "4097": {
+    "4117": {
       "op": "intc_0 // 0",
       "defined_out": [
         "0",
@@ -27810,7 +27996,7 @@
         "0"
       ]
     },
-    "4098": {
+    "4118": {
       "op": "bytec 7 // \"liq_threshold_bps\"",
       "defined_out": [
         "\"liq_threshold_bps\"",
@@ -27827,7 +28013,7 @@
         "\"liq_threshold_bps\""
       ]
     },
-    "4100": {
+    "4120": {
       "op": "app_global_get_ex",
       "defined_out": [
         "collateralAmount#0",
@@ -27844,7 +28030,7 @@
         "maybe_exists%2#0"
       ]
     },
-    "4101": {
+    "4121": {
       "error": "check GlobalState exists",
       "op": "assert // check GlobalState exists",
       "stack_out": [
@@ -27854,7 +28040,7 @@
         "liqBps#0"
       ]
     },
-    "4102": {
+    "4122": {
       "op": "uncover 3",
       "stack_out": [
         "debt#0",
@@ -27863,7 +28049,7 @@
         "record#0"
       ]
     },
-    "4104": {
+    "4124": {
       "error": "Index access is out of bounds",
       "op": "extract 32 8 // on error: Index access is out of bounds",
       "defined_out": [
@@ -27879,7 +28065,7 @@
         "tmp%4#0"
       ]
     },
-    "4107": {
+    "4127": {
       "callsub": "smart_contracts/orbital_lending/OrbitalLending.algo.ts::OrbitalLending.getOraclePrice",
       "op": "callsub getOraclePrice",
       "defined_out": [
@@ -27895,7 +28081,7 @@
         "oraclePrice#0"
       ]
     },
-    "4110": {
+    "4130": {
       "op": "dig 2",
       "defined_out": [
         "collateralAmount#0",
@@ -27912,7 +28098,7 @@
         "collateralAmount#0 (copy)"
       ]
     },
-    "4112": {
+    "4132": {
       "op": "mulw",
       "defined_out": [
         "collateralAmount#0",
@@ -27929,7 +28115,7 @@
         "lo#0"
       ]
     },
-    "4113": {
+    "4133": {
       "op": "intc_1 // 1",
       "defined_out": [
         "1",
@@ -27948,7 +28134,7 @@
         "1"
       ]
     },
-    "4114": {
+    "4134": {
       "op": "divw",
       "defined_out": [
         "collateralAmount#0",
@@ -27963,7 +28149,7 @@
         "collateralValueUSD#0"
       ]
     },
-    "4115": {
+    "4135": {
       "op": "dup",
       "defined_out": [
         "collateralAmount#0",
@@ -27980,7 +28166,7 @@
         "collateralValueUSD#0 (copy)"
       ]
     },
-    "4116": {
+    "4136": {
       "op": "intc 4 // 10000",
       "defined_out": [
         "10000",
@@ -27999,7 +28185,7 @@
         "10000"
       ]
     },
-    "4118": {
+    "4138": {
       "op": "*",
       "defined_out": [
         "collateralAmount#0",
@@ -28016,7 +28202,7 @@
         "tmp%5#0"
       ]
     },
-    "4119": {
+    "4139": {
       "op": "dig 4",
       "defined_out": [
         "collateralAmount#0",
@@ -28035,7 +28221,7 @@
         "debt#0 (copy)"
       ]
     },
-    "4121": {
+    "4141": {
       "op": "/",
       "defined_out": [
         "CR#0",
@@ -28052,7 +28238,7 @@
         "CR#0"
       ]
     },
-    "4122": {
+    "4142": {
       "op": "dup",
       "defined_out": [
         "CR#0",
@@ -28071,7 +28257,7 @@
         "CR#0 (copy)"
       ]
     },
-    "4123": {
+    "4143": {
       "op": "dig 3",
       "defined_out": [
         "CR#0",
@@ -28092,7 +28278,7 @@
         "liqBps#0 (copy)"
       ]
     },
-    "4125": {
+    "4145": {
       "op": "<",
       "defined_out": [
         "CR#0",
@@ -28111,7 +28297,7 @@
         "eligibleForLiquidation#0"
       ]
     },
-    "4126": {
+    "4146": {
       "op": "dig 1",
       "stack_out": [
         "debt#0",
@@ -28123,7 +28309,7 @@
         "CR#0 (copy)"
       ]
     },
-    "4128": {
+    "4148": {
       "op": "dig 4",
       "stack_out": [
         "debt#0",
@@ -28136,7 +28322,7 @@
         "liqBps#0 (copy)"
       ]
     },
-    "4130": {
+    "4150": {
       "op": ">",
       "defined_out": [
         "CR#0",
@@ -28157,7 +28343,7 @@
         "eligibleForBuyout#0"
       ]
     },
-    "4131": {
+    "4151": {
       "op": "uncover 6",
       "stack_out": [
         "collateralAmount#0",
@@ -28169,7 +28355,7 @@
         "debt#0"
       ]
     },
-    "4133": {
+    "4153": {
       "op": "uncover 4",
       "stack_out": [
         "collateralAmount#0",
@@ -28181,7 +28367,7 @@
         "collateralValueUSD#0"
       ]
     },
-    "4135": {
+    "4155": {
       "op": "uncover 6",
       "stack_out": [
         "liqBps#0",
@@ -28193,7 +28379,7 @@
         "collateralAmount#0"
       ]
     },
-    "4137": {
+    "4157": {
       "op": "uncover 5",
       "stack_out": [
         "liqBps#0",
@@ -28205,7 +28391,7 @@
         "CR#0"
       ]
     },
-    "4139": {
+    "4159": {
       "op": "uncover 6",
       "stack_out": [
         "eligibleForLiquidation#0",
@@ -28217,7 +28403,7 @@
         "liqBps#0"
       ]
     },
-    "4141": {
+    "4161": {
       "op": "uncover 6",
       "stack_out": [
         "eligibleForBuyout#0",
@@ -28229,7 +28415,7 @@
         "eligibleForLiquidation#0"
       ]
     },
-    "4143": {
+    "4163": {
       "op": "uncover 6",
       "stack_out": [
         "debt#0",
@@ -28241,7 +28427,7 @@
         "eligibleForBuyout#0"
       ]
     },
-    "4145": {
+    "4165": {
       "retsub": true,
       "op": "retsub"
     }
