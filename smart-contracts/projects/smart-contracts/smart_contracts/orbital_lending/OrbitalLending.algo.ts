@@ -20,23 +20,22 @@ import { abiCall, Address, DynamicArray, UintN64, UintN8 } from '@algorandfounda
 import { divw, mulw } from '@algorandfoundation/algorand-typescript/op'
 import { AcceptedCollateral, AcceptedCollateralKey, DebtChange, InterestAccrualReturn, LoanRecord } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
+import {
+  MBR_COLLATERAL,
+  MBR_CREATE_APP,
+  MBR_INIT_APP,
+  MBR_OPT_IN_LST,
+  STANDARD_TXN_FEE,
+  BASIS_POINTS,
+  DEBUG_TIMESTAMP_OFFSET,
+  VALIDATE_BORROW_FEE,
+  USD_MICRO_UNITS,
+  SECONDS_PER_YEAR,
+} from './config.algo'
 
 // Number of seconds in a (e.g.) 365-day year
-const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 
 // Instead of scattered magic numbers, centralize them
-
-const MBR_CREATE_APP: uint64 = 400_000
-const MBR_INIT_APP: uint64 = 102_000
-const MBR_OPT_IN_LST: uint64 = 2_000
-const MBR_COLLATERAL: uint64 = 101_000
-const STANDARD_TXN_FEE: uint64 = 1_000
-const VALIDATE_BORROW_FEE: uint64 = 4_000
-
-const BASIS_POINTS: uint64 = 10_000
-const USD_MICRO_UNITS: uint64 = 1_000_000
-
-const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -83,17 +82,56 @@ export class OrbitalLending extends Contract {
   /** Liquidation threshold (e.g., 8500 = 85% - liquidate when CR falls below) */
   liq_threshold_bps = GlobalState<uint64>()
 
-  /** Annual interest rate charged to borrowers (e.g., 500 = 5% APR) */
-  interest_bps = GlobalState<uint64>()
-
   /** One-time fee charged on loan origination (e.g., 100 = 1%) */
   origination_fee_bps = GlobalState<uint64>()
 
   /** Protocol's share of interest income (e.g., 2000 = 20%) */
   protocol_share_bps = GlobalState<uint64>()
 
-  /** Depositors' share of interest income (calculated as 10000 - protocol_share) */
-  depositor_share_bps = GlobalState<uint64>()
+  /** Minimum APR at 0% utilization (basis points per year). */
+  base_bps = GlobalState<uint64>()
+
+  /** Hard utilization cap in bps (e.g., 8000 = 80% of deposits may be borrowed). */
+  util_cap_bps = GlobalState<uint64>()
+
+  /** Kink point on normalized utilization (0..10_000 across [0..util_cap]). */
+  kink_norm_bps = GlobalState<uint64>()
+
+  /** APR increase from 0 → kink (added to base) over the normalized range. */
+  slope1_bps = GlobalState<uint64>()
+
+  /** APR increase from kink → cap (added after kink) over the normalized range. */
+  slope2_bps = GlobalState<uint64>()
+
+  /** (Optional) Absolute APR ceiling in bps (0 = no cap). */
+  max_apr_bps = GlobalState<uint64>()
+
+  /** If 1, reject borrows that would exceed util_cap_bps. */
+  borrow_gate_enabled = GlobalState<uint64>()
+
+  /** (Optional) Utilization EMA weight in bps (0..10_000; 0 disables smoothing). */
+  ema_alpha_bps = GlobalState<uint64>()
+
+  /** (Optional) Max APR change per accrual step in bps (0 = no limit). */
+  max_apr_step_bps = GlobalState<uint64>()
+
+  /** (Optional, mutable) Last applied APR in bps (for step limiting). */
+  prev_apr_bps = GlobalState<uint64>()
+
+  /** (Optional, mutable) Stored EMA of normalized utilization in bps. */
+  util_ema_bps = GlobalState<uint64>()
+
+  /** (Optional) Rate model selector (e.g., 0=kinked, 1=linear, 2=power, 3=asymptote). */
+  rate_model_type = GlobalState<uint64>()
+
+  /** (Optional) Power-curve exponent γ in Q16.16 fixed-point. */
+  power_gamma_q16 = GlobalState<uint64>()
+
+  /** (Optional) Strength parameter for asymptotic/scarcity escalator (bps-scaled). */
+  scarcity_K_bps = GlobalState<uint64>()
+
+  /** Total outstanding borrower principal + accrued interest (debt) */
+  total_borrows = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // COLLATERAL & LOAN MANAGEMENT
@@ -127,6 +165,9 @@ export class OrbitalLending extends Contract {
   /** Difference between max borrow and requested (for debugging) */
   debug_diff = GlobalState<uint64>()
 
+  params_updated_at = GlobalState<uint64>() // last params change timestamp (ledger seconds)
+  params_update_nonce = GlobalState<uint64>() // monotonic counter
+
   /**
    * Creates the lending application contract with initial configuration
    * @param admin - The administrative account that will have privileged access
@@ -144,7 +185,7 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn - Payment transaction covering minimum balance requirements
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
    * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
-   * @param interest_bps - Annual interest rate in basis points (e.g., 500 = 5%)
+   * @param borrow_gate_enabled - Whether the borrow gate is enabled (1 = enabled, 0 = disabled)
    * @param origination_fee_bps - One-time loan origination fee in basis points
    * @param protocol_share_bps - Protocol's share of interest income in basis points
    * @param oracle_app_id - Application ID of the price oracle contract
@@ -155,10 +196,9 @@ export class OrbitalLending extends Contract {
     mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
-    interest_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
-
+    borrow_gate_enabled: uint64,
     oracle_app_id: Application,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -170,7 +210,6 @@ export class OrbitalLending extends Contract {
 
     this.ltv_bps.value = ltv_bps
     this.liq_threshold_bps.value = liq_threshold_bps
-    this.interest_bps.value = interest_bps
     this.origination_fee_bps.value = origination_fee_bps
     this.accepted_collaterals_count.value = 0
     this.fee_pool.value = 0
@@ -178,9 +217,29 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value = 0
     this.active_loan_records.value = 0
     this.protocol_share_bps.value = protocol_share_bps
-    this.depositor_share_bps.value = BASIS_POINTS - protocol_share_bps
     this.oracle_app.value = oracle_app_id
+    this.borrow_gate_enabled.value = borrow_gate_enabled
     this.lst_token_id.value = new UintN64(99)
+    this.base_bps.value = 50
+    this.util_cap_bps.value = 8000 // 80% utilization cap
+    this.total_borrows.value = 0
+    this.rate_model_type.value = 0 // Default to kinked model
+    this.kink_norm_bps.value = 5000 // 50% kink point
+    this.slope1_bps.value = 1000 // 10% slope to kink
+    this.slope2_bps.value = 2000 // 20% slope after kink
+    this.max_apr_bps.value = 6000 // 60% APR Cap by Default
+    this.ema_alpha_bps.value = 0 // No EMA smoothing by default
+    this.max_apr_step_bps.value = 0 // No max APR step by default
+    this.prev_apr_bps.value = 50 // Same as base_bps by default
+    this.util_ema_bps.value = 0 // No utilization EMA by default
+    this.power_gamma_q16.value = 0 // No power curve by default
+    this.scarcity_K_bps.value = 0 // No scarcity parameter by default
+    this.last_scaled_down_disbursement.value = 0
+    this.last_max_borrow.value = 0
+    this.last_requested_loan.value = 0
+    this.debug_diff.value = 0
+    this.params_updated_at.value = Global.latestTimestamp
+    this.params_update_nonce.value = 0
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -191,6 +250,72 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+    }
+  }
+
+  /**
+   * Sets the core lending parameters for the protocol
+   * @param base_bps - Base APR in basis points (e.g., 500 = 5%)
+   * @param util_cap_bps - Utilization cap in basis points (e.g., 8000 = 80%)
+   * @param kink_norm_bps - Kink normalization point in basis points (e.g., 5000 = 50%)
+   * @param slope1_bps - Slope to kink in basis points (e.g., 1000 = 10%)
+   * @param slope2_bps - Slope after kink in basis points (e.g., 2000 = 20%)
+   * @param max_apr_bps - Maximum APR cap in basis points (0 = no cap)
+   * @param borrow_gate_enabled - Whether the borrow gate is enabled (1 = enabled, 0 = disabled)
+   * @param ema_alpha_bps - EMA smoothing factor in basis points (0 = no smoothing)
+   * @param max_apr_step_bps - Maximum APR step in basis points (0 = no limit)
+   * @param rate_model_type - Rate model type (0 = kinked, 1 = linear, 2 = power, 3 = asymptote)
+   * @param power_gamma_q16 - Power curve exponent in Q16.16 fixed-point (0 = no power curve)
+   * @param scarcity_K_bps - Scarcity parameter in basis points (0 = no scarcity)
+   * @dev Only callable by admin account. Updates all core lending parameters atomically
+   */
+  public setRateParams(
+    base_bps: uint64,
+    util_cap_bps: uint64,
+    kink_norm_bps: uint64,
+    slope1_bps: uint64,
+    slope2_bps: uint64,
+    max_apr_bps: uint64,
+    borrow_gate_enabled: uint64, // or uint8
+    ema_alpha_bps: uint64,
+    max_apr_step_bps: uint64,
+    rate_model_type: uint64, // or uint8
+    power_gamma_q16: uint64,
+    scarcity_K_bps: uint64,
+  ) {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+
+    // Invariants
+    assert(util_cap_bps >= 1 && util_cap_bps <= 10_000, 'BAD_UTIL_CAP')
+    assert(kink_norm_bps >= 1 && kink_norm_bps < 10_000, 'BAD_KINK')
+    assert(slope1_bps >= 0 && slope2_bps >= 0, 'BAD_SLOPE')
+    if (max_apr_bps > 0) {
+      assert(max_apr_bps >= base_bps, 'BAD_MAX_APR')
+    }
+    assert(ema_alpha_bps <= 10_000, 'BAD_EMA_ALPHA')
+    // (optional) restrict model types you actually implement now
+    assert(rate_model_type === 0 /* kinked */ || rate_model_type === 255 /* fixed */, 'UNSUPPORTED_MODEL')
+
+    // Apply atomically
+    this.base_bps.value = base_bps
+    this.util_cap_bps.value = util_cap_bps
+    this.kink_norm_bps.value = kink_norm_bps
+    this.slope1_bps.value = slope1_bps
+    this.slope2_bps.value = slope2_bps
+    this.max_apr_bps.value = max_apr_bps
+    this.borrow_gate_enabled.value = borrow_gate_enabled
+    this.ema_alpha_bps.value = ema_alpha_bps
+    this.max_apr_step_bps.value = max_apr_step_bps
+    this.rate_model_type.value = rate_model_type
+    this.power_gamma_q16.value = power_gamma_q16
+    this.scarcity_K_bps.value = scarcity_K_bps
+
+    this.params_update_nonce.value += 1
+    this.params_updated_at.value = Global.latestTimestamp
+
+    // Optional: clamp prev_apr if a new max is lower
+    if (this.max_apr_bps.value > 0 && this.prev_apr_bps.value > this.max_apr_bps.value) {
+      this.prev_apr_bps.value = this.max_apr_bps.value
     }
   }
 
@@ -595,6 +720,7 @@ export class OrbitalLending extends Contract {
     }
 
     this.disburseFunds(op.Txn.sender, disbursement)
+    this.total_borrows.value = this.total_borrows.value + disbursement
   }
 
   private mintLoanRecord(
@@ -641,7 +767,7 @@ export class OrbitalLending extends Contract {
     this.loan_record(borrowerAddress).value = loanRecord.copy()
   }
 
-   /**
+  /**
    * Manually accrues interest on a specific borrower's loan
    * @param debtor - Account address of the borrower whose loan interest should be accrued
    * @param templateReserveAddress - Reserve address for potential future use
@@ -666,6 +792,86 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += iar.change.amount.native // Update total deposits with interest earned
   }
 
+  // 0..10_000 over the allowed band [0 .. util_cap_bps * deposits]
+private util_norm_bps(): uint64 {
+  const D: uint64 = this.total_deposits.value
+  const B: uint64 = this.total_borrows.value
+  const cap_bps: uint64 = this.util_cap_bps.value
+  if (D === 0) return 0
+
+  // capBorrow = floor(D * util_cap_bps / 10_000)
+  const [hiCap, loCap] = mulw(D, cap_bps)
+  const capBorrow = divw(hiCap, loCap, BASIS_POINTS)
+  if (capBorrow === 0) return 0
+
+  const cappedB = B <= capBorrow ? B : capBorrow
+  const [hiN, loN] = mulw(cappedB, BASIS_POINTS)
+  return divw(hiN, loN, capBorrow)
+}
+
+// Kinked APR from normalized utilization
+private apr_bps_kinked(U_norm_bps: uint64): uint64 {
+  const base_bps: uint64      = this.base_bps.value
+  const kink_norm_bps: uint64 = this.kink_norm_bps.value
+  const slope1_bps: uint64    = this.slope1_bps.value
+  const slope2_bps: uint64    = this.slope2_bps.value
+  let apr: uint64
+
+  if (U_norm_bps <= kink_norm_bps) {
+    const [hi1, lo1] = mulw(slope1_bps, U_norm_bps)
+    apr = base_bps + divw(hi1, lo1, kink_norm_bps)
+  } else {  
+    const over: uint64 = U_norm_bps - kink_norm_bps
+    const denom: uint64 = BASIS_POINTS - kink_norm_bps
+    const [hi2, lo2] = mulw(slope2_bps, over)
+    apr = base_bps + slope1_bps + divw(hi2, lo2, denom)
+  }
+
+  const maxCap: uint64 = this.max_apr_bps.value
+  if (maxCap > 0 && apr > maxCap) apr = maxCap
+  return apr
+}
+
+// SINGLE public entrypoint to get the current APR (bps)
+public current_apr_bps(): uint64 {
+  // Compute normalized utilization (0..10_000)
+  const U_raw: uint64 = this.util_norm_bps()
+
+  // Optional EMA smoothing
+  const alpha: uint64 = this.ema_alpha_bps.value // 0..10_000
+  let U_used: uint64
+  if (alpha === 0) {
+    U_used = U_raw
+  } else {
+    const prevU: uint64 = this.util_ema_bps.value
+    const oneMinus: uint64 = BASIS_POINTS - alpha
+    const [hiA, loA] = mulw(alpha, U_raw)
+    const [hiB, loB] = mulw(oneMinus, prevU)
+    U_used = divw(hiA, loA, BASIS_POINTS) + divw(hiB, loB, BASIS_POINTS)
+    this.util_ema_bps.value = U_used
+  }
+
+  // Model selection (0=kinked; 255=fixed fallback)
+  let apr = (this.rate_model_type.value === 0)
+    ? this.apr_bps_kinked(U_used)
+    : this.base_bps.value // Fixed APR fallback
+
+  // Optional per-step change limiter
+  const stepMax: uint64 = this.max_apr_step_bps.value
+  if (stepMax > 0) {
+    const prevApr: uint64 = (this.prev_apr_bps.value === 0)
+      ? this.base_bps.value
+      : this.prev_apr_bps.value
+    const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
+    const hi: uint64 = prevApr + stepMax
+    if (apr < lo) apr = lo
+    if (apr > hi) apr = hi
+  }
+
+  this.prev_apr_bps.value = apr
+  return apr
+}
+
   private accrueInterest(record: LoanRecord): InterestAccrualReturn {
     const now = Global.latestTimestamp
     const last = record.lastAccrualTimestamp.native
@@ -682,7 +888,9 @@ export class OrbitalLending extends Contract {
 
     const deltaT: uint64 = now - last
     const principal: uint64 = record.totalDebt.native
-    const rateBps: uint64 = this.interest_bps.value // e.g. 500 = 5%
+
+    // Replace with curve calcualtion
+    const rateBps: uint64 = this.current_apr_bps()
 
     // 1) Compute principal * rateBps → wide multiply
     const [hi1, lo1] = mulw(principal, rateBps)
@@ -755,6 +963,7 @@ export class OrbitalLending extends Contract {
     // Might need to remove this and return any excess
     assert(repaymentAmount <= iar.totalDebt.native)
     const remainingDebt: uint64 = iar.totalDebt.native - repaymentAmount
+    this.total_borrows.value = this.total_borrows.value - repaymentAmount
 
     if (remainingDebt === 0) {
       //Delete box reference
@@ -806,6 +1015,7 @@ export class OrbitalLending extends Contract {
 
     assert(repaymentAmount <= iar.totalDebt.native)
     const remainingDebt: uint64 = iar.totalDebt.native - repaymentAmount
+    this.total_borrows.value = this.total_borrows.value - repaymentAmount
 
     if (remainingDebt === 0) {
       //Delete box reference
@@ -1203,6 +1413,7 @@ export class OrbitalLending extends Contract {
     const totalCollateral: uint64 = existingLoan.collateralAmount.native + collateralAmount
     const newDebt: uint64 = iar.totalDebt.native + disbursement
     const newTotalDisb: uint64 = existingLoan.totalDebt.native + disbursement
+    this.total_borrows.value = this.total_borrows.value + disbursement
 
     this.updateLoanRecord(
       new DebtChange({

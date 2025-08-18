@@ -1,4 +1,18 @@
-import { arc4 } from '@algorandfoundation/algorand-typescript'
+import { arc4, uint64 } from '@algorandfoundation/algorand-typescript'
+
+export const MBR_CREATE_APP: uint64 = 400_000
+export const MBR_INIT_APP: uint64 = 102_000
+export const MBR_OPT_IN_LST: uint64 = 2_000
+export const MBR_COLLATERAL: uint64 = 101_000
+export const STANDARD_TXN_FEE: uint64 = 1_000
+export const VALIDATE_BORROW_FEE: uint64 = 4_000
+
+export const BASIS_POINTS: uint64 = 10_000
+export const USD_MICRO_UNITS: uint64 = 1_000_000
+
+export const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
+
+export const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64

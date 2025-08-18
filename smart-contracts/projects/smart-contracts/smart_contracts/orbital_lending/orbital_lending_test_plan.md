@@ -34,11 +34,12 @@
 - [x] Borrow multiple times to top up loan    
 
 ## 📈 5. Interest Accrual
-- [ ] Accrue interest correctly based on delta time  
-- [ ] Depositor share increases `total_deposits`  
-- [ ] Protocol share added to `fee_pool`  
-- [ ] Loan record updated with new debt value  
+- [x] Accrue interest correctly based on delta time  
+- [x] Depositor share increases `total_deposits`  
+- [x] Protocol share added to `fee_pool`  
+- [x] Loan record updated with new debt value  
 - [ ] LST value shifts accordingly post-accrual  
+- [ ] Interest moved from static to formula based on utilisation
 
 ## ♻️ 6. Repayment
 - [ ] Repay partial debt (loan ASA replaced)  

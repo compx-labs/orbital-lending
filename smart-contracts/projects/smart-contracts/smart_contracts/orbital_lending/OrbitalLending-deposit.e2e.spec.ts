@@ -7,7 +7,13 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { calculateDisbursement, calculateInterest, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
+import {
+  calculateDisbursement,
+  calculateInterest,
+  currentAprBps,
+  getCollateralBoxValue,
+  getLoanRecordBoxValue,
+} from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -23,9 +29,9 @@ let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 2500n
 const liq_threshold_bps = 1000000n
-const interest_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
+const borrow_gate_enabled = 1n // 0 = false, 1 = true
 
 const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 500_000_000n
@@ -75,9 +81,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
-        interest_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
+        borrow_gate_enabled,
         oracleAppClient.appId,
       ],
     })
@@ -97,7 +103,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
-    expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
     expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
@@ -119,9 +124,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
-        interest_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
+        borrow_gate_enabled,
         oracleAppClient.appId,
       ],
     })
@@ -156,7 +161,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
-    expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
     expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.lstTokenId).toEqual(lstId)
@@ -1373,10 +1377,31 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       console.log('Last time interest accrued:', lastTimeInterestAccrued)
       console.log('Current timestamp:', timestamp)
 
+      const currentGlobalState = await algoLendingContractClient.state.global.getAll()
+
+      const interestRateBps = currentAprBps({
+        base_bps: currentGlobalState.baseBps || 0n,
+        ema_alpha_bps: currentGlobalState.emaAlphaBps || 0n,
+        interest_bps_fallback: 50n,
+        kink_norm_bps: currentGlobalState.kinkNormBps || 0n,
+        max_apr_bps: currentGlobalState.maxAprBps || 0n,
+        max_apr_step_bps: currentGlobalState.maxAprStepBps || 0n,
+        prev_apr_bps: currentGlobalState.prevAprBps || 0n,
+        rate_model_type: currentGlobalState.rateModelType || 0n,
+        slope1_bps: currentGlobalState.slope1Bps || 0n,
+        slope2_bps: currentGlobalState.slope2Bps || 0n,
+        totalDeposits: currentGlobalState.totalDeposits || 0n,
+        totalBorrows: currentGlobalState.totalBorrows || 0n,
+        util_cap_bps: currentGlobalState.utilCapBps || 0n,
+        util_ema_bps: currentGlobalState.utilEmaBps || 0n,
+      })
+
+      console.log('Interest rate bps:', interestRateBps)
+
       // Expected interest rate
       const expectedResults = calculateInterest({
         disbursement: loanRecord.totalDebt,
-        interestRateBps: interest_bps,
+        interestRateBps: interestRateBps.apr_bps,
         lastAccrualTimestamp: loanRecord.lastAccrualTimestamp,
         currentTimestamp: timestamp,
         protocolBPS: protocol_interest_fee_bps,
