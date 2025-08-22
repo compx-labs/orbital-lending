@@ -9,6 +9,7 @@ export const VALIDATE_BORROW_FEE: uint64 = 4_000
 
 export const BASIS_POINTS: uint64 = 10_000
 export const USD_MICRO_UNITS: uint64 = 1_000_000
+export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
 
 export const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
 
@@ -35,9 +36,9 @@ export class LoanRecord extends arc4.Struct<{
   collateralTokenId: arc4.UintN64
   collateralAmount: arc4.UintN64
   lastDebtChange: DebtChange
-  totalDebt: arc4.UintN64
   borrowedTokenId: arc4.UintN64
-  lastAccrualTimestamp: arc4.UintN64
+  principal: arc4.UintN64 
+  userIndexWad: arc4.UintN64
 }> {}
 
 export class InterestAccrualReturn extends arc4.Struct<{

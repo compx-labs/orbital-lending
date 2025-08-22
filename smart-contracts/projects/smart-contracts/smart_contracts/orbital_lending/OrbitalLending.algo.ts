@@ -18,7 +18,14 @@ import {
 } from '@algorandfoundation/algorand-typescript'
 import { abiCall, Address, DynamicArray, UintN64, UintN8 } from '@algorandfoundation/algorand-typescript/arc4'
 import { divw, mulw } from '@algorandfoundation/algorand-typescript/op'
-import { AcceptedCollateral, AcceptedCollateralKey, DebtChange, InterestAccrualReturn, LoanRecord } from './config.algo'
+import {
+  AcceptedCollateral,
+  AcceptedCollateralKey,
+  DebtChange,
+  INDEX_SCALE,
+  InterestAccrualReturn,
+  LoanRecord,
+} from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 import {
   MBR_COLLATERAL,
@@ -133,6 +140,18 @@ export class OrbitalLending extends Contract {
   /** Total outstanding borrower principal + accrued interest (debt) */
   total_borrows = GlobalState<uint64>()
 
+  /** Multiplicative borrow index (scaled by INDEX_SCALE). Starts at INDEX_SCALE */
+  borrow_index_wad = GlobalState<uint64>()
+
+  /** Timestamp (ledger seconds) at which borrow_index_wad was last advanced */
+  last_accrual_ts = GlobalState<uint64>()
+
+  /** APR (in bps) that applied during [last_accrual_ts, now) before recompute */
+  last_apr_bps = GlobalState<uint64>()
+
+  /** Sum of borrower principals (no interest). We’ll migrate total_borrows usage. */
+  total_borrows_principal = GlobalState<uint64>()
+
   // ═══════════════════════════════════════════════════════════════════════
   // COLLATERAL & LOAN MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════
@@ -240,6 +259,11 @@ export class OrbitalLending extends Contract {
     this.debug_diff.value = 0
     this.params_updated_at.value = Global.latestTimestamp
     this.params_update_nonce.value = 0
+    this.borrow_index_wad.value = INDEX_SCALE
+    this.last_accrual_ts.value = Global.latestTimestamp
+    this.last_apr_bps.value = this.base_bps.value
+
+    this.total_borrows_principal.value = 0
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -557,6 +581,8 @@ export class OrbitalLending extends Contract {
       amount: STANDARD_TXN_FEE,
     })
 
+    const _interestSlice = this.accrueMarket()
+
     let lstDue: uint64 = 0
     const depositBalance = op.AssetHolding.assetBalance(
       Global.currentApplicationAddress,
@@ -578,6 +604,7 @@ export class OrbitalLending extends Contract {
 
     this.circulating_lst.value += lstDue
     this.total_deposits.value += amount
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -599,6 +626,8 @@ export class OrbitalLending extends Contract {
       amount: STANDARD_TXN_FEE,
     })
 
+    const _interestSlice = this.accrueMarket()
+
     let lstDue: uint64 = 0
     if (this.total_deposits.value === 0) {
       lstDue = amount
@@ -616,6 +645,7 @@ export class OrbitalLending extends Contract {
 
     this.circulating_lst.value += lstDue
     this.total_deposits.value += amount
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -645,6 +675,8 @@ export class OrbitalLending extends Contract {
       amount: 3000,
     })
 
+    const _interestSlice = this.accrueMarket()
+
     //Calculate the return amount of ASA
     let asaDue: uint64 = 0
     if (lstAppId === Global.currentApplicationId.id) {
@@ -665,6 +697,7 @@ export class OrbitalLending extends Contract {
 
     this.circulating_lst.value -= amount // LST burned
     this.total_deposits.value -= asaDue // ASA returned
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -690,6 +723,7 @@ export class OrbitalLending extends Contract {
   ): void {
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
+    const _interestSlice = this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
       const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
@@ -721,6 +755,7 @@ export class OrbitalLending extends Contract {
 
     this.disburseFunds(op.Txn.sender, disbursement)
     this.total_borrows.value = this.total_borrows.value + disbursement
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   private mintLoanRecord(
@@ -731,23 +766,25 @@ export class OrbitalLending extends Contract {
   ): void {
     const debtChangeArray = new DynamicArray<DebtChange>()
 
-    const loanRecord: LoanRecord = new LoanRecord({
+    this.loan_record(borrowerAddress).value = new LoanRecord({
       borrowerAddress: new Address(borrowerAddress.bytes),
-      collateralTokenId: collateralTokenId,
+      collateralTokenId,
       collateralAmount: new UintN64(collateralAmount),
+      borrowedTokenId: this.base_token_id.value,
       lastDebtChange: new DebtChange({
         amount: new UintN64(disbursement),
         timestamp: new UintN64(Global.latestTimestamp),
-        changeType: new UintN8(0), // 0 for borrow
+        changeType: new UintN8(0), // borrow
       }),
-      totalDebt: new UintN64(disbursement),
-      borrowedTokenId: this.base_token_id.value,
-      lastAccrualTimestamp: new UintN64(Global.latestTimestamp - DEBUG_TIMESTAMP_OFFSET),
-    })
-    this.loan_record(borrowerAddress).value = loanRecord.copy()
+      principal: new UintN64(disbursement),
+      userIndexWad: new UintN64(this.borrow_index_wad.value),
+    }).copy()
+
+    // Update market aggregates for the principal added
+    this.total_borrows.value += disbursement
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
-
+  /* 
   private updateLoanRecord(
     debtChange: DebtChange,
     totalDebt: uint64,
@@ -765,114 +802,196 @@ export class OrbitalLending extends Contract {
       lastAccrualTimestamp: new UintN64(Global.latestTimestamp),
     })
     this.loan_record(borrowerAddress).value = loanRecord.copy()
-  }
+  } */
 
-  /**
-   * Manually accrues interest on a specific borrower's loan
-   * @param debtor - Account address of the borrower whose loan interest should be accrued
-   * @param templateReserveAddress - Reserve address for potential future use
-   * @dev Updates loan record with latest interest calculations
-   * @dev Can be called by anyone to ensure loan interest is up to date
-   */
   @abimethod({ allowActions: 'NoOp' })
   accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-    const currentLoanRecord = this.loan_record(debtor).value.copy()
-    //Apply interest
-    const iar = this.accrueInterest(currentLoanRecord)
-
-    //update loan record - nft and box
-    this.updateLoanRecord(
-      iar.change.copy(),
-      iar.totalDebt.native,
-      currentLoanRecord.collateralTokenId,
-      debtor,
-      currentLoanRecord.collateralAmount.native,
-    )
-    this.total_deposits.value += iar.change.amount.native // Update total deposits with interest earned
+    this.accrueMarket()
+    // Just roll the borrower snapshot forward
+    this.syncBorrowerSnapshot(debtor)
+    // No changes to total_deposits or fee_pool here — already handled in accrueMarket()
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   // 0..10_000 over the allowed band [0 .. util_cap_bps * deposits]
-private util_norm_bps(): uint64 {
-  const D: uint64 = this.total_deposits.value
-  const B: uint64 = this.total_borrows.value
-  const cap_bps: uint64 = this.util_cap_bps.value
-  if (D === 0) return 0
+  private util_norm_bps(): uint64 {
+    const D: uint64 = this.total_deposits.value
+    const B: uint64 = this.total_borrows.value
+    const cap_bps: uint64 = this.util_cap_bps.value
+    if (D === 0) return 0
 
-  // capBorrow = floor(D * util_cap_bps / 10_000)
-  const [hiCap, loCap] = mulw(D, cap_bps)
-  const capBorrow = divw(hiCap, loCap, BASIS_POINTS)
-  if (capBorrow === 0) return 0
+    // capBorrow = floor(D * util_cap_bps / 10_000)
+    const [hiCap, loCap] = mulw(D, cap_bps)
+    const capBorrow = divw(hiCap, loCap, BASIS_POINTS)
+    if (capBorrow === 0) return 0
 
-  const cappedB = B <= capBorrow ? B : capBorrow
-  const [hiN, loN] = mulw(cappedB, BASIS_POINTS)
-  return divw(hiN, loN, capBorrow)
-}
-
-// Kinked APR from normalized utilization
-private apr_bps_kinked(U_norm_bps: uint64): uint64 {
-  const base_bps: uint64      = this.base_bps.value
-  const kink_norm_bps: uint64 = this.kink_norm_bps.value
-  const slope1_bps: uint64    = this.slope1_bps.value
-  const slope2_bps: uint64    = this.slope2_bps.value
-  let apr: uint64
-
-  if (U_norm_bps <= kink_norm_bps) {
-    const [hi1, lo1] = mulw(slope1_bps, U_norm_bps)
-    apr = base_bps + divw(hi1, lo1, kink_norm_bps)
-  } else {  
-    const over: uint64 = U_norm_bps - kink_norm_bps
-    const denom: uint64 = BASIS_POINTS - kink_norm_bps
-    const [hi2, lo2] = mulw(slope2_bps, over)
-    apr = base_bps + slope1_bps + divw(hi2, lo2, denom)
+    const cappedB = B <= capBorrow ? B : capBorrow
+    const [hiN, loN] = mulw(cappedB, BASIS_POINTS)
+    return divw(hiN, loN, capBorrow)
   }
 
-  const maxCap: uint64 = this.max_apr_bps.value
-  if (maxCap > 0 && apr > maxCap) apr = maxCap
-  return apr
-}
+  // Kinked APR from normalized utilization
+  private apr_bps_kinked(U_norm_bps: uint64): uint64 {
+    const base_bps: uint64 = this.base_bps.value
+    const kink_norm_bps: uint64 = this.kink_norm_bps.value
+    const slope1_bps: uint64 = this.slope1_bps.value
+    const slope2_bps: uint64 = this.slope2_bps.value
+    let apr: uint64
 
-// SINGLE public entrypoint to get the current APR (bps)
-public current_apr_bps(): uint64 {
-  // Compute normalized utilization (0..10_000)
-  const U_raw: uint64 = this.util_norm_bps()
+    if (U_norm_bps <= kink_norm_bps) {
+      const [hi1, lo1] = mulw(slope1_bps, U_norm_bps)
+      apr = base_bps + divw(hi1, lo1, kink_norm_bps)
+    } else {
+      const over: uint64 = U_norm_bps - kink_norm_bps
+      const denom: uint64 = BASIS_POINTS - kink_norm_bps
+      const [hi2, lo2] = mulw(slope2_bps, over)
+      apr = base_bps + slope1_bps + divw(hi2, lo2, denom)
+    }
 
-  // Optional EMA smoothing
-  const alpha: uint64 = this.ema_alpha_bps.value // 0..10_000
-  let U_used: uint64
-  if (alpha === 0) {
-    U_used = U_raw
-  } else {
-    const prevU: uint64 = this.util_ema_bps.value
-    const oneMinus: uint64 = BASIS_POINTS - alpha
-    const [hiA, loA] = mulw(alpha, U_raw)
-    const [hiB, loB] = mulw(oneMinus, prevU)
-    U_used = divw(hiA, loA, BASIS_POINTS) + divw(hiB, loB, BASIS_POINTS)
-    this.util_ema_bps.value = U_used
+    const maxCap: uint64 = this.max_apr_bps.value
+    if (maxCap > 0 && apr > maxCap) apr = maxCap
+    return apr
   }
 
-  // Model selection (0=kinked; 255=fixed fallback)
-  let apr = (this.rate_model_type.value === 0)
-    ? this.apr_bps_kinked(U_used)
-    : this.base_bps.value // Fixed APR fallback
+  // SINGLE public entrypoint to get the current APR (bps)
+  public current_apr_bps(): uint64 {
+    // Compute normalized utilization (0..10_000)
+    const U_raw: uint64 = this.util_norm_bps()
 
-  // Optional per-step change limiter
-  const stepMax: uint64 = this.max_apr_step_bps.value
-  if (stepMax > 0) {
-    const prevApr: uint64 = (this.prev_apr_bps.value === 0)
-      ? this.base_bps.value
-      : this.prev_apr_bps.value
-    const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
-    const hi: uint64 = prevApr + stepMax
-    if (apr < lo) apr = lo
-    if (apr > hi) apr = hi
+    // Optional EMA smoothing
+    const alpha: uint64 = this.ema_alpha_bps.value // 0..10_000
+    let U_used: uint64
+    if (alpha === 0) {
+      U_used = U_raw
+    } else {
+      const prevU: uint64 = this.util_ema_bps.value
+      const oneMinus: uint64 = BASIS_POINTS - alpha
+      const [hiA, loA] = mulw(alpha, U_raw)
+      const [hiB, loB] = mulw(oneMinus, prevU)
+      U_used = divw(hiA, loA, BASIS_POINTS) + divw(hiB, loB, BASIS_POINTS)
+      this.util_ema_bps.value = U_used
+    }
+
+    // Model selection (0=kinked; 255=fixed fallback)
+    let apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
+
+    // Optional per-step change limiter
+    const stepMax: uint64 = this.max_apr_step_bps.value
+    if (stepMax > 0) {
+      const prevApr: uint64 = this.prev_apr_bps.value === 0 ? this.base_bps.value : this.prev_apr_bps.value
+      const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
+      const hi: uint64 = prevApr + stepMax
+      if (apr < lo) apr = lo
+      if (apr > hi) apr = hi
+    }
+
+    this.prev_apr_bps.value = apr
+    return apr
   }
 
-  this.prev_apr_bps.value = apr
-  return apr
-}
+  // Returns the simple interest factor for this time slice, scaled by INDEX_SCALE.
+  // simple = (last_apr_bps / 10_000) * (Δt / SECONDS_PER_YEAR)
+  private sliceFactorWad(deltaT: uint64): uint64 {
+    if (deltaT === 0) return 0
 
-  private accrueInterest(record: LoanRecord): InterestAccrualReturn {
+    // tmp = last_apr_bps * deltaT
+    const [h1, l1] = mulw(this.last_apr_bps.value, deltaT)
+    // tmp2 = tmp / SECONDS_PER_YEAR  (still in "bps")
+    const tmp2: uint64 = divw(h1, l1, SECONDS_PER_YEAR)
+
+    // simpleWad = (INDEX_SCALE * tmp2) / BASIS_POINTS
+    const [h2, l2] = mulw(INDEX_SCALE, tmp2)
+    const simpleWad: uint64 = divw(h2, l2, BASIS_POINTS)
+    return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
+  }
+
+  private currentDebtFromSnapshot(rec: LoanRecord): uint64 {
+    const p: uint64 = rec.principal.native
+    if (p === 0) return 0
+    const [hi, lo] = mulw(p, this.borrow_index_wad.value)
+    return divw(hi, lo, rec.userIndexWad.native)
+  }
+
+  // Roll borrower snapshot forward to "now" without changing what they owe
+  private syncBorrowerSnapshot(borrower: Account): uint64 {
+    const rec = this.loan_record(borrower).value.copy()
+    const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+    const newRec = new LoanRecord({
+      borrowerAddress: new Address(borrower.bytes),
+      collateralTokenId: rec.collateralTokenId,
+      collateralAmount: rec.collateralAmount,
+      borrowedTokenId: this.base_token_id.value,
+      lastDebtChange: rec.lastDebtChange.copy(), // keep your audit trail
+      principal: new UintN64(liveDebt),
+      userIndexWad: new UintN64(this.borrow_index_wad.value),
+    })
+    this.loan_record(borrower).value = newRec.copy()
+    return liveDebt
+  }
+
+  // Advances the market from last_accrual_ts → now using the *stored* last_apr_bps.
+  // Returns the total interest added to total_borrows for this slice.
+  private accrueMarket(): uint64 {
+    const now: uint64 = Global.latestTimestamp
+    const last: uint64 = this.last_accrual_ts.value
+    if (now <= last) return 0
+
+    const deltaT: uint64 = now - last
+
+    // 1) Compute simple slice factor in INDEX_SCALE
+    const simpleWad: uint64 = this.sliceFactorWad(deltaT)
+    if (simpleWad === 0) {
+      this.last_accrual_ts.value = now
+      return 0
+    }
+
+    // 2) Update borrow_index_wad: index *= (1 + simple)
+    //    newIndex = oldIndex + oldIndex * simpleWad / INDEX_SCALE
+    const oldIndex: uint64 = this.borrow_index_wad.value
+    const [hiI, loI] = mulw(oldIndex, simpleWad)
+    const incrIndex: uint64 = divw(hiI, loI, INDEX_SCALE)
+    const newIndex: uint64 = oldIndex + incrIndex
+    this.borrow_index_wad.value = newIndex
+
+    // 3) Market-wide interest for this slice:
+    //    interest = total_borrows * simple
+    // NOTE: at this step we treat total_borrows as the *current aggregate debt*.
+    const totalBefore: uint64 = this.total_borrows.value
+    let interest: uint64 = 0
+    if (totalBefore > 0) {
+      const [hiB, loB] = mulw(totalBefore, simpleWad)
+      interest = divw(hiB, loB, INDEX_SCALE)
+    }
+
+    // 4) Split interest into depositor yield & protocol fee
+    const protoBps: uint64 = this.protocol_share_bps.value
+    const deposBps: uint64 = BASIS_POINTS - protoBps
+
+    // depositorInterest = interest * deposBps / 10_000
+    const [hiD, loD] = mulw(interest, deposBps)
+    const depositorInterest: uint64 = divw(hiD, loD, BASIS_POINTS)
+    const protocolInterest: uint64 = interest - depositorInterest
+
+    // 5) Apply state updates
+    // Borrowers' aggregate debt grows by *full* interest:
+    this.total_borrows.value = totalBefore + interest
+
+    // Depositors earn their share as yield (LST exchange rate rises):
+    this.total_deposits.value += depositorInterest
+
+    // Protocol takes its fee share:
+    this.fee_pool.value += protocolInterest
+
+    // 6) Close the slice
+    this.last_accrual_ts.value = now
+
+    // IMPORTANT: We DO NOT recompute last_apr_bps here.
+    // That happens *after* state mutations that change utilization (Step 3).
+    return interest
+  }
+
+  /*   private accrueInterest(record: LoanRecord): InterestAccrualReturn {
     const now = Global.latestTimestamp
     const last = record.lastAccrualTimestamp.native
     // If no time has passed, nothing to do
@@ -929,7 +1048,7 @@ public current_apr_bps(): uint64 {
       }),
       totalDebt: new UintN64(newPrincipal),
     })
-  }
+  } */
 
   getLoanRecord(borrowerAddress: Account): LoanRecord {
     return this.loan_record(borrowerAddress).value
@@ -956,11 +1075,47 @@ public current_apr_bps(): uint64 {
       xferAsset: baseToken,
       assetAmount: repaymentAmount,
     })
-
+    const _interestSlice = this.accrueMarket()
     const loanRecord = this.getLoanRecord(op.Txn.sender)
-    const iar = this.accrueInterest(loanRecord)
 
-    // Might need to remove this and return any excess
+    const rec = this.getLoanRecord(op.Txn.sender)
+    const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+
+    assert(repaymentAmount <= liveDebt)
+
+    const remainingDebt: uint64 = liveDebt - repaymentAmount
+
+    // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
+    this.total_borrows.value -= repaymentAmount
+
+    if (remainingDebt === 0) {
+      this.loan_record(op.Txn.sender).delete()
+      this.active_loan_records.value -= 1
+
+      itxn
+        .assetTransfer({
+          assetReceiver: op.Txn.sender,
+          xferAsset: rec.collateralTokenId.native,
+          assetAmount: rec.collateralAmount.native,
+        })
+        .submit()
+    } else {
+      // Roll snapshot after repay
+      this.loan_record(op.Txn.sender).value = new LoanRecord({
+        borrowerAddress: new Address(op.Txn.sender.bytes),
+        collateralTokenId: rec.collateralTokenId,
+        collateralAmount: rec.collateralAmount,
+        borrowedTokenId: this.base_token_id.value,
+        lastDebtChange: new DebtChange({
+          amount: new UintN64(repaymentAmount),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(2), // repay
+        }),
+        principal: new UintN64(remainingDebt),
+        userIndexWad: new UintN64(this.borrow_index_wad.value),
+      }).copy()
+
+      /*  // Might need to remove this and return any excess
     assert(repaymentAmount <= iar.totalDebt.native)
     const remainingDebt: uint64 = iar.totalDebt.native - repaymentAmount
     this.total_borrows.value = this.total_borrows.value - repaymentAmount
@@ -991,6 +1146,8 @@ public current_apr_bps(): uint64 {
         loanRecord.collateralAmount.native, // collateral locked
       )
     }
+    this.last_apr_bps.value = this.current_apr_bps() */
+    }
   }
 
   /**
@@ -1009,39 +1166,44 @@ public current_apr_bps(): uint64 {
       receiver: Global.currentApplicationAddress,
       amount: repaymentAmount,
     })
-
+    const _interestSlice = this.accrueMarket()
     const loanRecord = this.getLoanRecord(op.Txn.sender)
-    const iar = this.accrueInterest(loanRecord)
+    const rec = this.getLoanRecord(op.Txn.sender)
+    const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
 
-    assert(repaymentAmount <= iar.totalDebt.native)
-    const remainingDebt: uint64 = iar.totalDebt.native - repaymentAmount
-    this.total_borrows.value = this.total_borrows.value - repaymentAmount
+    assert(repaymentAmount <= liveDebt)
+
+    const remainingDebt: uint64 = liveDebt - repaymentAmount
+
+    // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
+    this.total_borrows.value -= repaymentAmount
 
     if (remainingDebt === 0) {
-      //Delete box reference
       this.loan_record(op.Txn.sender).delete()
-      this.active_loan_records.value = this.active_loan_records.value - 1
+      this.active_loan_records.value -= 1
 
       itxn
         .assetTransfer({
           assetReceiver: op.Txn.sender,
-          xferAsset: loanRecord.collateralTokenId.native,
-          assetAmount: loanRecord.collateralAmount.native,
+          xferAsset: rec.collateralTokenId.native,
+          assetAmount: rec.collateralAmount.native,
         })
         .submit()
     } else {
-      // Update the record and mint a new ASA
-      this.updateLoanRecord(
-        new DebtChange({
+      // Roll snapshot after repay
+      this.loan_record(op.Txn.sender).value = new LoanRecord({
+        borrowerAddress: new Address(op.Txn.sender.bytes),
+        collateralTokenId: rec.collateralTokenId,
+        collateralAmount: rec.collateralAmount,
+        borrowedTokenId: this.base_token_id.value,
+        lastDebtChange: new DebtChange({
           amount: new UintN64(repaymentAmount),
           timestamp: new UintN64(Global.latestTimestamp),
-          changeType: new UintN8(2), // 2 for repayment
+          changeType: new UintN8(2), // repay
         }),
-        remainingDebt,
-        loanRecord.collateralTokenId, // collateral type
-        op.Txn.sender, // borrower
-        loanRecord.collateralAmount.native, // collateral locked
-      )
+        principal: new UintN64(remainingDebt),
+        userIndexWad: new UintN64(this.borrow_index_wad.value),
+      }).copy()
     }
   }
 
@@ -1075,11 +1237,12 @@ public current_apr_bps(): uint64 {
   @abimethod({ allowActions: 'NoOp' })
   buyoutASA(buyer: Account, debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const _interestSlice = this.accrueMarket()
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     this.loan_record(debtor).value = currentLoanRecord.copy()
 
     const collateralAmount = currentLoanRecord.collateralAmount.native
-    const debtAmount = currentLoanRecord.totalDebt.native
+    const debtAmount: uint64 = this.currentDebtFromSnapshot(currentLoanRecord)
     const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1118,6 +1281,7 @@ public current_apr_bps(): uint64 {
     //Update collateral total
     const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -1132,11 +1296,13 @@ public current_apr_bps(): uint64 {
   @abimethod({ allowActions: 'NoOp' })
   buyoutAlgo(buyer: Account, debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    const _interestSlice = this.accrueMarket()
     const currentLoanRecord = this.loan_record(debtor).value.copy()
     this.loan_record(debtor).value = currentLoanRecord.copy()
 
+    const rec = this.loan_record(debtor).value.copy()
     const collateralAmount = currentLoanRecord.collateralAmount.native
-    const debtAmount = currentLoanRecord.totalDebt.native
+    const debtAmount: uint64 = this.currentDebtFromSnapshot(rec)
     const collateralTokenId: UintN64 = new UintN64(currentLoanRecord.collateralTokenId.native)
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1174,6 +1340,7 @@ public current_apr_bps(): uint64 {
     //Update collateral total
     const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -1187,10 +1354,10 @@ public current_apr_bps(): uint64 {
   @abimethod({ allowActions: 'NoOp' })
   liquidateASA(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-
+    const _interestSlice = this.accrueMarket()
     const record = this.loan_record(debtor).value.copy()
     const collateralAmount = record.collateralAmount.native
-    const debtAmount = record.totalDebt.native
+    const debtAmount: uint64 = this.currentDebtFromSnapshot(record)
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1226,6 +1393,7 @@ public current_apr_bps(): uint64 {
     //Update the collateral total
     const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -1239,10 +1407,10 @@ public current_apr_bps(): uint64 {
   @abimethod({ allowActions: 'NoOp' })
   liquidateAlgo(debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-
+    const _interestSlice = this.accrueMarket()
     const record = this.loan_record(debtor).value.copy()
     const collateralAmount = record.collateralAmount.native
-    const debtAmount = record.totalDebt.native
+    const debtAmount: uint64 = this.currentDebtFromSnapshot(record)
     const collateralTokenId = record.collateralTokenId
     const acceptedCollateral = this.getCollateral(collateralTokenId)
 
@@ -1275,6 +1443,7 @@ public current_apr_bps(): uint64 {
     //Update the collateral total
     const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
     this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   /**
@@ -1296,9 +1465,8 @@ public current_apr_bps(): uint64 {
   } {
     assert(this.loan_record(borrower).exists, 'Loan record does not exist')
     const record = this.loan_record(borrower).value.copy()
-    const iar = this.accrueInterest(record) // simulate interest accrual for latest status
-
-    const debt: uint64 = iar.totalDebt.native
+    this.accrueMarket()
+    const debt: uint64 = this.currentDebtFromSnapshot(record)
     const collateralAmount: uint64 = record.collateralAmount.native
     const liqBps: uint64 = this.liq_threshold_bps.value
 
@@ -1397,35 +1565,36 @@ public current_apr_bps(): uint64 {
     collateralTokenId: UintN64,
   ): void {
     const existingLoan = this.getLoanRecord(borrower)
-    const iar = this.accrueInterest(existingLoan).copy()
+    // 1) Bring borrower snapshot current (uses global index)
+    const liveDebt: uint64 = this.syncBorrowerSnapshot(borrower)
 
-    // Validate total debt doesn't exceed LTV
-    const [h1, l1] = mulw(iar.totalDebt.native, baseTokenOraclePrice)
+    // 2) LTV check stays the same but use liveDebt instead of iar.totalDebt
+    const [h1, l1] = mulw(liveDebt, baseTokenOraclePrice)
     const oldLoanUSD = divw(h1, l1, USD_MICRO_UNITS)
+    // ... compute totalRequestedUSD etc (unchanged) ...
 
-    const [h2, l2] = mulw(requestedLoanAmount, baseTokenOraclePrice)
-    const newLoanUSD = divw(h2, l2, USD_MICRO_UNITS)
+    // 3) Add new principal
+    const newDebt: uint64 = liveDebt + disbursement
 
-    const totalRequestedUSD: uint64 = oldLoanUSD + newLoanUSD
-    assert(totalRequestedUSD <= maxBorrowUSD, 'exceeds LTV limit with existing debt')
-
-    // Combine collateral & debt
-    const totalCollateral: uint64 = existingLoan.collateralAmount.native + collateralAmount
-    const newDebt: uint64 = iar.totalDebt.native + disbursement
-    const newTotalDisb: uint64 = existingLoan.totalDebt.native + disbursement
-    this.total_borrows.value = this.total_borrows.value + disbursement
-
-    this.updateLoanRecord(
-      new DebtChange({
+    // 4) Update borrower snapshot after the top-up
+    this.loan_record(borrower).value = new LoanRecord({
+      borrowerAddress: new Address(borrower.bytes),
+      collateralTokenId: existingLoan.collateralTokenId,
+      collateralAmount: new UintN64(existingLoan.collateralAmount.native + collateralAmount),
+      borrowedTokenId: this.base_token_id.value,
+      lastDebtChange: new DebtChange({
         amount: new UintN64(disbursement),
         timestamp: new UintN64(Global.latestTimestamp),
-        changeType: new UintN8(0), // 0 for borrow
+        changeType: new UintN8(0), // borrow
       }),
-      newTotalDisb,
-      existingLoan.collateralTokenId,
-      borrower,
-      totalCollateral,
-    )
+      principal: new UintN64(newDebt),
+      userIndexWad: new UintN64(this.borrow_index_wad.value),
+    }).copy()
+
+    // 5) Market aggregates: principal grows by disbursement
+    this.total_borrows.value += disbursement
+
+    // 6) Update collateral running total
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
   }
   private disburseFunds(borrower: Account, amount: uint64): void {
