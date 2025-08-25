@@ -48,16 +48,39 @@ export async function getCollateralBoxValue(
   }
 }
 
+export const INDEX_SCALE = 1_000_000_000_000n; // 1e12 (match contract)
+
+export function liveDebtFromSnapshot(principal: bigint, userIndexWad: bigint, borrowIndexWad: bigint): bigint {
+  if (principal === 0n) return 0n
+  return (principal * borrowIndexWad) / userIndexWad
+}
+
+/* borrowerAddress: arc4.Address
+  collateralTokenId: arc4.UintN64
+  collateralAmount: arc4.UintN64
+  lastDebtChange: DebtChange
+  borrowedTokenId: arc4.UintN64
+  principal: arc4.UintN64 
+  userIndexWad: arc4.UintN64 */
 export interface getLoanRecordReturnType {
   borrowerAddress: string
   collateralTokenId: bigint
   collateralAmount: bigint
   lastDebtChange: number[]
-  totalDebt: bigint
   borrowedTokenId: bigint
-  lastAccrualTimestamp: bigint
+  principal: bigint
+  userIndexWad: bigint
   boxRef: algosdk.BoxReference
+  
 }
+
+/* borrowerAddress: arc4.Address
+  collateralTokenId: arc4.UintN64
+  collateralAmount: arc4.UintN64
+  lastDebtChange: DebtChange
+  borrowedTokenId: arc4.UintN64
+  principal: arc4.UintN64 
+  userIndexWad: arc4.UintN64 */
 export async function getLoanRecordBoxValue(
   borrower: string,
   appClient: OrbitalLendingClient,
@@ -73,9 +96,9 @@ export async function getLoanRecordBoxValue(
       new algosdk.ABIUintType(8), // changeType
       new algosdk.ABIUintType(64), // timestamp
     ]),
-    new algosdk.ABIUintType(64), // totalDebt
+    new algosdk.ABIUintType(64), // principal
     new algosdk.ABIUintType(64), // borrowedTokenId
-    new algosdk.ABIUintType(64), // lastAccrualTimestamp
+    new algosdk.ABIUintType(64), // userIndexWad
   ])
 
   const boxNames = await appClient.appClient.getBoxNames()
@@ -96,9 +119,9 @@ export async function getLoanRecordBoxValue(
     collateralTokenId,
     collateralAmount,
     lastDebtChange,
-    totalDebt,
     borrowedTokenId,
-    lastAccrualTimestamp,
+    principal,
+    userIndexWad,
   ] = value as any[]
 
   console.log('value from box:', value)
@@ -108,9 +131,9 @@ export async function getLoanRecordBoxValue(
     collateralTokenId,
     collateralAmount,
     lastDebtChange,
-    totalDebt,
+    principal,
     borrowedTokenId,
-    lastAccrualTimestamp,
+    userIndexWad,
     boxRef: {
       appIndex: appId,
       name: boxName,
@@ -142,11 +165,17 @@ export function calculateDisbursement({
 
   // Step 2: max borrow USD
   const maxBorrowUSD = (collateralUSD * ltvBps) / 10_000n
+  console.log('collateralUSD:', collateralUSD)
+  console.log('ltvBps:', ltvBps)
+
 
   // Step 3: requested borrow value in USD
   const borrowValueUSD = (requestedLoanAmount * baseTokenPrice) / 1_000_000n
 
   const allowed = borrowValueUSD <= maxBorrowUSD
+  console.log('borrowValueUSD:', borrowValueUSD)
+  console.log('maxBorrowUSD:', maxBorrowUSD)
+  console.log('allowed:', allowed)
 
   // Step 4: fee and disbursement
   const fee = (requestedLoanAmount * originationFeeBps) / 10_000n
@@ -155,92 +184,44 @@ export function calculateDisbursement({
   return { allowed, disbursement, fee }
 }
 
-export function calculateInterest({
-  disbursement,
-  interestRateBps,
-  lastAccrualTimestamp,
-  currentTimestamp,
-  protocolBPS,
-  totalDeposits,
-}: {
-  disbursement: bigint
-  interestRateBps: bigint
-  lastAccrualTimestamp: bigint
-  currentTimestamp: bigint
-  protocolBPS: bigint
-  totalDeposits: bigint
-}): {
-  newTotalDeposits: bigint
-  protocolFees: bigint
-  interest: bigint
-  newPrincipal: bigint
-} {
-  
-  const deltaT = currentTimestamp - lastAccrualTimestamp
-  const principal = disbursement
-  const rateBps = interestRateBps
-  const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n
-  // 1) Compute principal * rateBps → wide multiply
-  const principleTimesRate = principal * rateBps
-  // 2) Convert basis points to fraction: divide by 10_000
-  const rateScaled = principleTimesRate / 10_000n
-  // 3) Multiply by time delta: rateScaled * deltaT  → wide multiply
-  const interest = (rateScaled * deltaT) / SECONDS_PER_YEAR
-
-  const protoBps = protocolBPS
-  const depositorBps = 10_000n - protoBps
-
-  const depositorInterest = (interest * depositorBps) / 10_000n
-  const protocolInterest = interest - depositorInterest
-
-  return {
-    newTotalDeposits: totalDeposits + depositorInterest,
-    protocolFees: protocolInterest,
-    interest, // full interest added to borrower’s debt
-    newPrincipal: principal + interest,
-  }
-}
 
 export function utilNormBps(totalDeposits: bigint, totalBorrows: bigint, utilCapBps: bigint) {
-  if (totalDeposits === 0n) return 0n;
+  if (totalDeposits === 0n) return 0n
   // capBorrow = floor(D * util_cap_bps / 10_000)
-  const capBorrow = (totalDeposits * utilCapBps) / BASIS_POINTS;
-  if (capBorrow === 0n) return 0n;
-  const cappedB = totalBorrows <= capBorrow ? totalBorrows : capBorrow;
-  return (cappedB * BASIS_POINTS) / capBorrow; // 0..10_000
+  const capBorrow = (totalDeposits * utilCapBps) / BASIS_POINTS
+  if (capBorrow === 0n) return 0n
+  const cappedB = totalBorrows <= capBorrow ? totalBorrows : capBorrow
+  return (cappedB * BASIS_POINTS) / capBorrow // 0..10_000
 }
 
 /**
  * APR (bps) from normalized utilization for the kinked model.
  * Params: { base_bps, kink_norm_bps, slope1_bps, slope2_bps, max_apr_bps }
  */
-export function aprBpsKinked(U_norm_bps: bigint, params: {
-  base_bps: bigint,
-  kink_norm_bps: bigint,
-  slope1_bps: bigint,
-  slope2_bps: bigint,
-  max_apr_bps: bigint
-}) {
-  const {
-    base_bps,
-    kink_norm_bps,
-    slope1_bps,
-    slope2_bps,
-    max_apr_bps = 0n,
-  } = params;
+export function aprBpsKinked(
+  U_norm_bps: bigint,
+  params: {
+    base_bps: bigint
+    kink_norm_bps: bigint
+    slope1_bps: bigint
+    slope2_bps: bigint
+    max_apr_bps: bigint
+  },
+) {
+  const { base_bps, kink_norm_bps, slope1_bps, slope2_bps, max_apr_bps = 0n } = params
 
-  let apr;
+  let apr
   if (U_norm_bps <= kink_norm_bps) {
     // base + slope1 * U / kink
-    apr = base_bps + (slope1_bps * U_norm_bps) / kink_norm_bps;
+    apr = base_bps + (slope1_bps * U_norm_bps) / kink_norm_bps
   } else {
     // base + slope1 + slope2 * (U - kink) / (1 - kink)
-    const over = U_norm_bps - kink_norm_bps;
-    const denom = BASIS_POINTS - kink_norm_bps;
-    apr = base_bps + slope1_bps + (slope2_bps * over) / denom;
+    const over = U_norm_bps - kink_norm_bps
+    const denom = BASIS_POINTS - kink_norm_bps
+    apr = base_bps + slope1_bps + (slope2_bps * over) / denom
   }
-  if (max_apr_bps > 0n && apr > max_apr_bps) apr = max_apr_bps;
-  return apr;
+  if (max_apr_bps > 0n && apr > max_apr_bps) apr = max_apr_bps
+  return apr
 }
 
 export function currentAprBps(state: {
@@ -274,23 +255,21 @@ export function currentAprBps(state: {
     util_ema_bps = 0n,
     rate_model_type = 0n,
     interest_bps_fallback = 0n,
-  } = state;
+  } = state
 
   // 1) Utilization (normalized 0..10_000 over the capped band)
-  const U_raw = utilNormBps(totalDeposits, totalBorrows, util_cap_bps);
+  const U_raw = utilNormBps(totalDeposits, totalBorrows, util_cap_bps)
 
   // 2) Optional EMA smoothing
-  let U_used;
-  let next_util_ema_bps = util_ema_bps;
+  let U_used
+  let next_util_ema_bps = util_ema_bps
   if (ema_alpha_bps === 0n) {
-    U_used = U_raw;
+    U_used = U_raw
   } else {
     // U_smooth = α*U_raw + (1-α)*prev
-    const oneMinus = BASIS_POINTS - ema_alpha_bps;
-    U_used =
-      (ema_alpha_bps * U_raw) / BASIS_POINTS +
-      (oneMinus * util_ema_bps) / BASIS_POINTS;
-    next_util_ema_bps = U_used;
+    const oneMinus = BASIS_POINTS - ema_alpha_bps
+    U_used = (ema_alpha_bps * U_raw) / BASIS_POINTS + (oneMinus * util_ema_bps) / BASIS_POINTS
+    next_util_ema_bps = U_used
   }
 
   // 3) Base APR from selected model
@@ -303,20 +282,165 @@ export function currentAprBps(state: {
           slope2_bps,
           max_apr_bps,
         })
-      : interest_bps_fallback; // fixed-rate fallback if you want it
+      : interest_bps_fallback // fixed-rate fallback if you want it
 
   // 4) Optional per-step change limiter
   if (max_apr_step_bps > 0n) {
-    const prev = prev_apr_bps === 0n ? base_bps : prev_apr_bps;
-    const lo = prev > max_apr_step_bps ? prev - max_apr_step_bps : 0n;
-    const hi = prev + max_apr_step_bps;
-    if (apr_bps < lo) apr_bps = lo;
-    if (apr_bps > hi) apr_bps = hi;
+    const prev = prev_apr_bps === 0n ? base_bps : prev_apr_bps
+    const lo = prev > max_apr_step_bps ? prev - max_apr_step_bps : 0n
+    const hi = prev + max_apr_step_bps
+    if (apr_bps < lo) apr_bps = lo
+    if (apr_bps > hi) apr_bps = hi
   }
 
   return {
     apr_bps,
     next_prev_apr_bps: apr_bps,
     next_util_ema_bps,
-  };
+  }
+}
+
+export function accrueMarketSlice({
+  now,
+  lastAccrualTs,
+  lastAprBps,
+  totalBorrows,     // aggregate debt before this slice
+  totalDeposits,    // TVL before slice (principal TVL)
+  feePool,
+}: {
+  now: bigint
+  lastAccrualTs: bigint
+  lastAprBps: bigint         // APR in bps for the CLOSED interval
+  totalBorrows: bigint
+  totalDeposits: bigint
+  feePool: bigint
+}) {
+  const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n
+  const BASIS_POINTS = 10_000n
+
+  if (now <= lastAccrualTs) {
+    return {
+      interest: 0n,
+      newTotalBorrows: totalBorrows,
+      newTotalDeposits: totalDeposits,
+      newFeePool: feePool,
+      newLastAccrualTs: lastAccrualTs,
+      simpleWad: 0n,       // for index update: (INDEX_SCALE * rateBps * dt / YEAR / 10_000)
+    }
+  }
+
+  const dt = now - lastAccrualTs
+
+  // simpleWad = INDEX_SCALE * (lastAprBps / 10_000) * (dt / YEAR)
+  const simpleWad = (INDEX_SCALE * lastAprBps * dt) / SECONDS_PER_YEAR / BASIS_POINTS
+
+  // interest = totalBorrows * simple   (simple in WAD)
+  const interest = (totalBorrows * simpleWad) / INDEX_SCALE
+
+  const depositorBps = BASIS_POINTS - 0n // you’ll pass protocol split below
+  // We’ll split using protocolBps supplied by the test, so make it a param:
+  return { interest, simpleWad, dt }
+}
+
+export function applyInterestSplit({
+  interest,
+  protocolBps,
+  totalBorrows,
+  totalDeposits,
+  feePool,
+  lastAccrualTs,
+  now,
+}: {
+  interest: bigint
+  protocolBps: bigint
+  totalBorrows: bigint
+  totalDeposits: bigint
+  feePool: bigint
+  lastAccrualTs: bigint
+  now: bigint
+}) {
+  const BASIS_POINTS = 10_000n
+  const depositorBps = BASIS_POINTS - protocolBps
+
+  const depositorInterest = (interest * depositorBps) / BASIS_POINTS
+  const protocolInterest  = interest - depositorInterest
+
+  return {
+    newTotalBorrows: totalBorrows + interest,
+    newTotalDeposits: totalDeposits + depositorInterest,
+    newFeePool: feePool + protocolInterest,
+    newLastAccrualTs: now,
+  }
+}
+
+export function advanceBorrowIndex(oldBorrowIndexWad: bigint, simpleWad: bigint): bigint {
+  // newIndex = oldIndex * (1 + simple) = oldIndex + oldIndex*simple
+  return oldBorrowIndexWad + (oldBorrowIndexWad * simpleWad) / INDEX_SCALE
+}
+export function recomputeNextAprBps(state: {
+  totalDeposits: bigint
+  totalBorrows: bigint
+  base_bps: bigint
+  util_cap_bps: bigint
+  kink_norm_bps: bigint
+  slope1_bps: bigint
+  slope2_bps: bigint
+  max_apr_bps: bigint
+  ema_alpha_bps: bigint
+  max_apr_step_bps: bigint
+  prev_apr_bps: bigint
+  util_ema_bps: bigint
+  rate_model_type: bigint
+  interest_bps_fallback: bigint
+}) {
+  const { apr_bps, next_prev_apr_bps, next_util_ema_bps } = currentAprBps(state)
+  return {
+    next_lastAprBps: apr_bps,
+    next_prev_apr_bps,
+    next_util_ema_bps,
+  }
+}
+export function applyBorrow({
+  principalDelta,              // disbursement
+  borrower,                    // { principal, userIndexWad }
+  borrowIndexWad,
+  totalBorrows,
+}: {
+  principalDelta: bigint
+  borrower: { principal: bigint, userIndexWad: bigint }
+  borrowIndexWad: bigint
+  totalBorrows: bigint
+}) {
+  const newPrincipal = borrower.principal + principalDelta
+  return {
+    borrower: {
+      principal: newPrincipal,
+      userIndexWad: borrowIndexWad,   // snapshot at post-borrow
+    },
+    newTotalBorrows: totalBorrows + principalDelta,
+  }
+}
+
+export function applyRepay({
+  repayAmount,
+  borrower,
+  borrowIndexWad,
+  totalBorrows,
+}: {
+  repayAmount: bigint
+  borrower: { principal: bigint, userIndexWad: bigint }
+  borrowIndexWad: bigint
+  totalBorrows: bigint
+}) {
+  const liveDebt = liveDebtFromSnapshot(borrower.principal, borrower.userIndexWad, borrowIndexWad)
+  if (repayAmount > liveDebt) throw new Error('repay > liveDebt')
+  const remaining = liveDebt - repayAmount
+  return {
+    borrower: {
+      principal: remaining,
+      userIndexWad: borrowIndexWad,   // resnapshot after repay
+    },
+    newTotalBorrows: totalBorrows - repayAmount,
+    fullyRepaid: remaining === 0n,
+  }
 }

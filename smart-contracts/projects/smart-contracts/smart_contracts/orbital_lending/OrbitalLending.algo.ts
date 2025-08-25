@@ -780,8 +780,6 @@ export class OrbitalLending extends Contract {
       userIndexWad: new UintN64(this.borrow_index_wad.value),
     }).copy()
 
-    // Update market aggregates for the principal added
-    this.total_borrows.value += disbursement
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
   /* 
@@ -1590,9 +1588,6 @@ export class OrbitalLending extends Contract {
       principal: new UintN64(newDebt),
       userIndexWad: new UintN64(this.borrow_index_wad.value),
     }).copy()
-
-    // 5) Market aggregates: principal grows by disbursement
-    this.total_borrows.value += disbursement
 
     // 6) Update collateral running total
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
