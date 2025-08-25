@@ -368,7 +368,7 @@ export class OrbitalLending extends Contract {
         defaultFrozen: false,
         manager: Global.currentApplicationAddress,
         unitName: 'c' + String(baseToken.unitName),
-        assetName: 'c' + String(this.base_token_id.value.bytes),
+        assetName: 'c' + String(baseToken.unitName),
         fee: STANDARD_TXN_FEE,
       })
       .submit()

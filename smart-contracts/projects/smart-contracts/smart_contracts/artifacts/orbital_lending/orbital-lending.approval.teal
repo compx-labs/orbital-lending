@@ -1562,7 +1562,7 @@ generateLSTToken_bool_merge@4:
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
     //     unitName: 'c' + String(baseToken.unitName),
-    //     assetName: 'c' + String(this.base_token_id.value.bytes),
+    //     assetName: 'c' + String(baseToken.unitName),
     //     fee: STANDARD_TXN_FEE,
     //   })
     //   .submit()
@@ -1585,20 +1585,17 @@ generateLSTToken_bool_merge@4:
     global CurrentApplicationAddress
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:370
     // unitName: 'c' + String(baseToken.unitName),
-    uncover 4
+    dig 4
     asset_params_get AssetUnitName
     assert // asset exists
     pushbytes "c"
     swap
     concat
-    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:54
-    // base_token_id = GlobalState<UintN64>()
-    intc_0 // 0
-    bytec_0 // "base_token_id"
-    app_global_get_ex
-    assert // check GlobalState exists
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:371
-    // assetName: 'c' + String(this.base_token_id.value.bytes),
+    // assetName: 'c' + String(baseToken.unitName),
+    uncover 5
+    asset_params_get AssetUnitName
+    assert // asset exists
     pushbytes "c"
     swap
     concat
@@ -1621,7 +1618,7 @@ generateLSTToken_bool_merge@4:
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
     //     unitName: 'c' + String(baseToken.unitName),
-    //     assetName: 'c' + String(this.base_token_id.value.bytes),
+    //     assetName: 'c' + String(baseToken.unitName),
     //     fee: STANDARD_TXN_FEE,
     //   })
     pushint 3 // 3
@@ -1639,7 +1636,7 @@ generateLSTToken_bool_merge@4:
     //     defaultFrozen: false,
     //     manager: Global.currentApplicationAddress,
     //     unitName: 'c' + String(baseToken.unitName),
-    //     assetName: 'c' + String(this.base_token_id.value.bytes),
+    //     assetName: 'c' + String(baseToken.unitName),
     //     fee: STANDARD_TXN_FEE,
     //   })
     //   .submit()
