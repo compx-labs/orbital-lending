@@ -18,6 +18,7 @@ export const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
   baseAssetId: arc4.UintN64
+  marketBaseAssetId: arc4.UintN64
   totalCollateral: arc4.UintN64
 }> {}
 
@@ -30,6 +31,7 @@ export class DebtChange extends arc4.Struct<{
   changeType: arc4.UintN8 // 0 = borrow, 1 = interest, 2 = repayment
   timestamp: arc4.UintN64
 }> {}
+
 
 export class LoanRecord extends arc4.Struct<{
   borrowerAddress: arc4.Address

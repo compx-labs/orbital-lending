@@ -481,6 +481,7 @@ export class OrbitalLending extends Contract {
       this.accepted_collaterals(key).value = new AcceptedCollateral({
         assetId: collateral.assetId,
         baseAssetId: collateral.baseAssetId,
+        marketBaseAssetId: collateral.marketBaseAssetId,
         totalCollateral: new UintN64(newTotal),
       }).copy()
     }
@@ -494,7 +495,7 @@ export class OrbitalLending extends Contract {
    * @dev Collateral cannot be the same as the base lending token
    */
   @abimethod({ allowActions: 'NoOp' })
-  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
+  addNewCollateralType(collateralTokenId: UintN64, collateralBaseTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value)
     assert(collateralTokenId.native !== baseToken.id)
@@ -506,7 +507,8 @@ export class OrbitalLending extends Contract {
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
-      baseAssetId: this.base_token_id.value,
+      baseAssetId: collateralBaseTokenId,
+      marketBaseAssetId: this.base_token_id.value,
       totalCollateral: new UintN64(0),
     })
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
@@ -1505,8 +1507,8 @@ export class OrbitalLending extends Contract {
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
-  private calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
-    // Get LST exchange rate
+  public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
+    // 1) Get LST exchange rate: (totalDeposits / circulatingLST)
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
       fee: STANDARD_TXN_FEE,
@@ -1517,13 +1519,18 @@ export class OrbitalLending extends Contract {
       fee: STANDARD_TXN_FEE,
     }).returnValue
 
-    // Convert LST → Underlying Collateral
+    // underlyingCollateral = (collateralAmount * totalDeposits) / circulatingLST
     const [hC, lC] = mulw(totalDepositsExternal, collateralAmount)
     const underlyingCollateral = divw(hC, lC, circulatingExternalLST)
 
-    // Get Oracle Price and convert to USD
-    const collateralOraclePrice = this.getOraclePrice(collateralTokenId)
-    const [hU, lU] = mulw(underlyingCollateral, collateralOraclePrice)
+    // 2) Get oracle price of the *base token*, not the LST itself
+    const lstCollateral = this.getCollateral(collateralTokenId)
+    const baseTokenId = lstCollateral.baseAssetId
+
+    const baseTokenPrice = this.getOraclePrice(baseTokenId)
+
+    // 3) Convert underlying collateral → USD
+    const [hU, lU] = mulw(underlyingCollateral, baseTokenPrice)
     const collateralUSD = divw(hU, lU, USD_MICRO_UNITS)
 
     return collateralUSD

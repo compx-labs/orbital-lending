@@ -10,6 +10,7 @@ export const SECONDS_PER_YEAR: bigint = 365n * 24n * 60n * 60n
 export interface getBoxValueReturnType {
   assetId: bigint
   baseAssetId: bigint
+  marketBaseAssetId: bigint
   totalCollateral: bigint
   boxRef: algosdk.BoxReference
 }
@@ -22,6 +23,7 @@ export async function getCollateralBoxValue(
   const acceptedCollateralType = new algosdk.ABITupleType([
     new algosdk.ABIUintType(64), // assetId
     new algosdk.ABIUintType(64), // baseAssetId
+    new algosdk.ABIUintType(64), // marketBaseAssetId
     new algosdk.ABIUintType(64), // totalCollateral
   ])
 
@@ -36,10 +38,11 @@ export async function getCollateralBoxValue(
   boxName.set(prefix, 0)
   boxName.set(keyBytes, prefix.length)
   const collateral = await appClient.appClient.getBoxValueFromABIType(boxName, acceptedCollateralType)
-  const [assetId, baseAssetId, totalCollateral] = collateral as bigint[]
+  const [assetId, baseAssetId, marketBaseAssetId, totalCollateral] = collateral as bigint[]
   return {
     assetId,
     baseAssetId,
+    marketBaseAssetId,
     totalCollateral,
     boxRef: {
       appIndex: appId,
