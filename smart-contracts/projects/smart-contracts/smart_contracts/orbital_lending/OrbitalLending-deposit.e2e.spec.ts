@@ -731,7 +731,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Circulating cXUSD:', circulatingcXUSD)
   })
 
-  test.skip('top up existing loans - algo Lending Contract (index model assertions)', async () => {
+  test('top up existing loans - algo Lending Contract (index model assertions)', async () => {
     const borrowAmount = DEPOSITOR_SECONDARY_BORROW_AMOUNT
 
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -748,25 +748,18 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
       // ── Prices ────────────────────────────────────────────────────────────
       const algoPrice = await oracleAppClient.send.getTokenPrice({ args: [0n], assetReferences: [0n] })
-      const cxusdPrice = await oracleAppClient.send.getTokenPrice({ args: [cxusd], assetReferences: [cxusd] })
       const xUSDPrice = await oracleAppClient.send.getTokenPrice({
         args: [xUSDAssetId],
         assetReferences: [xUSDAssetId],
       })
-      const cAlgoPrice = await oracleAppClient.send.getTokenPrice({
-        args: [cAlgoAssetId],
-        assetReferences: [cAlgoAssetId],
-      })
       expect(algoPrice.return?.price).toBeDefined()
-      expect(cxusdPrice.return?.price).toBeDefined()
       expect(xUSDPrice.return?.price).toBeDefined()
-      expect(cAlgoPrice.return?.price).toBeDefined()
 
       // ── Collateral box sanity ─────────────────────────────────────────────
       const boxValue = await getCollateralBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
       expect(boxValue).toBeDefined()
       expect(boxValue.assetId).toEqual(cxusd)
-      expect(boxValue.baseAssetId).toEqual(0n)
+      expect(boxValue.baseAssetId).toEqual(xUSDAssetId)
 
       // ── Txns for borrow (collateral axfer is 0 for top-up) ────────────────
       const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
@@ -809,10 +802,19 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         principal === 0n ? 0n : (principal * borrowIndexWad) / userIndexWad
       const liveDebtBefore = liveDebtFromSnapshot(priorPrincipal, priorUserIdx, borrowIndexBefore)
 
+      const collateralPriceReturn = await algoLendingContractClient.send.calculateCollateralValueUsd({
+        args: [cxusd, priorCollateral, lstAppId],
+        sender: borrowerAccount.addr,
+      })
+      const cxusdPrice =
+        collateralPriceReturn?.returns && collateralPriceReturn.returns.length > 0
+          ? (collateralPriceReturn.returns[0].returnValue as bigint)
+          : 0
+
       // Also pre-compute expected disbursement (fee-inclusive)
       const preCalculated = calculateDisbursement({
         collateralAmount: priorCollateral,
-        collateralPrice: cxusdPrice.return?.price || 0n, // cxUSD price
+        collateralPrice: cxusdPrice || 0n, // cxUSD price
         ltvBps: ltv_bps,
         baseTokenPrice: algoPrice.return?.price || 0n, // ALGO price
         requestedLoanAmount: borrowAmount,
@@ -893,100 +895,153 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  /*   test.skip('Accrue interest - algo Lending Contract', async () => {
-    //wait 5 seconds
-    await new Promise((resolve) => setTimeout(resolve, 5000))
-    const globalStateBefore = await algoLendingContractClient.state.global.getAll()
-    const currentTotalDeposits = globalStateBefore.totalDeposits || 0n
+  test('repay 25% of loan', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
-      const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
 
       const loanRecord = await getLoanRecordBoxValue(
         borrowerAccount.addr.toString(),
         algoLendingContractClient,
         algoLendingContractClient.appId,
       )
-      expect(loanRecord).toBeDefined()
-      const userIndexWad = loanRecord.userIndexWad
-      console.log('User index wad:', userIndexWad)
-      const previousDisbursement = loanRecord.principal
-      console.log('Previous disbursement:', previousDisbursement)
 
-      console.log('Current total deposits:', currentTotalDeposits)
+      const amountToRepay = loanRecord.principal / 4n
+      console.log('amountToRepay:', amountToRepay)
+      console.log('principal:', loanRecord.principal)
 
-      const status = await algoLendingContractClient.algorand.client.algod.status().do()
-      const latestRound = status.lastRound
-
-      // Fetch the latest block
-      const block = await algoLendingContractClient.algorand.client.algod.block(latestRound).do()
-
-      // Access the timestamp (in seconds since epoch)
-      const timestamp = block.block.header.timestamp
-      console.log('Last time interest accrued:', userIndexWad)
-      console.log('Current timestamp:', timestamp)
-
-      const currentGlobalState = await algoLendingContractClient.state.global.getAll()
-
-      const interestRateBps = currentAprBps({
-        base_bps: currentGlobalState.baseBps || 0n,
-        ema_alpha_bps: currentGlobalState.emaAlphaBps || 0n,
-        interest_bps_fallback: 50n,
-        kink_norm_bps: currentGlobalState.kinkNormBps || 0n,
-        max_apr_bps: currentGlobalState.maxAprBps || 0n,
-        max_apr_step_bps: currentGlobalState.maxAprStepBps || 0n,
-        prev_apr_bps: currentGlobalState.prevAprBps || 0n,
-        rate_model_type: currentGlobalState.rateModelType || 0n,
-        slope1_bps: currentGlobalState.slope1Bps || 0n,
-        slope2_bps: currentGlobalState.slope2Bps || 0n,
-        totalDeposits: currentGlobalState.totalDeposits || 0n,
-        totalBorrows: currentGlobalState.totalBorrows || 0n,
-        util_cap_bps: currentGlobalState.utilCapBps || 0n,
-        util_ema_bps: currentGlobalState.utilEmaBps || 0n,
+      const repayTxn = algoLendingContractClient.algorand.createTransaction.payment({
+        receiver: algoLendingContractClient.appAddress,
+        amount: AlgoAmount.MicroAlgo(amountToRepay),
+        sender: borrowerAccount.addr,
       })
 
-      console.log('Interest rate bps:', interestRateBps)
+      // check borrowers current algo balance
+      const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+        .accountInformation(borrowerAccount.addr)
+        .do()
+      console.log('algoBalanceBefore:', algoBalanceBefore)
 
-      // Expected interest rate
-      const expectedResults = calculateInterest({
-        disbursement: loanRecord.principal,
-        interestRateBps: interestRateBps.apr_bps,
-        lastAccrualTimestamp: loanRecord.userIndexWad,
-        currentTimestamp: timestamp,
-        protocolBPS: protocol_interest_fee_bps,
-        totalDeposits: globalStateBefore.totalDeposits || 0n,
-      })
-      console.log('Expected interest results:', expectedResults)
+      // check borrowers lst balance before
+      const lstBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
 
-      //accrue interest
-      await algoLendingContractClient.send.accrueLoanInterest({
-        args: [borrowerAccount.addr.publicKey, reserve.addr.publicKey],
-        accountReferences: [borrowerAccount.addr],
-        appReferences: [oracleAppClient.appId],
-      })
+      const result = await algoLendingContractClient
+        .newGroup()
+        .repayLoanAlgo({
+          args: [repayTxn, amountToRepay],
+          sender: borrowerAccount.addr,
+        })
+        .send({ populateAppCallResources: true })
 
-      const loanRecordAfter = await getLoanRecordBoxValue(
+      const totalFeesPaid = result.transactions.reduce((acc, tx) => acc + Number(tx.fee), 0)
+      console.log('totalFeesPaid:', totalFeesPaid)
+
+      const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+        .accountInformation(borrowerAccount.addr)
+        .do()
+      console.log('algoBalanceAfter:', algoBalanceAfter)
+      expect(algoBalanceAfter).toBe(algoBalanceBefore - amountToRepay - BigInt(totalFeesPaid))
+
+      const lstBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceAfter = lstBalanceAfterRequest.assetHolding?.amount || BigInt(0)
+      expect(lstBalanceAfter).toBe(lstBalanceBefore) // no collateral removal automatically unless loan closed out
+    }
+  })
+
+  test('withdraw max safe collateral', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      const loanRecord = await getLoanRecordBoxValue(
         borrowerAccount.addr.toString(),
         algoLendingContractClient,
         algoLendingContractClient.appId,
       )
-      expect(loanRecord).toBeDefined()
 
-      const newUserIndexWad = loanRecordAfter.userIndexWad
-      console.log('Last time interest accrued:', newUserIndexWad)
-      const debtChange = loanRecordAfter.lastDebtChange
-      console.log('Interest charge:', debtChange)
+      // get the max removable collateral
+      const maxSafeCollateralResult = await algoLendingContractClient.send.maxWithdrawableCollateralLst({
+        args: [xUSDLendingContractClient.appId],
+        sender: borrowerAccount.addr,
+      })
+      const maxSafeCollateral = maxSafeCollateralResult.return as bigint
 
-      const newDisbursement = loanRecordAfter.principal
-      console.log('Previous disbursement:', previousDisbursement)
-      console.log('New disbursement:', newDisbursement)
-      expect(newDisbursement).toBeGreaterThan(previousDisbursement)
+      console.log('maxSafeCollateral:', maxSafeCollateral)
+      expect(maxSafeCollateral).toBeLessThanOrEqual(loanRecord.collateralAmount)
+      const collateralBoxValue = await getCollateralBoxValue(
+        loanRecord.collateralTokenId,
+        algoLendingContractClient,
+        algoLendingContractClient.appId,
+      )
+
+      console.log('collateralBoxValue:', collateralBoxValue)
+      expect(collateralBoxValue.totalCollateral).toBeGreaterThanOrEqual(maxSafeCollateral)
+      const lstBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
+
+      await algoLendingContractClient
+        .newGroup()
+        .gas()
+        .withdrawCollateral({
+          args: [maxSafeCollateral, loanRecord.collateralTokenId, xUSDLendingContractClient.appId],
+          sender: borrowerAccount.addr,
+        })
+        .send()
+
+      const lstBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceAfter = lstBalanceAfterRequest.assetHolding?.amount || BigInt(0)
+
+      expect(lstBalanceAfter).toBe(lstBalanceBefore + maxSafeCollateral)
     }
+  })
 
-    const globalStateAfter = await algoLendingContractClient.state.global.getAll()
-    const newTotalDeposits = globalStateAfter.totalDeposits || 0n
-    console.log('New total deposits:', newTotalDeposits)
-    expect(newTotalDeposits).toBeGreaterThan(currentTotalDeposits)
-  }) */
+  test('repay and close loan', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      const loanRecord = await getLoanRecordBoxValue(
+        borrowerAccount.addr.toString(),
+        algoLendingContractClient,
+        algoLendingContractClient.appId,
+      )
+      const currentDebt = loanRecord.principal
+      const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+        .accountInformation(borrowerAccount.addr)
+        .do()
+      const lstBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
+
+      const payTxn = algoLendingContractClient.algorand.createTransaction.payment({
+        receiver: algoLendingContractClient.appAddress,
+        amount: AlgoAmount.MicroAlgos(currentDebt),
+        sender: borrowerAccount.addr,
+      })
+      const result = await algoLendingContractClient.send.repayLoanAlgo({
+        args: [payTxn, currentDebt],
+        sender: borrowerAccount.addr,
+      })
+
+      const totalFees = result.transactions.reduce((sum, txn) => sum + Number(txn.fee), 0)
+
+      const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+        .accountInformation(borrowerAccount.addr)
+        .do()
+      expect(algoBalanceAfter).toBeLessThan(algoBalanceBefore)
+      expect(algoBalanceAfter).toBe(algoBalanceBefore - currentDebt - BigInt(totalFees))
+      const lstBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
+        .do()
+      const lstBalanceAfter = lstBalanceAfterRequest.assetHolding?.amount || BigInt(0)
+      expect(lstBalanceAfter).toBeGreaterThan(lstBalanceBefore) // collateral returned on loan closure
+      expect(lstBalanceAfter).toBe(lstBalanceBefore + loanRecord.collateralAmount)
+    }
+  })
 })

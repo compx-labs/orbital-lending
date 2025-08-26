@@ -476,15 +476,27 @@ export class OrbitalLending extends Contract {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     const collateral = this.accepted_collaterals(key).value.copy()
 
-    if (collateral.assetId.native === collateralTokenId.native) {
-      const newTotal: uint64 = collateral.totalCollateral.native + amount
-      this.accepted_collaterals(key).value = new AcceptedCollateral({
-        assetId: collateral.assetId,
-        baseAssetId: collateral.baseAssetId,
-        marketBaseAssetId: collateral.marketBaseAssetId,
-        totalCollateral: new UintN64(newTotal),
-      }).copy()
-    }
+    const newTotal: uint64 = collateral.totalCollateral.native + amount
+    this.accepted_collaterals(key).value = new AcceptedCollateral({
+      assetId: collateral.assetId,
+      baseAssetId: collateral.baseAssetId,
+      marketBaseAssetId: collateral.marketBaseAssetId,
+      totalCollateral: new UintN64(newTotal),
+    }).copy()
+  }
+
+  private reduceCollateralTotal(collateralTokenId: UintN64, amount: uint64): void {
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
+    const collateral = this.accepted_collaterals(key).value.copy()
+
+    assert(collateral.totalCollateral.native >= amount, 'INSUFFICIENT_COLLATERAL')
+    const newTotal: uint64 = collateral.totalCollateral.native - amount
+    this.accepted_collaterals(key).value = new AcceptedCollateral({
+      assetId: collateral.assetId,
+      baseAssetId: collateral.baseAssetId,
+      marketBaseAssetId: collateral.marketBaseAssetId,
+      totalCollateral: new UintN64(newTotal),
+    }).copy()
   }
 
   /**
@@ -753,11 +765,14 @@ export class OrbitalLending extends Contract {
       )
     } else {
       this.mintLoanRecord(disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
+      this.updateCollateralTotal(collateralTokenId, collateralAmount)
     }
 
     this.disburseFunds(op.Txn.sender, disbursement)
     this.total_borrows.value = this.total_borrows.value + disbursement
     this.last_apr_bps.value = this.current_apr_bps()
+
+    this.payPlatformFees(this.base_token_id.value.native, fee)
   }
 
   private mintLoanRecord(
@@ -981,7 +996,7 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += depositorInterest
 
     // Protocol takes its fee share:
-    this.fee_pool.value += protocolInterest
+    this.payPlatformFees(this.base_token_id.value.native, protocolInterest)
 
     // 6) Close the slice
     this.last_accrual_ts.value = now
@@ -1097,6 +1112,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: op.Txn.sender,
           xferAsset: rec.collateralTokenId.native,
           assetAmount: rec.collateralAmount.native,
+          fee: STANDARD_TXN_FEE,
         })
         .submit()
     } else {
@@ -1160,7 +1176,7 @@ export class OrbitalLending extends Contract {
    * @dev Full repayment closes loan and returns all collateral
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64, templateReserveAddress: Account): void {
+  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(paymentTxn, {
       receiver: Global.currentApplicationAddress,
@@ -1187,6 +1203,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: op.Txn.sender,
           xferAsset: rec.collateralTokenId.native,
           assetAmount: rec.collateralAmount.native,
+          fee: STANDARD_TXN_FEE,
         })
         .submit()
     } else {
@@ -1207,22 +1224,27 @@ export class OrbitalLending extends Contract {
     }
   }
 
-  /**
-   * Withdraws accumulated protocol fees to admin account
-   * @dev Only callable by admin account
-   * @dev Transfers entire fee pool balance and resets it to zero
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  withdrawFees(): void {
-    assert(op.Txn.sender === this.admin_account.value)
-    itxn
-      .assetTransfer({
-        assetReceiver: this.admin_account.value,
-        xferAsset: this.base_token_id.value.native,
-        assetAmount: this.fee_pool.value,
-      })
-      .submit()
-    this.fee_pool.value = 0
+  private payPlatformFees(assetId: uint64, amount: uint64): void {
+    if (amount > 0) {
+      if (assetId === 0) {
+        itxn
+          .payment({
+            receiver: this.admin_account.value,
+            amount: amount,
+            fee: STANDARD_TXN_FEE,
+          })
+          .submit()
+      } else {
+        itxn
+          .assetTransfer({
+            assetReceiver: this.admin_account.value,
+            xferAsset: assetId,
+            assetAmount: amount,
+            fee: STANDARD_TXN_FEE,
+          })
+          .submit()
+      }
+    }
   }
 
   /**
@@ -1276,11 +1298,12 @@ export class OrbitalLending extends Contract {
         assetReceiver: buyer,
         xferAsset: collateralTokenId.native,
         assetAmount: collateralAmount,
+        fee: STANDARD_TXN_FEE,
       })
       .submit()
     //Update collateral total
-    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
-    this.updateCollateralTotal(collateralTokenId, newTotal)
+
+    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
@@ -1335,11 +1358,170 @@ export class OrbitalLending extends Contract {
         assetReceiver: buyer,
         xferAsset: collateralTokenId.native,
         assetAmount: collateralAmount,
+        fee: STANDARD_TXN_FEE,
       })
       .submit()
     //Update collateral total
-    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
-    this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
+    this.last_apr_bps.value = this.current_apr_bps()
+  }
+
+  private debtUSD(debtBaseUnits: uint64): uint64 {
+    const baseTokenPrice: uint64 = this.getOraclePrice(this.base_token_id.value) // price of market base token
+    const [h, l] = mulw(debtBaseUnits, baseTokenPrice)
+    return divw(h, l, USD_MICRO_UNITS) // micro-USD
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
+    assert(this.loan_record(op.Txn.sender).exists, 'NO_LOAN')
+    this.accrueMarket()
+
+    const rec = this.loan_record(op.Txn.sender).value.copy()
+    const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
+    if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
+
+    // Current collateral USD (before any withdrawal)
+    const currCollatUSD: uint64 = this.calculateCollateralValueUSD(
+      rec.collateralTokenId,
+      rec.collateralAmount.native,
+      lstAppId,
+    )
+
+    // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
+    const debtUSDv: uint64 = this.debtUSD(debtBase)
+    // requiredCollateralUSD = ceil(debtUSD * 10_000 / ltv_bps)
+    const [hReq, lReq] = mulw(debtUSDv, BASIS_POINTS)
+    const requiredCollateralUSD: uint64 = divw(hReq, lReq, this.ltv_bps.value)
+
+    // If we’re already below requirement (shouldn’t happen), nothing is withdrawable
+    if (currCollatUSD <= requiredCollateralUSD) return 0
+
+    // Max removable USD
+    const removableUSD: uint64 = currCollatUSD - requiredCollateralUSD
+
+    // Convert removable USD → underlying base units → LST amount
+    // Pull LST exchange data
+    const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const totalDeposits = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+
+    // Base token price for this LST’s underlying
+    const ac = this.getCollateral(rec.collateralTokenId)
+    const basePrice = this.getOraclePrice(ac.baseAssetId)
+
+    // underlying = removableUSD * 1e6 / basePrice
+    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
+    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
+
+    // LST = underlying * circulating / totalDeposits
+    const [hL, lL] = mulw(removableUnderlying, circulatingLST)
+    const removableLST: uint64 = divw(hL, lL, totalDeposits)
+
+    return removableLST
+  }
+
+  private maxWithdrawableCollateralLSTLocal(borrower: Account, lstAppId: uint64): uint64 {
+    assert(this.loan_record(borrower).exists, 'NO_LOAN')
+    this.accrueMarket()
+
+    const rec = this.loan_record(borrower).value.copy()
+    const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
+    if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
+
+    // Current collateral USD (before any withdrawal)
+    const currCollatUSD: uint64 = this.calculateCollateralValueUSD(
+      rec.collateralTokenId,
+      rec.collateralAmount.native,
+      lstAppId,
+    )
+
+    // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
+    const debtUSDv: uint64 = this.debtUSD(debtBase)
+    // requiredCollateralUSD = ceil(debtUSD * 10_000 / ltv_bps)
+    const [hReq, lReq] = mulw(debtUSDv, BASIS_POINTS)
+    const requiredCollateralUSD: uint64 = divw(hReq, lReq, this.ltv_bps.value)
+
+    // If we’re already below requirement (shouldn’t happen), nothing is withdrawable
+    if (currCollatUSD <= requiredCollateralUSD) return 0
+
+    // Max removable USD
+    const removableUSD: uint64 = currCollatUSD - requiredCollateralUSD
+
+    // Convert removable USD → underlying base units → LST amount
+    // Pull LST exchange data
+    const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const totalDeposits = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+
+    // Base token price for this LST’s underlying
+    const ac = this.getCollateral(rec.collateralTokenId)
+    const basePrice = this.getOraclePrice(ac.baseAssetId)
+
+    // underlying = removableUSD * 1e6 / basePrice
+    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
+    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
+
+    // LST = underlying * circulating / totalDeposits
+    const [hL, lL] = mulw(removableUnderlying, circulatingLST)
+    const removableLST: uint64 = divw(hL, lL, totalDeposits)
+
+    return removableLST
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  public withdrawCollateral(amountLST: uint64, collateralTokenId: uint64, lstAppId: uint64): void {
+    assert(amountLST > 0, 'ZERO_AMOUNT')
+    const borrower = op.Txn.sender
+    assert(this.loan_record(borrower).exists, 'NO_LOAN')
+    this.accrueMarket() // 1) make time current for everyone
+    const loan = this.loan_record(borrower).value.copy()
+
+    const maxSafe = this.maxWithdrawableCollateralLSTLocal(borrower, lstAppId)
+    assert(amountLST <= maxSafe, 'EXCEEDS_LIMITS')
+    assert(amountLST < loan.collateralAmount.native, 'INSUFFICIENT_COLLATERAL')
+    const remainLST: uint64 = loan.collateralAmount.native - amountLST
+
+    // 5) Safe: perform transfer of LST back to borrower
+    itxn
+      .assetTransfer({
+        assetReceiver: borrower,
+        xferAsset: collateralTokenId, // LST ASA
+        assetAmount: amountLST,
+        fee: STANDARD_TXN_FEE,
+      })
+      .submit()
+
+    // 6) Update storage
+    const newRec = new LoanRecord({
+      borrowerAddress: new Address(borrower.bytes),
+      collateralTokenId: new UintN64(collateralTokenId),
+      collateralAmount: new UintN64(remainLST),
+      borrowedTokenId: this.base_token_id.value,
+      lastDebtChange: new DebtChange({
+        amount: new UintN64(amountLST),
+        timestamp: new UintN64(Global.latestTimestamp),
+        changeType: new UintN8(3), // 3 = collateral withdraw
+      }),
+      principal: loan.principal, // unchanged
+      userIndexWad: loan.userIndexWad, // unchanged snapshot; no debt change here
+    })
+    this.loan_record(borrower).value = newRec.copy()
+
+    // 7) Track global collateral totals (optional if you maintain them)
+    this.reduceCollateralTotal(loan.collateralTokenId, amountLST)
+
+    // 8) Recompute next rate for subsequent slice (utilization may change only if this affects borrows/deposits; harmless to do)
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
@@ -1373,6 +1555,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(this.base_token_id.value.native),
       assetAmount: debtAmount,
+      
     })
 
     //Clawback ASA if needed
@@ -1387,12 +1570,12 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: collateralTokenId.native,
         assetAmount: collateralAmount,
+        fee: STANDARD_TXN_FEE,
       })
       .submit()
 
     //Update the collateral total
-    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
-    this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
@@ -1437,12 +1620,12 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: collateralTokenId.native,
         assetAmount: collateralAmount,
+        fee: STANDARD_TXN_FEE,
       })
       .submit()
 
     //Update the collateral total
-    const newTotal: uint64 = acceptedCollateral.totalCollateral.native - collateralAmount
-    this.updateCollateralTotal(collateralTokenId, newTotal)
+    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
