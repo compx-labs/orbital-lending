@@ -447,3 +447,142 @@ export function applyRepay({
     fullyRepaid: remaining === 0n,
   }
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Buyout terms (premium in buyout token, debt repayment in base token)
+// ───────────────────────────────────────────────────────────────────────────
+// LST collateral valuation in micro-USD using on-chain exchange rate
+// underlying = (amountLST * totalDeposits) / circulatingLST
+// valueUSD  = underlying * price(underlyingBase) / 1e6
+export function collateralUSDFromLST(
+  collateralLSTAmount: bigint,
+  totalDepositsLST: bigint,
+  circulatingLST: bigint,
+  underlyingBasePrice: bigint // µUSD per 1 unit of the LST's underlying base asset
+): bigint {
+  if (collateralLSTAmount === 0n || totalDepositsLST === 0n || circulatingLST === 0n) return 0n
+  const underlying = (collateralLSTAmount * totalDepositsLST) / circulatingLST
+  return (underlying * underlyingBasePrice) / USD_MICRO_UNITS
+}
+
+// Base-token-denominated debt → micro-USD
+export function debtUSD(
+  debtBaseUnits: bigint,
+  baseTokenPrice: bigint // µUSD per 1 base token
+): bigint {
+  if (debtBaseUnits === 0n) return 0n
+  return (debtBaseUnits * baseTokenPrice) / USD_MICRO_UNITS
+}
+/**
+ * Compute buyout premium and debt repayment amounts.
+ *
+ * @param params
+ *  - collateralLSTAmount: amount of LST being bought out (borrower’s full collateral)
+ *  - totalDepositsLST, circulatingLST: from LST app
+ *  - underlyingBasePrice: µUSD price of the LST’s underlying base asset (e.g., xUSD=1e6)
+ *  - baseTokenPrice: µUSD price of the market base token (debt is in this token)
+ *  - buyoutTokenPrice: µUSD price of the token used to pay the premium (e.g., xUSD)
+ *  - principal, userIndexWad, borrowIndexWad: borrower snapshot + market index
+ *  - liq_threshold_bps: liquidation threshold in bps (e.g., 8500)
+ *
+ * @returns
+ *  - eligible: whether CR_bps > liq_threshold_bps
+ *  - premiumTokens: amount of buyout token (xUSD) needed to pay the premium
+ *  - premiumUSD: premium value in µUSD (for debugging/asserts)
+ *  - debtRepayAmountBase: full live debt in base token units (ASA/ALGO) to be repaid
+ *  - collateralUSD, debtUSDv, CR_bps, premiumRateBps: intermediates for assertions
+ */
+export function computeBuyoutTerms(params: {
+  collateralLSTAmount: bigint
+  totalDepositsLST: bigint
+  circulatingLST: bigint
+  underlyingBasePrice: bigint
+  baseTokenPrice: bigint
+  buyoutTokenPrice: bigint
+  principal: bigint
+  userIndexWad: bigint
+  borrowIndexWad: bigint
+  liq_threshold_bps: bigint
+}) {
+  const {
+    collateralLSTAmount,
+    totalDepositsLST,
+    circulatingLST,
+    underlyingBasePrice,
+    baseTokenPrice,
+    buyoutTokenPrice,
+    principal,
+    userIndexWad,
+    borrowIndexWad,
+    liq_threshold_bps,
+  } = params
+
+  // 1) Live debt (base token units)
+  const debtRepayAmountBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
+
+  // 2) Collateral USD via LST exchange rate
+  const collateralUSD = collateralUSDFromLST(
+    collateralLSTAmount,
+    totalDepositsLST,
+    circulatingLST,
+    underlyingBasePrice
+  )
+
+  // 3) Debt USD
+  const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice)
+
+  // Edge-guards
+  if (debtRepayAmountBase === 0n || debtUSDv === 0n) {
+    // No debt → buyout not applicable
+    return {
+      eligible: false as const,
+      premiumTokens: 0n,
+      premiumUSD: 0n,
+      debtRepayAmountBase,
+      collateralUSD,
+      debtUSDv,
+      CR_bps: 0n,
+      premiumRateBps: 0n,
+    }
+  }
+
+  // 4) Collateral Ratio in bps: (collateralUSD / debtUSD) * 10_000
+  const CR_bps = (collateralUSD * BASIS_POINTS) / debtUSDv
+  const eligible = CR_bps > liq_threshold_bps
+
+  if (!eligible) {
+    return {
+      eligible,
+      premiumTokens: 0n,
+      premiumUSD: 0n,
+      debtRepayAmountBase,
+      collateralUSD,
+      debtUSDv,
+      CR_bps,
+      premiumRateBps: 0n,
+    }
+  }
+
+  // 5) Premium rate (bps): (CR_bps / liq_threshold_bps) * 10_000 - 10_000
+  // Equivalent to: premiumRateBps = (CR_bps * 10_000 / liq_threshold_bps) - 10_000
+  const premiumRateBps = (CR_bps * BASIS_POINTS) / liq_threshold_bps - BASIS_POINTS
+
+  // 6) Premium USD = collateralUSD * premiumRateBps / 10_000
+  const premiumUSD = (collateralUSD * premiumRateBps) / BASIS_POINTS
+
+  // 7) Premium in buyout token units: premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
+  // (e.g., if buyout token is xUSD at 1_000_000 µUSD, this is a 1:1 conversion)
+  const premiumTokens =
+    buyoutTokenPrice === 0n ? 0n : (premiumUSD * USD_MICRO_UNITS) / buyoutTokenPrice
+
+  return {
+    eligible,
+    premiumTokens,        // pay this much xUSD (or other buyout token)
+    premiumUSD,           // µUSD, useful for asserts/logs
+    debtRepayAmountBase,  // repay this much in the market base token
+    collateralUSD,
+    debtUSDv,
+    CR_bps,
+    premiumRateBps,
+  }
+}

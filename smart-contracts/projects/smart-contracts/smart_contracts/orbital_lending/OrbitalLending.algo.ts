@@ -1258,7 +1258,6 @@ export class OrbitalLending extends Contract {
    * @dev Closes the loan and transfers collateral to buyer
    */
   @abimethod({ allowActions: 'NoOp' })
-  @abimethod({ allowActions: 'NoOp' })
   public buyoutSplitASA(
     // base token is an ASA
     buyer: Account,
