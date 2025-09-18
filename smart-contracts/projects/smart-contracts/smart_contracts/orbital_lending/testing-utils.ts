@@ -51,7 +51,7 @@ export async function getCollateralBoxValue(
   }
 }
 
-export const INDEX_SCALE = 1_000_000_000_000n; // 1e12 (match contract)
+export const INDEX_SCALE = 1_000_000_000_000n // 1e12 (match contract)
 
 export function liveDebtFromSnapshot(principal: bigint, userIndexWad: bigint, borrowIndexWad: bigint): bigint {
   if (principal === 0n) return 0n
@@ -74,7 +74,6 @@ export interface getLoanRecordReturnType {
   principal: bigint
   userIndexWad: bigint
   boxRef: algosdk.BoxReference
-  
 }
 
 /* borrowerAddress: arc4.Address
@@ -171,7 +170,6 @@ export function calculateDisbursement({
   console.log('collateralUSD:', collateralUSD)
   console.log('ltvBps:', ltvBps)
 
-
   // Step 3: requested borrow value in USD
   const borrowValueUSD = (requestedLoanAmount * baseTokenPrice) / 1_000_000n
 
@@ -186,7 +184,6 @@ export function calculateDisbursement({
 
   return { allowed, disbursement, fee }
 }
-
 
 export function utilNormBps(totalDeposits: bigint, totalBorrows: bigint, utilCapBps: bigint) {
   if (totalDeposits === 0n) return 0n
@@ -307,13 +304,13 @@ export function accrueMarketSlice({
   now,
   lastAccrualTs,
   lastAprBps,
-  totalBorrows,     // aggregate debt before this slice
-  totalDeposits,    // TVL before slice (principal TVL)
+  totalBorrows, // aggregate debt before this slice
+  totalDeposits, // TVL before slice (principal TVL)
   feePool,
 }: {
   now: bigint
   lastAccrualTs: bigint
-  lastAprBps: bigint         // APR in bps for the CLOSED interval
+  lastAprBps: bigint // APR in bps for the CLOSED interval
   totalBorrows: bigint
   totalDeposits: bigint
   feePool: bigint
@@ -328,7 +325,7 @@ export function accrueMarketSlice({
       newTotalDeposits: totalDeposits,
       newFeePool: feePool,
       newLastAccrualTs: lastAccrualTs,
-      simpleWad: 0n,       // for index update: (INDEX_SCALE * rateBps * dt / YEAR / 10_000)
+      simpleWad: 0n, // for index update: (INDEX_SCALE * rateBps * dt / YEAR / 10_000)
     }
   }
 
@@ -366,7 +363,7 @@ export function applyInterestSplit({
   const depositorBps = BASIS_POINTS - protocolBps
 
   const depositorInterest = (interest * depositorBps) / BASIS_POINTS
-  const protocolInterest  = interest - depositorInterest
+  const protocolInterest = interest - depositorInterest
 
   return {
     newTotalBorrows: totalBorrows + interest,
@@ -404,13 +401,13 @@ export function recomputeNextAprBps(state: {
   }
 }
 export function applyBorrow({
-  principalDelta,              // disbursement
-  borrower,                    // { principal, userIndexWad }
+  principalDelta, // disbursement
+  borrower, // { principal, userIndexWad }
   borrowIndexWad,
   totalBorrows,
 }: {
   principalDelta: bigint
-  borrower: { principal: bigint, userIndexWad: bigint }
+  borrower: { principal: bigint; userIndexWad: bigint }
   borrowIndexWad: bigint
   totalBorrows: bigint
 }) {
@@ -418,7 +415,7 @@ export function applyBorrow({
   return {
     borrower: {
       principal: newPrincipal,
-      userIndexWad: borrowIndexWad,   // snapshot at post-borrow
+      userIndexWad: borrowIndexWad, // snapshot at post-borrow
     },
     newTotalBorrows: totalBorrows + principalDelta,
   }
@@ -431,7 +428,7 @@ export function applyRepay({
   totalBorrows,
 }: {
   repayAmount: bigint
-  borrower: { principal: bigint, userIndexWad: bigint }
+  borrower: { principal: bigint; userIndexWad: bigint }
   borrowIndexWad: bigint
   totalBorrows: bigint
 }) {
@@ -441,7 +438,7 @@ export function applyRepay({
   return {
     borrower: {
       principal: remaining,
-      userIndexWad: borrowIndexWad,   // resnapshot after repay
+      userIndexWad: borrowIndexWad, // resnapshot after repay
     },
     newTotalBorrows: totalBorrows - repayAmount,
     fullyRepaid: remaining === 0n,
@@ -458,7 +455,7 @@ export function collateralUSDFromLST(
   collateralLSTAmount: bigint,
   totalDepositsLST: bigint,
   circulatingLST: bigint,
-  underlyingBasePrice: bigint // µUSD per 1 unit of the LST's underlying base asset
+  underlyingBasePrice: bigint, // µUSD per 1 unit of the LST's underlying base asset
 ): bigint {
   if (collateralLSTAmount === 0n || totalDepositsLST === 0n || circulatingLST === 0n) return 0n
   const underlying = (collateralLSTAmount * totalDepositsLST) / circulatingLST
@@ -468,7 +465,7 @@ export function collateralUSDFromLST(
 // Base-token-denominated debt → micro-USD
 export function debtUSD(
   debtBaseUnits: bigint,
-  baseTokenPrice: bigint // µUSD per 1 base token
+  baseTokenPrice: bigint, // µUSD per 1 base token
 ): bigint {
   if (debtBaseUnits === 0n) return 0n
   return (debtBaseUnits * baseTokenPrice) / USD_MICRO_UNITS
@@ -493,15 +490,20 @@ export function debtUSD(
  *  - collateralUSD, debtUSDv, CR_bps, premiumRateBps: intermediates for assertions
  */
 export function computeBuyoutTerms(params: {
+  // Collateral (LST)
   collateralLSTAmount: bigint
   totalDepositsLST: bigint
   circulatingLST: bigint
-  underlyingBasePrice: bigint
-  baseTokenPrice: bigint
-  buyoutTokenPrice: bigint
+  underlyingBasePrice: bigint // µUSD (oracle of LST's underlying base asset)
+  // Debt (market base)
+  baseTokenPrice: bigint // µUSD (oracle of market base token)
+  // Premium payment token
+  buyoutTokenPrice: bigint // µUSD (oracle of buyout token, e.g., xUSD = 1e6)
+  // Borrower snapshot + market index
   principal: bigint
   userIndexWad: bigint
   borrowIndexWad: bigint
+  // Parameters
   liq_threshold_bps: bigint
 }) {
   const {
@@ -517,72 +519,203 @@ export function computeBuyoutTerms(params: {
     liq_threshold_bps,
   } = params
 
-  // 1) Live debt (base token units)
+  // 1) Live debt (base units) and USD legs
   const debtRepayAmountBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
+  const collateralUSD = collateralUSDFromLST(collateralLSTAmount, totalDepositsLST, circulatingLST, underlyingBasePrice)
+  const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice)
 
-  // 2) Collateral USD via LST exchange rate
-  const collateralUSD = collateralUSDFromLST(
+  // Edge cases (no debt → premium 0, repay 0)
+  if (debtRepayAmountBase === 0n || debtUSDv === 0n) {
+    return {
+      premiumTokens: 0n,
+      premiumUSD: 0n,
+      premiumRateBps: 0n,
+      CR_bps: 0n,
+      collateralUSD,
+      debtUSDv,
+      debtRepayAmountBase,
+    }
+  }
+
+  // 2) CR in bps
+  const CR_bps = (collateralUSD * BASIS_POINTS) / debtUSDv
+  console.log('CR_bps:', CR_bps)
+  console.log('liq_threshold_bps:', liq_threshold_bps)
+  // 3) Premium rate (bps). 0 at/below threshold; grows unbounded above it.
+  let premiumRateBps = 0n
+  if (CR_bps > liq_threshold_bps) {
+    // (CR_bps * 10_000 / liq_threshold_bps) - 10_000
+    premiumRateBps = (CR_bps * BASIS_POINTS) / liq_threshold_bps - BASIS_POINTS
+    console.log('premiumRateBps:', premiumRateBps)
+  }
+
+  // 4) Premium USD & buyout token amount
+  const premiumUSD = (collateralUSD * premiumRateBps) / BASIS_POINTS
+  console.log('premiumUSD:', premiumUSD)
+  const premiumTokens = buyoutTokenPrice === 0n ? 0n : (premiumUSD * USD_MICRO_UNITS) / buyoutTokenPrice
+  console.log('premiumTokens:', premiumTokens)
+
+  return {
+    premiumTokens, // amount of buyout token to send (xUSD)
+    premiumUSD, // µUSD
+    premiumRateBps, // for assertions/logs
+    CR_bps, // for assertions/logs
+    collateralUSD, // µUSD
+    debtUSDv, // µUSD
+    debtRepayAmountBase, // base token units to repay (ASA/ALGO)
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Core: compute max profitable repay for partial liquidation with bonus
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Max repay (base units) a liquidator should send so that the seized collateral
+ * value (incl. bonus) is NOT capped by available collateral.
+ *
+ * Condition for no cap (i.e. profitable as designed):
+ *   repayUSD * (1 + bonus) <= collateralUSD
+ * => repayUSD <= collateralUSD * 10_000 / (10_000 + bonusBps)
+ *
+ * Then convert repayUSD -> base units and cap by liveDebt.
+ */
+export function maxRepayBaseForProfit(params: {
+  // Borrower/market
+  principal: bigint
+  userIndexWad: bigint
+  borrowIndexWad: bigint
+  // Prices
+  baseTokenPrice: bigint // µUSD (market base token)
+  underlyingBasePrice: bigint // µUSD (LST's underlying)
+  // Collateral LST state
+  collateralLSTAmount: bigint
+  totalDepositsLST: bigint
+  circulatingLST: bigint
+  // Bonus
+  liq_bonus_bps: bigint // e.g. 1000 (=10%)
+}) {
+  const {
+    principal,
+    userIndexWad,
+    borrowIndexWad,
+    baseTokenPrice,
+    underlyingBasePrice,
     collateralLSTAmount,
     totalDepositsLST,
     circulatingLST,
-    underlyingBasePrice
-  )
+    liq_bonus_bps,
+  } = params
 
-  // 3) Debt USD
-  const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice)
+  // Live debt (base units)
+  const liveDebtBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
 
-  // Edge-guards
-  if (debtRepayAmountBase === 0n || debtUSDv === 0n) {
-    // No debt → buyout not applicable
+  // Collateral value (µUSD)
+  const collateralUSD = collateralUSDFromLST(collateralLSTAmount, totalDepositsLST, circulatingLST, underlyingBasePrice)
+
+  if (liveDebtBase === 0n || baseTokenPrice === 0n) {
     return {
-      eligible: false as const,
-      premiumTokens: 0n,
-      premiumUSD: 0n,
-      debtRepayAmountBase,
+      maxRepayBase: 0n,
       collateralUSD,
-      debtUSDv,
-      CR_bps: 0n,
-      premiumRateBps: 0n,
+      liveDebtBase,
     }
   }
 
-  // 4) Collateral Ratio in bps: (collateralUSD / debtUSD) * 10_000
-  const CR_bps = (collateralUSD * BASIS_POINTS) / debtUSDv
-  const eligible = CR_bps > liq_threshold_bps
+  // repayUSD_max = floor(collateralUSD * 10_000 / (10_000 + bonus))
+  const repayUSD_max = (collateralUSD * BASIS_POINTS) / (BASIS_POINTS + liq_bonus_bps)
 
-  if (!eligible) {
-    return {
-      eligible,
-      premiumTokens: 0n,
-      premiumUSD: 0n,
-      debtRepayAmountBase,
-      collateralUSD,
-      debtUSDv,
-      CR_bps,
-      premiumRateBps: 0n,
-    }
-  }
+  // base units = floor(repayUSD_max * 1e6 / baseTokenPrice)
+  const repayBaseByCollateral = (repayUSD_max * USD_MICRO_UNITS) / baseTokenPrice
 
-  // 5) Premium rate (bps): (CR_bps / liq_threshold_bps) * 10_000 - 10_000
-  // Equivalent to: premiumRateBps = (CR_bps * 10_000 / liq_threshold_bps) - 10_000
-  const premiumRateBps = (CR_bps * BASIS_POINTS) / liq_threshold_bps - BASIS_POINTS
-
-  // 6) Premium USD = collateralUSD * premiumRateBps / 10_000
-  const premiumUSD = (collateralUSD * premiumRateBps) / BASIS_POINTS
-
-  // 7) Premium in buyout token units: premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
-  // (e.g., if buyout token is xUSD at 1_000_000 µUSD, this is a 1:1 conversion)
-  const premiumTokens =
-    buyoutTokenPrice === 0n ? 0n : (premiumUSD * USD_MICRO_UNITS) / buyoutTokenPrice
+  // cannot exceed live debt
+  const maxRepayBase = repayBaseByCollateral < liveDebtBase ? repayBaseByCollateral : liveDebtBase
 
   return {
-    eligible,
-    premiumTokens,        // pay this much xUSD (or other buyout token)
-    premiumUSD,           // µUSD, useful for asserts/logs
-    debtRepayAmountBase,  // repay this much in the market base token
-    collateralUSD,
-    debtUSDv,
-    CR_bps,
-    premiumRateBps,
+    maxRepayBase, // base units to repay (ALGO micro or ASA units)
+    collateralUSD, // µUSD
+    liveDebtBase, // base units
   }
+}
+
+/**
+ * Simulate a partial liquidation for an arbitrary proposed repay (base units).
+ * Returns how much LST would be seized (capped), and all intermediate values.
+ */
+export function simulatePartialLiquidation(params: {
+  // Proposed repay
+  repayBaseAmount: bigint
+  // Borrower/market snapshot
+  principal: bigint
+  userIndexWad: bigint
+  borrowIndexWad: bigint
+  // Prices
+  baseTokenPrice: bigint // µUSD of market base token
+  underlyingBasePrice: bigint // µUSD of LST underlying
+  // Collateral LST state
+  collateralLSTAmount: bigint
+  totalDepositsLST: bigint
+  circulatingLST: bigint
+  // Bonus
+  liq_bonus_bps: bigint
+}) {
+  const {
+    repayBaseAmount,
+    principal,
+    userIndexWad,
+    borrowIndexWad,
+    baseTokenPrice,
+    underlyingBasePrice,
+    collateralLSTAmount,
+    totalDepositsLST,
+    circulatingLST,
+    liq_bonus_bps,
+  } = params
+
+  const liveDebtBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
+  const repayBase = repayBaseAmount <= liveDebtBase ? repayBaseAmount : liveDebtBase
+
+  const repayUSD = amountUSD(repayBase, baseTokenPrice) // µUSD
+
+  // seizeUSD = repayUSD * (1 + bonus)
+  const seizeUSD = (repayUSD * (BASIS_POINTS + liq_bonus_bps)) / BASIS_POINTS
+
+  // Convert to LST and cap to available collateral
+  const seizeLST_raw = usdToLST(seizeUSD, underlyingBasePrice, totalDepositsLST, circulatingLST)
+  const seizeLST = seizeLST_raw <= collateralLSTAmount ? seizeLST_raw : collateralLSTAmount
+
+  // New debt and remaining collateral (if the protocol logic returns leftover on full repay, handle off-chain accordingly)
+  const newDebtBase = liveDebtBase - repayBase
+  const remainingLST = collateralLSTAmount - seizeLST
+
+  return {
+    repayBase,
+    repayUSD,
+    seizeUSD,
+    seizeLST_raw,
+    seizeLST, // actual seized after cap
+    newDebtBase,
+    remainingLST,
+  }
+}
+
+// USD -> LST (using exchange rate)
+export function usdToLST(
+  usdAmount: bigint,
+  underlyingBasePrice: bigint, // µUSD
+  totalDepositsLST: bigint,
+  circulatingLST: bigint,
+): bigint {
+  if (usdAmount === 0n || underlyingBasePrice === 0n || totalDepositsLST === 0n || circulatingLST === 0n) return 0n
+  // USD -> underlying units
+  const underlying = (usdAmount * USD_MICRO_UNITS) / underlyingBasePrice
+  // underlying -> LST
+  return (underlying * circulatingLST) / totalDepositsLST
+}
+
+export function amountUSD(
+  amountBaseUnits: bigint,
+  baseTokenPrice: bigint, // µUSD per base token
+): bigint {
+  if (amountBaseUnits === 0n) return 0n
+  return (amountBaseUnits * baseTokenPrice) / USD_MICRO_UNITS
 }

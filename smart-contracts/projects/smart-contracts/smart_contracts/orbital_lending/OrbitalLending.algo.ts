@@ -171,6 +171,9 @@ export class OrbitalLending extends Contract {
   /** Total number of active loans in the system */
   buyout_token_id = GlobalState<UintN64>()
 
+  /** Liquidation bonus in bps (e.g., 500 = 5% bonus to liquidators) */
+  liq_bonus_bps = GlobalState<uint64>()
+
   // ═══════════════════════════════════════════════════════════════════════
   // DEBUG & OPERATIONAL TRACKING
   // ═══════════════════════════════════════════════════════════════════════
@@ -207,6 +210,7 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn - Payment transaction covering minimum balance requirements
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
    * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
+   * @param liq_bonus_bps - Liquidation bonus in basis points (e.g., 500 = 5% bonus to liquidators)
    * @param borrow_gate_enabled - Whether the borrow gate is enabled (1 = enabled, 0 = disabled)
    * @param origination_fee_bps - One-time loan origination fee in basis points
    * @param protocol_share_bps - Protocol's share of interest income in basis points
@@ -218,6 +222,7 @@ export class OrbitalLending extends Contract {
     mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
+    liq_bonus_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
     borrow_gate_enabled: uint64,
@@ -267,6 +272,7 @@ export class OrbitalLending extends Contract {
     this.last_accrual_ts.value = Global.latestTimestamp
     this.last_apr_bps.value = this.base_bps.value
     this.buyout_token_id.value = new UintN64(buyout_token_id)
+    this.liq_bonus_bps.value = liq_bonus_bps
 
     this.total_borrows_principal.value = 0
 
@@ -275,6 +281,16 @@ export class OrbitalLending extends Contract {
         .assetTransfer({
           assetReceiver: Global.currentApplicationAddress,
           xferAsset: this.base_token_id.value.native,
+          assetAmount: 0,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
+    if (this.buyout_token_id.value.native !== 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: Global.currentApplicationAddress,
+          xferAsset: this.buyout_token_id.value.native,
           assetAmount: 0,
           fee: STANDARD_TXN_FEE,
         })
@@ -311,6 +327,7 @@ export class OrbitalLending extends Contract {
     rate_model_type: uint64, // or uint8
     power_gamma_q16: uint64,
     scarcity_K_bps: uint64,
+    liq_bonus_bps: uint64,
   ) {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
 
@@ -338,6 +355,7 @@ export class OrbitalLending extends Contract {
     this.rate_model_type.value = rate_model_type
     this.power_gamma_q16.value = power_gamma_q16
     this.scarcity_K_bps.value = scarcity_K_bps
+    this.liq_bonus_bps.value = liq_bonus_bps
 
     this.params_update_nonce.value += 1
     this.params_updated_at.value = Global.latestTimestamp
@@ -1259,56 +1277,56 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public buyoutSplitASA(
-    // base token is an ASA
     buyer: Account,
     debtor: Account,
-    premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token payment (xUSD)
-    repayAxferTxn: gtxn.AssetTransferTxn, // base token repayment
-    lstAppId: uint64, // the LST app backing the collateral
+    premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
+    repayAxferTxn: gtxn.AssetTransferTxn, // BASE TOKEN (ASA) full DEBT
+    lstAppId: uint64, // LST app backing the collateral
   ): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
 
+    // 1) Make time current
     this.accrueMarket()
 
+    // 2) Load state
     const rec = this.loan_record(debtor).value.copy()
     const collateralAmount: uint64 = rec.collateralAmount.native
     const collateralTokenId: UintN64 = rec.collateralTokenId
 
+    // Live debt (base token units)
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     assert(debtBase > 0, 'NO_DEBT')
 
-    // 2) Collateral USD (LST-aware) and Debt USD
+    // 3) USD legs
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
+    assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
-    // 3) Buyout eligibility: CR_bps > liq_threshold_bps
-    //    CR_bps = collateralUSD / debtUSD × 10_000
-    assert(debtUSDv > 0)
+    // CR in bps
     const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
     const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
-    assert(CR_bps > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
 
-    // 4) Premium rate & total buyout price (USD)
-    //    premiumRateBps = CR_bps / liq_threshold_bps * 10_000 - 10_000
-    const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-    const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value) // > 10_000
-    const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
+    // Premium rate (bps), clamped at 0 below threshold
+    let premiumRateBps: uint64 = 0
+    if (CR_bps > this.liq_threshold_bps.value) {
+      const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
+      const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value) // > 10_000 if CR_bps > thresh
+      premiumRateBps = ratio_bps - BASIS_POINTS
+    }
 
-    // buyoutPriceUSD = collateralUSD * (1 + premiumRateBps / 10_000)
-    const [hBP, lBP] = mulw(collateralUSD, premiumRateBps)
-    const premiumUSD: uint64 = divw(hBP, lBP, BASIS_POINTS)
-    const buyoutPriceUSD: uint64 = collateralUSD + premiumUSD
+    // Premium (USD)
+    const [hP, lP] = mulw(collateralUSD, premiumRateBps)
+    const premiumUSD: uint64 = divw(hP, lP, BASIS_POINTS)
 
-    // 5) Premium must be paid in the buyout token (xUSD)
+    // 4) Convert premium USD → buyout token amount
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
     const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
 
-    // amount of buyout token to cover premiumUSD
     // premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
-    const premiumTokens: uint64 = divw(hPT, lPT, buyoutTokenPrice)
+    const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
-    // Validate premium transfer
+    // Validate premium transfer (exact)
     assertMatch(premiumAxferTxn, {
       sender: buyer,
       assetReceiver: Global.currentApplicationAddress,
@@ -1316,20 +1334,19 @@ export class OrbitalLending extends Contract {
       assetAmount: premiumTokens,
     })
 
-    // 6) Debt must be repaid in the market base token (ASA variant)
+    // 5) Debt repayment in market base token (ASA)
     const baseAssetId = this.base_token_id.value.native
     assertMatch(repayAxferTxn, {
       sender: buyer,
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(baseAssetId),
-      assetAmount: debtBase, // full live debt in base units
+      assetAmount: debtBase, // full live debt
     })
 
-    // 7) State updates: the loan is closed, collateral goes to buyer, aggregates update
+    // 6) Close loan & transfer collateral
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
 
-    // Transfer collateral (LST) to buyer
     itxn
       .assetTransfer({
         assetReceiver: buyer,
@@ -1350,14 +1367,17 @@ export class OrbitalLending extends Contract {
       marketBaseAssetId: acVal.marketBaseAssetId,
     }).copy()
 
-    // Market aggregates:
-    // - Borrowers’ aggregate debt reduces by the amount repaid
+    // Market aggregates
     this.total_borrows.value = this.total_borrows.value - debtBase
-    // 8) Split premium payment 50/50 between protocol and original borrower
+
+    // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
+
+    // 8) Set next-slice APR
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
-    /**
+  /**
    * Purchases a borrower's collateral at a premium using ALGO payment
    * @param buyer - Account that will receive the collateral
    * @param debtor - Account whose loan is being bought out
@@ -1370,16 +1390,15 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public buyoutSplitAlgo(
-    // base token is an ASA
     buyer: Account,
     debtor: Account,
-    premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token payment (xUSD)
-    repayPayTxn: gtxn.AssetTransferTxn, // base ALGO token repayment
-    lstAppId: uint64, // the LST app backing the collateral
+    premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
+    repayPayTxn: gtxn.PaymentTxn, // ALGO DEBT repayment
+    lstAppId: uint64,
   ): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
+    assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
 
-    // 1) Bring market current, compute live debt
+    // 1) Make time current
     this.accrueMarket()
 
     const rec = this.loan_record(debtor).value.copy()
@@ -1389,38 +1408,31 @@ export class OrbitalLending extends Contract {
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     assert(debtBase > 0, 'NO_DEBT')
 
-    // 2) Collateral USD (LST-aware) and Debt USD
+    // 2) USD legs
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
+    assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
-    // 3) Buyout eligibility: CR_bps > liq_threshold_bps
-    //    CR_bps = collateralUSD / debtUSD × 10_000
-    assert(debtUSDv > 0)
     const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
     const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
-    assert(CR_bps > this.liq_threshold_bps.value, 'loan is not eligible for buyout')
 
-    // 4) Premium rate & total buyout price (USD)
-    //    premiumRateBps = CR_bps / liq_threshold_bps * 10_000 - 10_000
-    const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-    const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value) // > 10_000
-    const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
+    let premiumRateBps: uint64 = 0
+    if (CR_bps > this.liq_threshold_bps.value) {
+      const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
+      const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value)
+      premiumRateBps = ratio_bps - BASIS_POINTS
+    }
 
-    // buyoutPriceUSD = collateralUSD * (1 + premiumRateBps / 10_000)
-    const [hBP, lBP] = mulw(collateralUSD, premiumRateBps)
-    const premiumUSD: uint64 = divw(hBP, lBP, BASIS_POINTS)
-    const buyoutPriceUSD: uint64 = collateralUSD + premiumUSD
+    const [hP, lP] = mulw(collateralUSD, premiumRateBps)
+    const premiumUSD: uint64 = divw(hP, lP, BASIS_POINTS)
 
-    // 5) Premium must be paid in the buyout token (xUSD)
+    // 3) Premium in buyout token
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
-    const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
+    const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value)
 
-    // amount of buyout token to cover premiumUSD
-    // premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
-    const premiumTokens: uint64 = divw(hPT, lPT, buyoutTokenPrice)
+    const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
-    // Validate premium transfer
     assertMatch(premiumAxferTxn, {
       sender: buyer,
       assetReceiver: Global.currentApplicationAddress,
@@ -1428,19 +1440,17 @@ export class OrbitalLending extends Contract {
       assetAmount: premiumTokens,
     })
 
-    // 6) Debt must be repaid in the market base token (ASA variant)
-    const baseAssetId = this.base_token_id.value.native
+    // 4) Debt repayment in ALGO
     assertMatch(repayPayTxn, {
       sender: buyer,
-      assetReceiver: Global.currentApplicationAddress,
-      assetAmount: debtBase, // full live debt in base units
+      receiver: Global.currentApplicationAddress,
+      amount: debtBase,
     })
 
-    // 7) State updates: the loan is closed, collateral goes to buyer, aggregates update
+    // 5) Close loan, transfer collateral, update aggregates
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
 
-    // Transfer collateral (LST) to buyer
     itxn
       .assetTransfer({
         assetReceiver: buyer,
@@ -1450,7 +1460,6 @@ export class OrbitalLending extends Contract {
       })
       .submit()
 
-    // Update collateral totals
     const acKey = new AcceptedCollateralKey({ assetId: collateralTokenId })
     const acVal = this.accepted_collaterals(acKey).value.copy()
     const updatedTotal: uint64 = acVal.totalCollateral.native - collateralAmount
@@ -1461,12 +1470,11 @@ export class OrbitalLending extends Contract {
       marketBaseAssetId: acVal.marketBaseAssetId,
     }).copy()
 
-    // Market aggregates:
-    // - Borrowers’ aggregate debt reduces by the amount repaid
     this.total_borrows.value = this.total_borrows.value - debtBase
 
-    // 8) Split premium payment 50/50 between protocol and original borrower
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
+
+    this.last_apr_bps.value = this.current_apr_bps()
   }
 
   private splitPremium(premiumTokens: uint64, buyoutTokenId: uint64, debtor: Account) {
@@ -1650,6 +1658,33 @@ export class OrbitalLending extends Contract {
     // 8) Recompute next rate for subsequent slice (utilization may change only if this affects borrows/deposits; harmless to do)
     this.last_apr_bps.value = this.current_apr_bps()
   }
+  // Convert an intended seize value in USD into LST units, capped to what's available.
+  private seizeLSTFromUSD(
+    seizeUSD: uint64,
+    collateralTokenId: UintN64,
+    lstAppId: uint64,
+    availableLST: uint64,
+  ): uint64 {
+    // USD -> underlying base units
+    const underlyingPrice = this.getOraclePrice(this.getCollateral(collateralTokenId).baseAssetId) // µUSD
+    const [hUnd, lUnd] = mulw(seizeUSD, USD_MICRO_UNITS)
+    const seizeUnderlying: uint64 = divw(hUnd, lUnd, underlyingPrice)
+
+    // underlying -> LST via (underlying * circulating / totalDeposits)
+    const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const total = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const [hL, lL] = mulw(seizeUnderlying, circ)
+    let seizeLST: uint64 = divw(hL, lL, total)
+
+    if (seizeLST > availableLST) seizeLST = availableLST
+    return seizeLST
+  }
 
   /**
    * Liquidates an undercollateralized loan by repaying debt and claiming collateral
@@ -1660,47 +1695,104 @@ export class OrbitalLending extends Contract {
    * @dev Closes the loan and transfers collateral to liquidator
    */
   @abimethod({ allowActions: 'NoOp' })
-  liquidateASA(debtor: Account, axferTxn: gtxn.AssetTransferTxn): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-    const _interestSlice = this.accrueMarket()
-    const record = this.loan_record(debtor).value.copy()
-    const collateralAmount = record.collateralAmount.native
-    const debtAmount: uint64 = this.currentDebtFromSnapshot(record)
-    const collateralTokenId = record.collateralTokenId
-    const acceptedCollateral = this.getCollateral(collateralTokenId)
+  public liquidatePartialASA(
+    debtor: Account,
+    repayAxfer: gtxn.AssetTransferTxn, // liquidator pays base token (ASA)
+    repayBaseAmount: uint64, // amount to repay in base units (≤ live debt)
+    lstAppId: uint64, // LST app backing the collateral
+  ): void {
+    assert(this.loan_record(debtor).exists, 'NO_LOAN')
+    this.accrueMarket()
 
-    const oraclePrice = this.getOraclePrice(collateralTokenId)
-    const [h, l] = mulw(collateralAmount, oraclePrice)
-    const collateralUSD = divw(h, l, 1)
+    const rec = this.loan_record(debtor).value.copy()
+    const collTok: UintN64 = rec.collateralTokenId
+    const collLSTBal: uint64 = rec.collateralAmount.native
+    const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+    assert(liveDebt > 0, 'NO_DEBT')
+    assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
 
-    const CR: uint64 = collateralUSD / debtAmount
-    assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
+    // USD legs (for liquidatability & seize math)
+    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
+    const debtUSDv: uint64 = this.debtUSD(liveDebt)
+    assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
-    //Transfer must be full amount of the loan
-    assertMatch(axferTxn, {
+    // CR_bps = collateralUSD * 10_000 / debtUSD
+    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
+    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
+    assert(CR_bps <= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
+
+    // Validate repayment transfer (ASA base token)
+    const baseAssetId = this.base_token_id.value.native
+    assertMatch(repayAxfer, {
+      sender: op.Txn.sender,
       assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(this.base_token_id.value.native),
-      assetAmount: debtAmount,
+      xferAsset: Asset(baseAssetId),
+      assetAmount: repayBaseAmount,
     })
 
-    //Clawback ASA if needed
+    // Seize value with bonus: seizeUSD = repayUSD * (1 + bonus)
+    const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
+    const [hRU, lRU] = mulw(repayBaseAmount, basePrice)
+    const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
-    //Delete the loan record
-    this.loan_record(debtor).delete()
-    this.active_loan_records.value = this.active_loan_records.value - 1
+    const bonusBps: uint64 = this.liq_bonus_bps.value // add this global param
+    const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
+    const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
 
-    //transfer the collateral to the liquidator (the sender of the txn)
+    // USD -> LST (cap to available)
+    const seizeLST: uint64 = this.seizeLSTFromUSD(seizeUSD, collTok, lstAppId, collLSTBal)
+    assert(seizeLST > 0, 'NOTHING_TO_SEIZE')
+
+    // Transfer seized collateral to liquidator
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
-        xferAsset: collateralTokenId.native,
-        assetAmount: collateralAmount,
+        xferAsset: collTok.native,
+        assetAmount: seizeLST,
         fee: STANDARD_TXN_FEE,
       })
       .submit()
 
-    //Update the collateral total
-    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
+    const remainingLST: uint64 = collLSTBal - seizeLST
+    const newDebtBase: uint64 = liveDebt - repayBaseAmount
+
+    // Update aggregates
+    this.reduceCollateralTotal(collTok, seizeLST)
+    this.total_borrows.value = this.total_borrows.value - repayBaseAmount
+
+    if (newDebtBase === 0) {
+      // Close loan and return any leftover collateral to debtor
+      if (remainingLST > 0) {
+        itxn
+          .assetTransfer({
+            assetReceiver: debtor,
+            xferAsset: collTok.native,
+            assetAmount: remainingLST,
+            fee: STANDARD_TXN_FEE,
+          })
+          .submit()
+        this.reduceCollateralTotal(collTok, remainingLST)
+      }
+      this.loan_record(debtor).delete()
+      this.active_loan_records.value = this.active_loan_records.value - 1
+    } else {
+      // Resnapshot borrower at current index; keep leftover collateral locked
+      const newRec = new LoanRecord({
+        borrowerAddress: rec.borrowerAddress,
+        collateralTokenId: rec.collateralTokenId,
+        collateralAmount: new UintN64(remainingLST),
+        borrowedTokenId: this.base_token_id.value,
+        principal: new UintN64(newDebtBase),
+        userIndexWad: new UintN64(this.borrow_index_wad.value),
+        lastDebtChange: new DebtChange({
+          amount: new UintN64(repayBaseAmount),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(4), // 4 = liquidation repay
+        }),
+      })
+      this.loan_record(debtor).value = newRec.copy()
+    }
+
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
@@ -1713,44 +1805,95 @@ export class OrbitalLending extends Contract {
    * @dev Liquidator must repay full debt amount to claim all collateral
    */
   @abimethod({ allowActions: 'NoOp' })
-  liquidateAlgo(debtor: Account, paymentTxn: gtxn.PaymentTxn): void {
-    assert(this.loan_record(debtor).exists, 'Loan record does not exist')
-    const _interestSlice = this.accrueMarket()
-    const record = this.loan_record(debtor).value.copy()
-    const collateralAmount = record.collateralAmount.native
-    const debtAmount: uint64 = this.currentDebtFromSnapshot(record)
-    const collateralTokenId = record.collateralTokenId
-    const acceptedCollateral = this.getCollateral(collateralTokenId)
+  public liquidatePartialAlgo(
+    debtor: Account,
+    repayPay: gtxn.PaymentTxn, // liquidator pays ALGO
+    repayBaseAmount: uint64, // amount to repay in microALGO (≤ live debt)
+    lstAppId: uint64,
+  ): void {
+    assert(this.base_token_id.value.native === 0, 'BASE_NOT_ALGO')
+    assert(this.loan_record(debtor).exists, 'NO_LOAN')
+    this.accrueMarket()
 
-    const oraclePrice = this.getOraclePrice(collateralTokenId)
-    const [h, l] = mulw(collateralAmount, oraclePrice)
-    const collateralUSD = divw(h, l, 1)
+    const rec = this.loan_record(debtor).value.copy()
+    const collTok: UintN64 = rec.collateralTokenId
+    const collLSTBal: uint64 = rec.collateralAmount.native
+    const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+    assert(liveDebt > 0, 'NO_DEBT')
+    assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
 
-    const CR: uint64 = collateralUSD / debtAmount
-    assert(CR <= this.liq_threshold_bps.value, 'loan is not liquidatable')
+    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
+    const debtUSDv: uint64 = this.debtUSD(liveDebt)
+    assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
-    //Transfer must be full amount of the loan
-    assertMatch(paymentTxn, {
+    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
+    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
+    assert(CR_bps <= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
+
+    // Validate repayment transfer (ALGO)
+    assertMatch(repayPay, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
-      amount: debtAmount,
+      amount: repayBaseAmount,
     })
 
-    //Delete the loan record
-    this.loan_record(debtor).delete()
-    this.active_loan_records.value = this.active_loan_records.value - 1
+    const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
+    const [hRU, lRU] = mulw(repayBaseAmount, basePrice)
+    const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
-    //transfer the collateral to the liquidator (the sender of the txn)
+    const bonusBps: uint64 = this.liq_bonus_bps.value
+    const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
+    const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
+
+    const seizeLST: uint64 = this.seizeLSTFromUSD(seizeUSD, collTok, lstAppId, collLSTBal)
+    assert(seizeLST > 0, 'NOTHING_TO_SEIZE')
+
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
-        xferAsset: collateralTokenId.native,
-        assetAmount: collateralAmount,
+        xferAsset: collTok.native,
+        assetAmount: seizeLST,
         fee: STANDARD_TXN_FEE,
       })
       .submit()
 
-    //Update the collateral total
-    this.reduceCollateralTotal(collateralTokenId, collateralAmount)
+    const remainingLST: uint64 = collLSTBal - seizeLST
+    const newDebtBase: uint64 = liveDebt - repayBaseAmount
+
+    this.reduceCollateralTotal(collTok, seizeLST)
+    this.total_borrows.value = this.total_borrows.value - repayBaseAmount
+
+    if (newDebtBase === 0) {
+      if (remainingLST > 0) {
+        itxn
+          .assetTransfer({
+            assetReceiver: debtor,
+            xferAsset: collTok.native,
+            assetAmount: remainingLST,
+            fee: STANDARD_TXN_FEE,
+          })
+          .submit()
+        this.reduceCollateralTotal(collTok, remainingLST)
+      }
+      this.loan_record(debtor).delete()
+      this.active_loan_records.value = this.active_loan_records.value - 1
+    } else {
+      const newRec = new LoanRecord({
+        borrowerAddress: rec.borrowerAddress,
+        collateralTokenId: rec.collateralTokenId,
+        collateralAmount: new UintN64(remainingLST),
+        borrowedTokenId: this.base_token_id.value,
+        principal: new UintN64(newDebtBase),
+        userIndexWad: new UintN64(this.borrow_index_wad.value),
+        lastDebtChange: new DebtChange({
+          amount: new UintN64(repayBaseAmount),
+          timestamp: new UintN64(Global.latestTimestamp),
+          changeType: new UintN8(4),
+        }),
+      })
+      this.loan_record(debtor).value = newRec.copy()
+    }
+
     this.last_apr_bps.value = this.current_apr_bps()
   }
 

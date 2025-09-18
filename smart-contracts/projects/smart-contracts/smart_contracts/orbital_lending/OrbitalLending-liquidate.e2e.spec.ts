@@ -29,6 +29,7 @@ let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 8500n
 const liq_threshold_bps = 9000n
+const liq_bonus_bps = 1000n
 const origination_fee_bps = 500n
 const protocol_interest_fee_bps = 500n
 const borrow_gate_enabled = 1n // 0 = false, 1 = true
@@ -86,6 +87,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         borrow_gate_enabled,
         oracleAppClient.appId,
         xUSDAssetId,
+        liq_bonus_bps,
       ],
     })
 
@@ -130,6 +132,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         borrow_gate_enabled,
         oracleAppClient.appId,
         xUSDAssetId,
+        liq_bonus_bps
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -642,7 +645,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test('Buyout loan - algo Lending Contract', async () => {
+  test('liquidate loan - algo Lending Contract', async () => {
     const debtor = depositors[0]
     const buyer = buyerAccount
     algoLendingContractClient.algorand.setSignerFromAccount(buyer)
@@ -665,7 +668,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       await algoLendingContractClient.algorand.send.assetOptIn({
         sender: buyer.addr,
         assetId: collateralTokenId,
-        note: 'Opting in to collateral asset for buyout',
+        note: 'Opting in to collateral asset for liquidation',
       })
     }
     const algoGlobalState = await algoLendingContractClient.state.global.getAll()
@@ -758,4 +761,5 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(buyerxUSDBalanceAfter).toEqual(buyerxUSDBalanceBefore - r.premiumTokens)
     expect(buyerCollateralBalanceAfter).toEqual(buyerCollateralBalanceBefore + record.collateralAmount)
   })
+
 })
