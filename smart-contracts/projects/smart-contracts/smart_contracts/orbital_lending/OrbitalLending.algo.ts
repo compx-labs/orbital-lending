@@ -532,13 +532,17 @@ export class OrbitalLending extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   addNewCollateralType(collateralTokenId: UintN64, collateralBaseTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
-    assert(op.Txn.sender === this.admin_account.value)
-    assert(collateralTokenId.native !== baseToken.id)
-    assert(!this.collateralExists(collateralTokenId))
-    assertMatch(mbrTxn, {
-      sender: this.admin_account.value,
-      amount: MBR_COLLATERAL,
-    })
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
+    assert(!this.collateralExists(collateralTokenId), 'COLLATERAL_ALREADY_EXISTS')
+    assertMatch(
+      mbrTxn,
+      {
+        sender: this.admin_account.value,
+        amount: MBR_COLLATERAL,
+      },
+      'INSUFFICIENT_MBR',
+    )
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,

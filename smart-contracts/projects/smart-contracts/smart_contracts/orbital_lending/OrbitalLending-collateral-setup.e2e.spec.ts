@@ -20,9 +20,10 @@ let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 2500n
 const liq_threshold_bps = 1000000n
-const interest_bps = 500n
+const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
+const borrow_gate_enabled = 1n
 
 describe('orbital-lending Testing - collateral setup', () => {
   const localnet = algorandFixture()
@@ -124,10 +125,12 @@ describe('orbital-lending Testing - collateral setup', () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
-        interest_bps,
+        liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
+        borrow_gate_enabled,
         oracleAppClient.appId,
+        xUSDAssetId
       ],
     })
 
@@ -146,7 +149,6 @@ describe('orbital-lending Testing - collateral setup', () => {
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
-    expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
     expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
@@ -168,10 +170,12 @@ describe('orbital-lending Testing - collateral setup', () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
-        interest_bps,
+        liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
+        borrow_gate_enabled,
         oracleAppClient.appId,
+        xUSDAssetId
       ],
     })
 
@@ -219,7 +223,6 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     expect(globalState.ltvBps).toEqual(ltv_bps)
     expect(globalState.liqThresholdBps).toEqual(liq_threshold_bps)
-    expect(globalState.interestBps).toEqual(interest_bps)
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
     expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.lstTokenId).toEqual(lstId)
@@ -229,6 +232,7 @@ describe('orbital-lending Testing - collateral setup', () => {
   })
 
   test('add new collateral - xUSD Lending Contract - cAlgo collateral', async () => {
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
@@ -240,18 +244,19 @@ describe('orbital-lending Testing - collateral setup', () => {
     console.log('Box names before:', boxNames)
 
     await xUSDLendingContractClient.send.addNewCollateralType({
-      args: [cAlgoAssetId, mbrTxn],
+      args: [cAlgoAssetId, 0n, mbrTxn],
       assetReferences: [cAlgoAssetId],
+      sender: managerAccount.addr,
     })
 
     const boxValue = await getCollateralBoxValue(cAlgoAssetId, xUSDLendingContractClient, xUSDLendingContractClient.appClient.appId)
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
-    expect(boxValue.baseAssetId).toEqual(xUSDAssetId)
+    expect(boxValue.baseAssetId).toEqual(0n)
     expect(boxValue.totalCollateral).toEqual(0n)
   })
 
-  test.skip('add existing collateral - xUSD lending contract - Failure expected', async () => {
+  test('add existing collateral - xUSD lending contract - Failure expected', async () => {
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
@@ -261,10 +266,48 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     await expect(
       xUSDLendingContractClient.send.addNewCollateralType({
-        args: [cAlgoAssetId, mbrTxn],
+        args: [cAlgoAssetId, 0n, mbrTxn],
         assetReferences: [cAlgoAssetId],
       }),
     ).rejects.toThrowError()
+  })
+
+  test('addNewCollateralType rejects non-admin caller', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(500_000) })
+    localnet.algorand.setSignerFromAccount(outsider)
+
+    const outsiderAssetResult = await localnet.context.algorand.send.assetCreate({
+      sender: outsider.addr,
+      total: 1_000_000_000n,
+      decimals: 6,
+      defaultFrozen: false,
+      unitName: 'tCOLL',
+      assetName: 'Test Collateral',
+      manager: outsider.addr,
+      reserve: outsider.addr,
+      url: 'https://example.com',
+    })
+    const outsiderCollateralId = outsiderAssetResult.assetId
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: outsider.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(101000n),
+      note: 'Outsider collateral addition',
+    })
+
+    await expect(
+      xUSDLendingContractClient.send.addNewCollateralType({
+        args: [outsiderCollateralId, 0n, mbrTxn],
+        assetReferences: [outsiderCollateralId],
+        sender: outsider.addr,
+      }),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
   })
 
   test('Add token price to oracle', async () => {

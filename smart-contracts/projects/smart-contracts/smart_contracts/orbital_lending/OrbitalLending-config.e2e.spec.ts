@@ -18,6 +18,7 @@ let xUSDAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 2500n
 const liq_threshold_bps = 1000000n
+const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 const borrow_gate_enabled = 1n // 0 = false, 1 = true
@@ -108,27 +109,18 @@ describe('orbital-lending Testing - config', () => {
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
       note: 'Funding contract',
     })
-    /* 
-    @abimethod({ allowActions: 'NoOp' })
-      public initApplication(
-        mbrTxn: gtxn.PaymentTxn,
-        ltv_bps: uint64,
-        liq_threshold_bps: uint64,
-        origination_fee_bps: uint64,
-        protocol_share_bps: uint64,
-        borrow_gate_enabled: uint64,
-        oracle_app_id: Application,
-      ):
-    */
+
     await xUSDLendingContractClient.send.initApplication({
       args: [
         payTxn,
         ltv_bps,
         liq_threshold_bps,
+        liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
         borrow_gate_enabled,
         oracleAppClient.appId,
+        xUSDAssetId
       ],
     })
 
@@ -174,10 +166,12 @@ describe('orbital-lending Testing - config', () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
+        liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
         borrow_gate_enabled,
         oracleAppClient.appId,
+        xUSDAssetId
       ],
     })
 
@@ -231,6 +225,99 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.circulatingLst).toEqual(12000000n)
   })
 
+  test('initApplication rejects non-admin caller', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
+
+    const factory = localnet.algorand.client.getTypedAppFactory(OrbitalLendingFactory, {
+      defaultSender: managerAccount.addr,
+    })
+
+    const { appClient: tempClient } = await factory.send.create.createApplication({
+      args: [managerAccount.addr.publicKey, 0n],
+      sender: managerAccount.addr,
+      accountReferences: [managerAccount.addr],
+      assetReferences: [0n],
+    })
+
+    tempClient.algorand.setSignerFromAccount(managerAccount)
+    const mbrTxn = tempClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: tempClient.appClient.appAddress,
+      amount: microAlgo(INIT_CONTRACT_AMOUNT),
+      note: 'Funding contract',
+    })
+
+    tempClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      tempClient.send.initApplication({
+        args: [
+          mbrTxn,
+          ltv_bps,
+          liq_threshold_bps,
+          liq_bonus_bps,
+          origination_fee_bps,
+          protocol_interest_fee_bps,
+          borrow_gate_enabled,
+          oracleAppClient.appId,
+          xUSDAssetId,
+        ],
+        sender: outsider.addr,
+      })
+    ).rejects.toThrowError()
+  })
+
+  test('non-admin cannot call setRateParams', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(1_000_000) })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      xUSDLendingContractClient.send.setRateParams({
+        args: {
+          baseBps: 50n,
+          utilCapBps: 8000n,
+          kinkNormBps: 5000n,
+          slope1Bps: 1000n,
+          slope2Bps: 2000n,
+          maxAprBps: 6000n,
+          borrowGateEnabled: 1n,
+          emaAlphaBps: 0n,
+          maxAprStepBps: 0n,
+          rateModelType: 0n,
+          powerGammaQ16: 0n,
+          scarcityKBps: 0n,
+          liqBonusBps: liq_bonus_bps,
+        },
+        sender: outsider.addr,
+      })
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('setRateParams rejects invalid util cap', async () => {
+    await expect(
+      xUSDLendingContractClient.send.setRateParams({
+        args: {
+          baseBps: 50n,
+          utilCapBps: 0n,
+          kinkNormBps: 5000n,
+          slope1Bps: 1000n,
+          slope2Bps: 2000n,
+          maxAprBps: 6000n,
+          borrowGateEnabled: 1n,
+          emaAlphaBps: 0n,
+          maxAprStepBps: 0n,
+          rateModelType: 0n,
+          powerGammaQ16: 0n,
+          scarcityKBps: 0n,
+          liqBonusBps: liq_bonus_bps,
+        },
+      })
+    ).rejects.toThrowError()
+  })
+
   /* 
   public setRateParams(
       base_bps: uint64,
@@ -248,8 +335,24 @@ describe('orbital-lending Testing - config', () => {
     )
    */
   test('Set Rate params on xUSD Lending', async () => {
+    const previousNonce = (await xUSDLendingContractClient.state.global.getAll()).paramsUpdateNonce ?? 0n
+
     await xUSDLendingContractClient.send.setRateParams({
-      args: [50n, 8000n, 5000n, 1000n, 2000n, 6000n, 1n, 0n, 0n, 0n, 0n, 0n],
+      /* args: [50n, 8000n, 5000n, 1000n, 2000n, 6000n, 1n, 0n, 0n, 0n, 0n, 0n], */
+      args: {baseBps: 50n,
+        utilCapBps: 8000n,
+        kinkNormBps: 5000n,
+        slope1Bps: 1000n,
+        slope2Bps: 2000n,
+        maxAprBps: 6000n,
+        borrowGateEnabled: 1n, // or uint8
+        emaAlphaBps: 0n,
+        maxAprStepBps: 0n,
+        rateModelType: 0n, // or uint8
+        powerGammaQ16: 0n,
+        scarcityKBps: 0n,
+        liqBonusBps: 500n
+      },
     })
 
     const globalState = await xUSDLendingContractClient.state.global.getAll()
@@ -267,5 +370,6 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.rateModelType).toEqual(0n) // kinked
     expect(globalState.powerGammaQ16).toEqual(0n)
     expect(globalState.scarcityKBps).toEqual(0n)
+    expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
   })
 })
