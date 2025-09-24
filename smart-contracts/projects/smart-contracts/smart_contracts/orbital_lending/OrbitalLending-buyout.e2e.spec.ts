@@ -29,6 +29,7 @@ let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
 const ltv_bps = 8500n
 const liq_threshold_bps = 9000n
+const liquidation_bonus_bps = 500n
 const origination_fee_bps = 500n
 const protocol_interest_fee_bps = 500n
 const borrow_gate_enabled = 1n // 0 = false, 1 = true
@@ -81,6 +82,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
+        liquidation_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
         borrow_gate_enabled,
@@ -125,6 +127,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
+        liquidation_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
         borrow_gate_enabled,

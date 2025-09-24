@@ -1732,7 +1732,17 @@ export class OrbitalLending extends Contract {
 
     // Seize value with bonus: seizeUSD = repayUSD * (1 + bonus)
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
-    const [hRU, lRU] = mulw(repayBaseAmount, basePrice)
+    const closeFactorHalf: uint64 = liveDebt / 2
+    const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
+
+    let repayUsed: uint64 = repayBaseAmount
+    let refundAmount: uint64 = 0
+    if (repayUsed > maxRepayAllowed) {
+      refundAmount = repayUsed - maxRepayAllowed
+      repayUsed = maxRepayAllowed
+    }
+
+    const [hRU, lRU] = mulw(repayUsed, basePrice)
     const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
     const bonusBps: uint64 = this.liq_bonus_bps.value // add this global param
@@ -1754,11 +1764,22 @@ export class OrbitalLending extends Contract {
       .submit()
 
     const remainingLST: uint64 = collLSTBal - seizeLST
-    const newDebtBase: uint64 = liveDebt - repayBaseAmount
+    const newDebtBase: uint64 = liveDebt - repayUsed
 
     // Update aggregates
     this.reduceCollateralTotal(collTok, seizeLST)
-    this.total_borrows.value = this.total_borrows.value - repayBaseAmount
+    this.total_borrows.value = this.total_borrows.value - repayUsed
+
+    if (refundAmount > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: op.Txn.sender,
+          xferAsset: baseAssetId,
+          assetAmount: refundAmount,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
 
     if (newDebtBase === 0) {
       // Close loan and return any leftover collateral to debtor
@@ -1785,7 +1806,7 @@ export class OrbitalLending extends Contract {
         principal: new UintN64(newDebtBase),
         userIndexWad: new UintN64(this.borrow_index_wad.value),
         lastDebtChange: new DebtChange({
-          amount: new UintN64(repayBaseAmount),
+          amount: new UintN64(repayUsed),
           timestamp: new UintN64(Global.latestTimestamp),
           changeType: new UintN8(4), // 4 = liquidation repay
         }),
@@ -1838,7 +1859,17 @@ export class OrbitalLending extends Contract {
     })
 
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
-    const [hRU, lRU] = mulw(repayBaseAmount, basePrice)
+    const closeFactorHalf: uint64 = liveDebt / 2
+    const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
+
+    let repayUsed: uint64 = repayBaseAmount
+    let refundAmount: uint64 = 0
+    if (repayUsed > maxRepayAllowed) {
+      refundAmount = repayUsed - maxRepayAllowed
+      repayUsed = maxRepayAllowed
+    }
+
+    const [hRU, lRU] = mulw(repayUsed, basePrice)
     const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
     const bonusBps: uint64 = this.liq_bonus_bps.value
@@ -1857,11 +1888,21 @@ export class OrbitalLending extends Contract {
       })
       .submit()
 
+    if (refundAmount > 0) {
+      itxn
+        .payment({
+          amount: refundAmount,
+          receiver: op.Txn.sender,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
+
     const remainingLST: uint64 = collLSTBal - seizeLST
-    const newDebtBase: uint64 = liveDebt - repayBaseAmount
+    const newDebtBase: uint64 = liveDebt - repayUsed
 
     this.reduceCollateralTotal(collTok, seizeLST)
-    this.total_borrows.value = this.total_borrows.value - repayBaseAmount
+    this.total_borrows.value = this.total_borrows.value - repayUsed
 
     if (newDebtBase === 0) {
       if (remainingLST > 0) {
@@ -1886,7 +1927,7 @@ export class OrbitalLending extends Contract {
         principal: new UintN64(newDebtBase),
         userIndexWad: new UintN64(this.borrow_index_wad.value),
         lastDebtChange: new DebtChange({
-          amount: new UintN64(repayBaseAmount),
+          amount: new UintN64(repayUsed),
           timestamp: new UintN64(Global.latestTimestamp),
           changeType: new UintN8(4),
         }),
