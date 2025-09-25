@@ -193,6 +193,10 @@ export class OrbitalLending extends Contract {
   params_updated_at = GlobalState<uint64>() // last params change timestamp (ledger seconds)
   params_update_nonce = GlobalState<uint64>() // monotonic counter
 
+  last_interest_applied = GlobalState<uint64>() // last interest application timestamp (ledger seconds)
+  delta_debug = GlobalState<uint64>() // debug variable to track time between interest applications
+  calculateledSimpleWad = GlobalState<uint64>() // debug variable to track last calculated simple wad
+
   /**
    * Creates the lending application contract with initial configuration
    * @param admin - The administrative account that will have privileged access
@@ -981,8 +985,15 @@ export class OrbitalLending extends Contract {
 
     const deltaT: uint64 = now - last
 
+/*     if (deltaT < SECONDS_PER_YEAR) {
+      deltaT = 10000
+    }
+    this.delta_debug.value = deltaT
+    this.last_apr_bps.value = 5000 */
+
     // 1) Compute simple slice factor in INDEX_SCALE
     const simpleWad: uint64 = this.sliceFactorWad(deltaT)
+    this.calculateledSimpleWad.value = simpleWad
     if (simpleWad === 0) {
       this.last_accrual_ts.value = now
       return 0
@@ -1018,11 +1029,13 @@ export class OrbitalLending extends Contract {
     // 5) Apply state updates
     // Borrowers' aggregate debt grows by *full* interest:
     this.total_borrows.value = totalBefore + interest
+    this.last_interest_applied.value = interest
 
     // Depositors earn their share as yield (LST exchange rate rises):
     this.total_deposits.value += depositorInterest
 
     // Protocol takes its fee share:
+    this.fee_pool.value += protocolInterest
     this.payPlatformFees(this.base_token_id.value.native, protocolInterest)
 
     // 6) Close the slice

@@ -8,7 +8,7 @@ export const createToken = async (deployer: Account, tokenName: string, decimals
   //create xusd asset for contract 1
   const assetCreateTxn = await localnet.context.algorand.send.assetCreate({
     sender: deployer.addr,
-    total: 1_700_000_000_000n,
+    total: 1_700_000_000_000_000_000n,
     decimals: decimals,
     defaultFrozen: false,
     unitName: tokenName,
