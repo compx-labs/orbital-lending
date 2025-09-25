@@ -182,7 +182,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Box names before:', boxNames)
 
     await xUSDLendingContractClient.send.addNewCollateralType({
-      args: [cAlgoAssetId, 0, mbrTxn],
+      args: [cAlgoAssetId, 0, mbrTxn, algoLendingContractClient.appId],
       assetReferences: [cAlgoAssetId],
     })
 
@@ -447,7 +447,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(lstTokenId).toBeDefined()
     if (lstTokenId && baseTokenId) {
       await algoLendingContractClient.send.addNewCollateralType({
-        args: [lstTokenId, baseTokenId, mbrTxn],
+        args: [lstTokenId, baseTokenId, mbrTxn, xUSDLendingContractClient.appId],
         assetReferences: [lstTokenId],
       })
 
@@ -694,7 +694,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           .accountInformation(managerAccount.addr)
           .do()
         const expectedOriginationFee = (borrowAmount * origination_fee_bps) / 10_000n
-        expect(BigInt(adminBalanceAfter) - BigInt(adminBalanceBefore)).toEqual(expectedOriginationFee - 1000n)
+        //expect(BigInt(adminBalanceAfter) - BigInt(adminBalanceBefore)).toEqual(expectedOriginationFee - 1000n)
 
         const globalStateAfter = await algoLendingContractClient.state.global.getAll()
         const coount_loanRecords = globalStateAfter.activeLoanRecords
@@ -763,6 +763,41 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter)
       }
     }
+  })
+
+  test('withdraw platform fees - algo Lending Contract', async () => {
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const { amount: adminBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(managerAccount.addr)
+      .do()
+    const globalState = await algoLendingContractClient.state.global.getAll()
+    const feePool = globalState.feePool ?? 0n
+    console.log('Fee pool before withdrawal:', feePool)
+    expect(feePool).toBeGreaterThan(0n)
+
+    const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(1000n),
+      note: 'Funding fee withdrawal',
+    })
+    await algoLendingContractClient.send.withdrawPlatformFees({
+      args: [managerAccount.addr.toString(), mbrTxn],
+      sender: managerAccount.addr,
+    })
+
+    const globalStateAfter = await algoLendingContractClient.state.global.getAll()
+    const feePoolAfter = globalStateAfter.feePool ?? 0n
+    console.log('Fee pool after withdrawal:', feePoolAfter)
+    expect(feePoolAfter).toEqual(0n)
+
+    const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(managerAccount.addr)
+      .do()
+    console.log('Admin balance before fee withdrawal:', adminBalanceBefore)
+    console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
+    expect(adminBalanceAfter).toBeGreaterThan(adminBalanceBefore)
+    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool - 2000n) //subtract mbr
   })
 
   test.skip('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {

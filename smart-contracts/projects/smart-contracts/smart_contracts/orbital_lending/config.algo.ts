@@ -20,6 +20,7 @@ export class AcceptedCollateral extends arc4.Struct<{
   baseAssetId: arc4.UintN64
   marketBaseAssetId: arc4.UintN64
   totalCollateral: arc4.UintN64
+  originatingAppId: arc4.UintN64
 }> {}
 
 export class AcceptedCollateralKey extends arc4.Struct<{

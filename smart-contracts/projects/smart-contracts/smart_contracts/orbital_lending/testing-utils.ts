@@ -25,6 +25,7 @@ export async function getCollateralBoxValue(
     new algosdk.ABIUintType(64), // baseAssetId
     new algosdk.ABIUintType(64), // marketBaseAssetId
     new algosdk.ABIUintType(64), // totalCollateral
+    new algosdk.ABIUintType(64), // originatingAppId
   ])
 
   const boxNames = await appClient.appClient.getBoxNames()

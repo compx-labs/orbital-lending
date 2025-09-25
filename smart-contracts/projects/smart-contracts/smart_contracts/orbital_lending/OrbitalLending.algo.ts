@@ -318,6 +318,7 @@ export class OrbitalLending extends Contract {
    * @param scarcity_K_bps - Scarcity parameter in basis points (0 = no scarcity)
    * @dev Only callable by admin account. Updates all core lending parameters atomically
    */
+  @abimethod({ allowActions: 'NoOp' })
   public setRateParams(
     base_bps: uint64,
     util_cap_bps: uint64,
@@ -509,6 +510,7 @@ export class OrbitalLending extends Contract {
       baseAssetId: collateral.baseAssetId,
       marketBaseAssetId: collateral.marketBaseAssetId,
       totalCollateral: new UintN64(newTotal),
+      originatingAppId: collateral.originatingAppId,
     }).copy()
   }
 
@@ -523,6 +525,7 @@ export class OrbitalLending extends Contract {
       baseAssetId: collateral.baseAssetId,
       marketBaseAssetId: collateral.marketBaseAssetId,
       totalCollateral: new UintN64(newTotal),
+      originatingAppId: collateral.originatingAppId,
     }).copy()
   }
 
@@ -534,7 +537,12 @@ export class OrbitalLending extends Contract {
    * @dev Collateral cannot be the same as the base lending token
    */
   @abimethod({ allowActions: 'NoOp' })
-  addNewCollateralType(collateralTokenId: UintN64, collateralBaseTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
+  addNewCollateralType(
+    collateralTokenId: UintN64,
+    collateralBaseTokenId: UintN64,
+    mbrTxn: gtxn.PaymentTxn,
+    originatingAppId: UintN64,
+  ): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
@@ -553,6 +561,7 @@ export class OrbitalLending extends Contract {
       baseAssetId: collateralBaseTokenId,
       marketBaseAssetId: this.base_token_id.value,
       totalCollateral: new UintN64(0),
+      originatingAppId: originatingAppId,
     })
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     this.accepted_collaterals(key).value = newAcceptedCollateral.copy()
@@ -772,7 +781,7 @@ export class OrbitalLending extends Contract {
     let collateralToUse: uint64 = 0
     if (hasLoan) {
       const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
-      collateralToUse = existingCollateral.native
+      collateralToUse = existingCollateral.native + collateralAmount
     } else {
       collateralToUse = collateralAmount
     }
@@ -802,8 +811,6 @@ export class OrbitalLending extends Contract {
     this.disburseFunds(op.Txn.sender, disbursement)
     this.total_borrows.value = this.total_borrows.value + disbursement
     this.last_apr_bps.value = this.current_apr_bps()
-
-    this.payPlatformFees(this.base_token_id.value.native, fee)
   }
 
   private mintLoanRecord(
@@ -985,7 +992,7 @@ export class OrbitalLending extends Contract {
 
     const deltaT: uint64 = now - last
 
-/*     if (deltaT < SECONDS_PER_YEAR) {
+    /*     if (deltaT < SECONDS_PER_YEAR) {
       deltaT = 10000
     }
     this.delta_debug.value = deltaT
@@ -1036,7 +1043,6 @@ export class OrbitalLending extends Contract {
 
     // Protocol takes its fee share:
     this.fee_pool.value += protocolInterest
-    this.payPlatformFees(this.base_token_id.value.native, protocolInterest)
 
     // 6) Close the slice
     this.last_accrual_ts.value = now
@@ -1260,22 +1266,27 @@ export class OrbitalLending extends Contract {
     }
   }
 
-  private payPlatformFees(assetId: uint64, amount: uint64): void {
-    if (amount > 0) {
-      if (assetId === 0) {
+  public withdrawPlatformFees(paymentReceiver: Account, feeTxn: gtxn.PaymentTxn): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assertMatch(feeTxn, {
+      receiver: Global.currentApplicationAddress,
+      amount: STANDARD_TXN_FEE,
+    })
+    if (this.fee_pool.value > 0) {
+      if (this.base_token_id.value.native === 0) {
         itxn
           .payment({
-            receiver: this.admin_account.value,
-            amount: amount,
+            receiver: paymentReceiver,
+            amount: this.fee_pool.value,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
       } else {
         itxn
           .assetTransfer({
-            assetReceiver: this.admin_account.value,
-            xferAsset: assetId,
-            assetAmount: amount,
+            assetReceiver: paymentReceiver,
+            xferAsset: this.base_token_id.value.native,
+            assetAmount: this.fee_pool.value,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
@@ -1382,6 +1393,7 @@ export class OrbitalLending extends Contract {
       baseAssetId: acVal.baseAssetId,
       totalCollateral: new UintN64(updatedTotal),
       marketBaseAssetId: acVal.marketBaseAssetId,
+      originatingAppId: acVal.originatingAppId,
     }).copy()
 
     // Market aggregates
@@ -1485,6 +1497,7 @@ export class OrbitalLending extends Contract {
       baseAssetId: acVal.baseAssetId,
       totalCollateral: new UintN64(updatedTotal),
       marketBaseAssetId: acVal.marketBaseAssetId,
+      originatingAppId: acVal.originatingAppId,
     }).copy()
 
     this.total_borrows.value = this.total_borrows.value - debtBase
@@ -1529,6 +1542,9 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
 
     const rec = this.loan_record(op.Txn.sender).value.copy()
+    const collateral = this.getCollateral(rec.collateralTokenId)
+    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
+
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
 
@@ -1582,6 +1598,8 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
 
     const rec = this.loan_record(borrower).value.copy()
+    const collateral = this.getCollateral(rec.collateralTokenId)
+    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
 
@@ -1686,6 +1704,9 @@ export class OrbitalLending extends Contract {
     const underlyingPrice = this.getOraclePrice(this.getCollateral(collateralTokenId).baseAssetId) // µUSD
     const [hUnd, lUnd] = mulw(seizeUSD, USD_MICRO_UNITS)
     const seizeUnderlying: uint64 = divw(hUnd, lUnd, underlyingPrice)
+
+    const collateral = this.getCollateral(collateralTokenId)
+    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
 
     // underlying -> LST via (underlying * circulating / totalDeposits)
     const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
@@ -2011,12 +2032,17 @@ export class OrbitalLending extends Contract {
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
       assetAmount: collateralAmount,
+      xferAsset: Asset(collateralTokenId.native),
     })
 
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
   public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
+    // get collateral and check inputs match
+    assert(this.collateralExists(collateralTokenId), 'unknown collateral')
+    const collateralInfo = this.getCollateral(collateralTokenId)
+    assert(collateralInfo.originatingAppId.native === lstApp, 'mismatched LST app')
     // 1) Get LST exchange rate: (totalDeposits / circulatingLST)
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
