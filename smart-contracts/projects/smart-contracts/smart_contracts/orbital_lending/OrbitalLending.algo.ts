@@ -113,9 +113,6 @@ export class OrbitalLending extends Contract {
   /** (Optional) Absolute APR ceiling in bps (0 = no cap). */
   max_apr_bps = GlobalState<uint64>()
 
-  /** If 1, reject borrows that would exceed util_cap_bps. */
-  borrow_gate_enabled = GlobalState<uint64>()
-
   /** (Optional) Utilization EMA weight in bps (0..10_000; 0 disables smoothing). */
   ema_alpha_bps = GlobalState<uint64>()
 
@@ -215,7 +212,6 @@ export class OrbitalLending extends Contract {
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
    * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
    * @param liq_bonus_bps - Liquidation bonus in basis points (e.g., 500 = 5% bonus to liquidators)
-   * @param borrow_gate_enabled - Whether the borrow gate is enabled (1 = enabled, 0 = disabled)
    * @param origination_fee_bps - One-time loan origination fee in basis points
    * @param protocol_share_bps - Protocol's share of interest income in basis points
    * @param oracle_app_id - Application ID of the price oracle contract
@@ -229,7 +225,6 @@ export class OrbitalLending extends Contract {
     liq_bonus_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
-    borrow_gate_enabled: uint64,
     oracle_app_id: Application,
     buyout_token_id: uint64,
   ): void {
@@ -250,7 +245,6 @@ export class OrbitalLending extends Contract {
     this.active_loan_records.value = 0
     this.protocol_share_bps.value = protocol_share_bps
     this.oracle_app.value = oracle_app_id
-    this.borrow_gate_enabled.value = borrow_gate_enabled
     this.lst_token_id.value = new UintN64(99)
     this.base_bps.value = 50
     this.util_cap_bps.value = 8000 // 80% utilization cap
@@ -354,7 +348,6 @@ export class OrbitalLending extends Contract {
     this.slope1_bps.value = slope1_bps
     this.slope2_bps.value = slope2_bps
     this.max_apr_bps.value = max_apr_bps
-    this.borrow_gate_enabled.value = borrow_gate_enabled
     this.ema_alpha_bps.value = ema_alpha_bps
     this.max_apr_step_bps.value = max_apr_step_bps
     this.rate_model_type.value = rate_model_type
@@ -1266,6 +1259,7 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  @abimethod({ allowActions: 'NoOp' })
   public withdrawPlatformFees(paymentReceiver: Account, feeTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assertMatch(feeTxn, {
@@ -1291,6 +1285,7 @@ export class OrbitalLending extends Contract {
           })
           .submit()
       }
+      this.fee_pool.value = 0
     }
   }
 
@@ -1656,6 +1651,13 @@ export class OrbitalLending extends Contract {
     this.accrueMarket() // 1) make time current for everyone
     const loan = this.loan_record(borrower).value.copy()
 
+    assert(loan.collateralTokenId.native === collateralTokenId, 'WRONG_COLLATERAL')
+    // 2) Validate collateral type
+    const acKey = new AcceptedCollateralKey({ assetId: new UintN64(collateralTokenId) })
+    assert(this.accepted_collaterals(acKey).exists, 'BAD_COLLATERAL')
+    const acVal = this.accepted_collaterals(acKey).value.copy()
+    assert(acVal.originatingAppId.native === lstAppId, 'mismatched LST app')
+
     const maxSafe = this.maxWithdrawableCollateralLSTLocal(borrower, lstAppId)
     assert(amountLST <= maxSafe, 'EXCEEDS_LIMITS')
     assert(amountLST < loan.collateralAmount.native, 'INSUFFICIENT_COLLATERAL')
@@ -1995,14 +1997,17 @@ export class OrbitalLending extends Contract {
   } {
     assert(this.loan_record(borrower).exists, 'Loan record does not exist')
     const record = this.loan_record(borrower).value.copy()
+    const collateralRecord = this.getCollateral(record.collateralTokenId)
     this.accrueMarket()
     const debt: uint64 = this.currentDebtFromSnapshot(record)
     const collateralAmount: uint64 = record.collateralAmount.native
     const liqBps: uint64 = this.liq_threshold_bps.value
 
-    const oraclePrice = this.getOraclePrice(record.collateralTokenId)
-    const [hi, lo] = mulw(collateralAmount, oraclePrice)
-    const collateralValueUSD = divw(hi, lo, 1)
+    const collateralValueUSD: uint64 = this.calculateCollateralValueUSD(
+      record.collateralTokenId,
+      collateralAmount,
+      collateralRecord.originatingAppId.native,
+    )
 
     const CR: uint64 = (collateralValueUSD * BASIS_POINTS) / debt
     const eligibleForLiquidation = CR < liqBps
@@ -2081,8 +2086,15 @@ export class OrbitalLending extends Contract {
     this.debug_diff.value = maxBorrowUSD - requestedLoanUSD
 
     assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
+    const capBorrow = this.capBorrowLimit() // e.g., deposits * util_cap / 10_000
+    assert(this.total_borrows.value + requestedLoanAmount <= capBorrow, 'UTIL_CAP_EXCEEDED')
 
     return requestedLoanUSD
+  }
+
+  private capBorrowLimit(): uint64 {
+    const [h, l] = mulw(this.total_deposits.value, this.util_cap_bps.value)
+    return divw(h, l, BASIS_POINTS)
   }
 
   private calculateDisbursement(requestedAmount: uint64): { disbursement: uint64; fee: uint64 } {
