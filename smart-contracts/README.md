@@ -1,6 +1,3 @@
-Got it — here’s a clean, concise **project overview in Markdown** you can drop straight into your `README.md`. It sets the stage before the parameter + checklist sections you already have.
-
----
 
 # Orbital Lending
 
