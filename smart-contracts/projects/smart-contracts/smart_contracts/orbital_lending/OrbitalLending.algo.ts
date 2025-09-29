@@ -251,6 +251,8 @@ export class OrbitalLending extends Contract {
       amount: MBR_CREATE_APP,
     })
 
+    assert(additional_rewards_commission_percentage <= 100, 'COMMISSION_TOO_HIGH')
+
     this.ltv_bps.value = ltv_bps
     this.liq_threshold_bps.value = liq_threshold_bps
     this.origination_fee_bps.value = origination_fee_bps
@@ -358,8 +360,6 @@ export class OrbitalLending extends Contract {
     assert(ema_alpha_bps <= 10_000, 'BAD_EMA_ALPHA')
     // (optional) restrict model types you actually implement now
     assert(rate_model_type === 0 /* kinked */ || rate_model_type === 255 /* fixed */, 'UNSUPPORTED_MODEL')
-
-    // Apply atomically
     this.base_bps.value = base_bps
     this.util_cap_bps.value = util_cap_bps
     this.kink_norm_bps.value = kink_norm_bps
@@ -383,12 +383,10 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Generates a new LST (Liquidity Staking Token) for the base lending token
-   * @param mbrTxn - Payment transaction covering asset creation minimum balance requirements
-   * @dev Only callable by admin. Creates a new asset with 'c' prefix (e.g., cUSDC for USDC)
-   * @dev The LST represents depositor shares in the lending pool
+   * Generates a new LST (Liquidity Staking Token) for the base lending token.
+   * @param mbrTxn Payment transaction covering asset-creation minimum balance.
+   * @dev Admin-only path that mints a brand-new LST mirroring the base token supply.
    */
-  //If generating a new LST for the base token.
   public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -415,12 +413,11 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Opts into an existing LST token created externally
-   * @param lstAssetId - Asset ID of the existing LST token to opt into
-   * @param mbrTxn - Payment transaction covering opt-in minimum balance requirements
-   * @dev Only callable by admin. Use when LST token already exists and needs to be adopted
+   * Opts into an externally created LST token instead of minting a new one.
+   * @param lstAssetId Asset ID of the pre-existing LST contract.
+   * @param mbrTxn Payment covering the opt-in minimum balance requirement.
+   * @dev Admin-only. Use when an LST has already been deployed for this market.
    */
-  //If LST already created externally.
   public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -441,10 +438,10 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Configures the LST token by setting initial circulating supply
-   * @param axferTxn - Asset transfer transaction from admin containing LST tokens
-   * @param circulating_lst - Initial amount of LST tokens to mark as circulating
-   * @dev Only callable by admin. Used to bootstrap LST token circulation after creation/opt-in
+   * Configures the LST token by seeding the initial circulating supply.
+   * @param axferTxn Asset transfer from the admin delivering LST units to the app.
+   * @param circulating_lst Initial circulating amount to record on-chain.
+   * @dev Must be called after `generateLSTToken` or `optInToLST` to finalize setup.
    */
   public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
@@ -501,16 +498,31 @@ export class OrbitalLending extends Contract {
     return result.price.native
   }
 
+  /**
+   * Checks whether a collateral asset has already been registered.
+   * @param collateralTokenId Asset identifier to look up in collateral storage.
+   * @returns True when the collateral entry exists, false otherwise.
+   */
   private collateralExists(collateralTokenId: UintN64): boolean {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     return this.accepted_collaterals(key).exists
   }
 
+  /**
+   * Loads the persisted metadata for a collateral asset.
+   * @param collateralTokenId Asset identifier to fetch.
+   * @returns Collateral configuration copied from box storage.
+   */
   private getCollateral(collateralTokenId: UintN64): AcceptedCollateral {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     return this.accepted_collaterals(key).value.copy()
   }
 
+  /**
+   * Increments the tracked collateral total for an asset.
+   * @param collateralTokenId Asset whose total is being increased.
+   * @param amount Amount of collateral (in LST units) to add.
+   */
   private updateCollateralTotal(collateralTokenId: UintN64, amount: uint64): void {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     const collateral = this.accepted_collaterals(key).value.copy()
@@ -525,6 +537,12 @@ export class OrbitalLending extends Contract {
     }).copy()
   }
 
+  /**
+   * Decrements the tracked collateral total when collateral is returned.
+   * @param collateralTokenId Asset whose total is being reduced.
+   * @param amount Amount of collateral (in LST units) to remove.
+   * @dev Reverts if the requested reduction exceeds the tracked total.
+   */
   private reduceCollateralTotal(collateralTokenId: UintN64, amount: uint64): void {
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId })
     const collateral = this.accepted_collaterals(key).value.copy()
@@ -590,6 +608,11 @@ export class OrbitalLending extends Contract {
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
+  /**
+   * Computes the LST amount owed for a deposit based on local exchange rate.
+   * @param amount Base token amount being deposited.
+   * @returns LST units to mint to the depositor.
+   */
   private calculateLSTDue(amount: uint64): uint64 {
     const [highBits1, lowBits1] = mulw(this.circulating_lst.value, BASIS_POINTS)
 
@@ -601,6 +624,12 @@ export class OrbitalLending extends Contract {
 
   // Calculate how much underlying ASA to return for a given LST amount,
   // by querying the external LST contract’s circulatingLST & totalDeposits.
+  /**
+   * Calculates required underlying ASA using an external LST app's exchange rate.
+   * @param amount LST units being redeemed.
+   * @param lstApp Application ID of the external LST market.
+   * @returns Base asset amount that must be returned.
+   */
   private calculateASADue(amount: uint64, lstApp: uint64): uint64 {
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
@@ -616,6 +645,11 @@ export class OrbitalLending extends Contract {
     return divw(hi, lo, circulatingExternalLST)
   }
 
+  /**
+   * Calculates underlying assets owed for an LST redemption using local state.
+   * @param amount LST units being redeemed within this contract.
+   * @returns Base asset amount that matches the burn.
+   */
   private calculateLSTDueLocal(amount: uint64): uint64 {
     // Calculate the LST due based on the local state of this contract
     const circulatingExternalLST = this.circulating_lst.value
@@ -645,6 +679,7 @@ export class OrbitalLending extends Contract {
     assertMatch(mbrTxn, {
       amount: STANDARD_TXN_FEE,
     })
+    this.addCash(amount)
 
     const _interestSlice = this.accrueMarket()
 
@@ -690,6 +725,7 @@ export class OrbitalLending extends Contract {
     assertMatch(mbrTxn, {
       amount: STANDARD_TXN_FEE,
     })
+    this.addCash(amount)
 
     const _interestSlice = this.accrueMarket()
 
@@ -749,6 +785,7 @@ export class OrbitalLending extends Contract {
     } else {
       asaDue = this.calculateASADue(amount, lstAppId)
     }
+    this.removeCash(asaDue)
 
     assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
     itxn
@@ -820,10 +857,18 @@ export class OrbitalLending extends Contract {
     }
 
     this.disburseFunds(op.Txn.sender, disbursement)
+    this.removeCash(disbursement)
     this.total_borrows.value = this.total_borrows.value + disbursement
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
+  /**
+   * Creates a brand-new loan record for a borrower.
+   * @param disbursement Net amount borrowed in base-token units.
+   * @param collateralTokenId Asset ID of the collateral locking the loan.
+   * @param borrowerAddress Borrower whose account box is mutated.
+   * @param collateralAmount Quantity of collateral deposited alongside the loan.
+   */
   private mintLoanRecord(
     disbursement: uint64,
     collateralTokenId: UintN64,
@@ -848,8 +893,8 @@ export class OrbitalLending extends Contract {
 
     this.active_loan_records.value = this.active_loan_records.value + 1
   }
-  /* 
-  private updateLoanRecord(
+  /*
+  // private updateLoanRecord(
     debtChange: DebtChange,
     totalDebt: uint64,
     collateralTokenId: UintN64,
@@ -879,6 +924,10 @@ export class OrbitalLending extends Contract {
   }
 
   // 0..10_000 over the allowed band [0 .. util_cap_bps * deposits]
+  /**
+   * Calculates utilization normalized to basis points relative to the cap.
+   * @returns Utilization between 0 and 10_000 after capping at the configured limit.
+   */
   private util_norm_bps(): uint64 {
     const D: uint64 = this.total_deposits.value
     const B: uint64 = this.total_borrows.value
@@ -896,6 +945,11 @@ export class OrbitalLending extends Contract {
   }
 
   // Kinked APR from normalized utilization
+  /**
+   * Evaluates the kinked interest-rate curve for a given normalized utilization.
+   * @param U_norm_bps Utilization in basis points (0-10_000) after capping logic.
+   * @returns APR in basis points produced by the model.
+   */
   private apr_bps_kinked(U_norm_bps: uint64): uint64 {
     const base_bps: uint64 = this.base_bps.value
     const kink_norm_bps: uint64 = this.kink_norm_bps.value
@@ -919,6 +973,10 @@ export class OrbitalLending extends Contract {
   }
 
   // SINGLE public entrypoint to get the current APR (bps)
+  /**
+   * Computes the current borrow APR in basis points, applying smoothing and clamps.
+   * @returns APR value used for subsequent accrual slices.
+   */
   public current_apr_bps(): uint64 {
     // Compute normalized utilization (0..10_000)
     const U_raw: uint64 = this.util_norm_bps()
@@ -956,6 +1014,11 @@ export class OrbitalLending extends Contract {
 
   // Returns the simple interest factor for this time slice, scaled by INDEX_SCALE.
   // simple = (last_apr_bps / 10_000) * (Δt / SECONDS_PER_YEAR)
+  /**
+   * Derives the simple-interest slice factor scaled by `INDEX_SCALE` for a time delta.
+   * @param deltaT Elapsed seconds since the last accrual.
+   * @returns Slice factor in wad precision used to advance indices.
+   */
   private sliceFactorWad(deltaT: uint64): uint64 {
     if (deltaT === 0) return 0
 
@@ -970,6 +1033,11 @@ export class OrbitalLending extends Contract {
     return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
   }
 
+  /**
+   * Computes the borrower’s live debt using the current borrow index.
+   * @param rec Stored loan record snapshot for the borrower.
+   * @returns Debt amount in base units respecting the latest index.
+   */
   private currentDebtFromSnapshot(rec: LoanRecord): uint64 {
     const p: uint64 = rec.principal.native
     if (p === 0) return 0
@@ -978,6 +1046,11 @@ export class OrbitalLending extends Contract {
   }
 
   // Roll borrower snapshot forward to "now" without changing what they owe
+  /**
+   * Resynchronizes a loan record with the current borrow index while preserving history.
+   * @param borrower Account whose loan snapshot should be refreshed.
+   * @returns Debt amount that was outstanding before the snapshot update.
+   */
   private syncBorrowerSnapshot(borrower: Account): uint64 {
     const rec = this.loan_record(borrower).value.copy()
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
@@ -996,6 +1069,10 @@ export class OrbitalLending extends Contract {
 
   // Advances the market from last_accrual_ts → now using the *stored* last_apr_bps.
   // Returns the total interest added to total_borrows for this slice.
+  /**
+   * Executes market-wide accrual, updating indices, totals, and fee pools.
+   * @returns Interest amount added to `total_borrows` during this accrual.
+   */
   private accrueMarket(): uint64 {
     const now: uint64 = Global.latestTimestamp
     const last: uint64 = this.last_accrual_ts.value
@@ -1063,65 +1140,11 @@ export class OrbitalLending extends Contract {
     return interest
   }
 
-  /*   private accrueInterest(record: LoanRecord): InterestAccrualReturn {
-    const now = Global.latestTimestamp
-    const last = record.lastAccrualTimestamp.native
-    // If no time has passed, nothing to do
-    if (now <= last)
-      return new InterestAccrualReturn({
-        change: new DebtChange({
-          amount: new UintN64(0),
-          timestamp: new UintN64(Global.latestTimestamp),
-          changeType: new UintN8(1),
-        }),
-        totalDebt: record.totalDebt,
-      })
-
-    const deltaT: uint64 = now - last
-    const principal: uint64 = record.totalDebt.native
-
-    // Replace with curve calcualtion
-    const rateBps: uint64 = this.current_apr_bps()
-
-    // 1) Compute principal * rateBps → wide multiply
-    const [hi1, lo1] = mulw(principal, rateBps)
-    // 2) Convert basis points to fraction: divide by 10_000
-    const rateScaled: uint64 = divw(hi1, lo1, BASIS_POINTS)
-    // 3) Multiply by time delta: rateScaled * deltaT  → wide multiply
-    const [hi2, lo2] = mulw(rateScaled, deltaT)
-    // 4) Divide by seconds_per_year to get interest amount
-    const interest: uint64 = divw(hi2, lo2, SECONDS_PER_YEAR)
-
-    const protoBps: uint64 = this.protocol_share_bps.value
-    const depositorBps: uint64 = BASIS_POINTS - protoBps
-
-    // depositor’s share = interest * depositorBps / 10_000
-    const [hiDep, loDep] = mulw(interest, depositorBps)
-    const depositorInterest: uint64 = divw(hiDep, loDep, BASIS_POINTS)
-
-    // protocol’s share = remainder
-    const protocolInterest: uint64 = interest - depositorInterest
-
-    // 3) Credit the shares
-    // a) Depositors earn yield: bump total_deposits (so LSTs become worth more)
-    this.total_deposits.value += depositorInterest
-    // b) Protocol earnings: add to fee_pool
-    this.fee_pool.value += protocolInterest
-
-    // 4) Update borrower’s outstanding debt (principal + full interest)
-
-    const newPrincipal: uint64 = principal + interest
-
-    return new InterestAccrualReturn({
-      change: new DebtChange({
-        amount: new UintN64(interest),
-        timestamp: new UintN64(Global.latestTimestamp),
-        changeType: new UintN8(1),
-      }),
-      totalDebt: new UintN64(newPrincipal),
-    })
-  } */
-
+  /**
+   * Fetches the stored loan record for a borrower (without accrual).
+   * @param borrowerAddress Borrower whose record should be returned.
+   * @returns Loan record snapshot stored in the box map.
+   */
   getLoanRecord(borrowerAddress: Account): LoanRecord {
     return this.loan_record(borrowerAddress).value
   }
@@ -1155,6 +1178,7 @@ export class OrbitalLending extends Contract {
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
     this.total_borrows.value -= repaymentAmount
+    this.addCash(repaymentAmount)
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1183,39 +1207,6 @@ export class OrbitalLending extends Contract {
         principal: new UintN64(remainingDebt),
         userIndexWad: new UintN64(this.borrow_index_wad.value),
       }).copy()
-
-      /*  // Might need to remove this and return any excess
-    assert(repaymentAmount <= iar.totalDebt.native)
-    const remainingDebt: uint64 = iar.totalDebt.native - repaymentAmount
-    this.total_borrows.value = this.total_borrows.value - repaymentAmount
-
-    if (remainingDebt === 0) {
-      //Delete box reference
-      this.loan_record(op.Txn.sender).delete()
-      this.active_loan_records.value = this.active_loan_records.value - 1
-
-      itxn
-        .assetTransfer({
-          assetReceiver: op.Txn.sender,
-          xferAsset: loanRecord.collateralTokenId.native,
-          assetAmount: loanRecord.collateralAmount.native,
-        })
-        .submit()
-    } else {
-      // Update the record and mint a new ASA
-      this.updateLoanRecord(
-        new DebtChange({
-          amount: new UintN64(repaymentAmount),
-          timestamp: new UintN64(Global.latestTimestamp),
-          changeType: new UintN8(2), // 2 for repayment
-        }), // scaledDownDisbursement
-        remainingDebt, // new debt
-        loanRecord.collateralTokenId, // collateral type
-        op.Txn.sender, // borrower
-        loanRecord.collateralAmount.native, // collateral locked
-      )
-    }
-    this.last_apr_bps.value = this.current_apr_bps() */
     }
   }
 
@@ -1246,6 +1237,7 @@ export class OrbitalLending extends Contract {
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
     this.total_borrows.value -= repaymentAmount
+    this.addCash(repaymentAmount)
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1277,6 +1269,11 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Withdraws accumulated protocol fees and commission to the admin-controlled account.
+   * @param paymentReceiver Address receiving the payout.
+   * @param feeTxn Separate payment covering inner-transaction fees.
+   */
   @abimethod({ allowActions: 'NoOp' })
   public withdrawPlatformFees(paymentReceiver: Account, feeTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
@@ -1284,12 +1281,13 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: STANDARD_TXN_FEE,
     })
-    if (this.fee_pool.value > 0) {
+    const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
+    if (payout > 0) {
       if (this.base_token_id.value.native === 0) {
         itxn
           .payment({
             receiver: paymentReceiver,
-            amount: this.fee_pool.value + this.current_accumulated_commission.value,
+            amount: payout,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
@@ -1298,11 +1296,12 @@ export class OrbitalLending extends Contract {
           .assetTransfer({
             assetReceiver: paymentReceiver,
             xferAsset: this.base_token_id.value.native,
-            assetAmount: this.fee_pool.value + this.current_accumulated_commission.value,
+            assetAmount: payout,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
       }
+      this.removeCash(payout)
       this.fee_pool.value = 0
       this.current_accumulated_commission.value = 0
     }
@@ -1412,6 +1411,7 @@ export class OrbitalLending extends Contract {
 
     // Market aggregates
     this.total_borrows.value = this.total_borrows.value - debtBase
+    this.addCash(debtBase)
 
     // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
@@ -1515,12 +1515,19 @@ export class OrbitalLending extends Contract {
     }).copy()
 
     this.total_borrows.value = this.total_borrows.value - debtBase
+    this.addCash(debtBase)
 
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
 
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
+  /**
+   * Splits buyout premium payments evenly between the protocol and the original borrower.
+   * @param premiumTokens Total premium paid in the buyout token.
+   * @param buyoutTokenId Asset ID of the premium token (e.g., xUSD).
+   * @param debtor Borrower whose collateral was bought out.
+   */
   private splitPremium(premiumTokens: uint64, buyoutTokenId: uint64, debtor: Account) {
     // split premium payments 50/50 between protocol and original borrower
     const halfPremium: uint64 = premiumTokens / 2
@@ -1544,12 +1551,22 @@ export class OrbitalLending extends Contract {
       .submit()
   }
 
+  /**
+   * Converts a base-token debt amount into USD micro-units using the oracle price.
+   * @param debtBaseUnits Debt amount measured in base-token micro units.
+   * @returns Equivalent value denominated in USD micro-units.
+   */
   private debtUSD(debtBaseUnits: uint64): uint64 {
     const baseTokenPrice: uint64 = this.getOraclePrice(this.base_token_id.value) // price of market base token
     const [h, l] = mulw(debtBaseUnits, baseTokenPrice)
     return divw(h, l, USD_MICRO_UNITS) // micro-USD
   }
 
+  /**
+   * Computes how much LST collateral the caller can withdraw using live market data.
+   * @param lstAppId External LST app backing the collateral.
+   * @returns Maximum withdrawable LST balance for the borrower.
+   */
   @abimethod({ allowActions: 'NoOp' })
   public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
     assert(this.loan_record(op.Txn.sender).exists, 'NO_LOAN')
@@ -1607,6 +1624,12 @@ export class OrbitalLending extends Contract {
     return removableLST
   }
 
+  /**
+   * Local helper mirroring `maxWithdrawableCollateralLST` without ABI overhead.
+   * @param borrower Account whose collateral capacity is being evaluated.
+   * @param lstAppId External LST app that priced the collateral.
+   * @returns Maximum withdrawable LST amount using cached state.
+   */
   private maxWithdrawableCollateralLSTLocal(borrower: Account, lstAppId: uint64): uint64 {
     assert(this.loan_record(borrower).exists, 'NO_LOAN')
     this.accrueMarket()
@@ -1662,6 +1685,12 @@ export class OrbitalLending extends Contract {
     return removableLST
   }
 
+  /**
+   * Allows borrowers to withdraw a portion of their collateral within safety limits.
+   * @param amountLST Amount of LST being withdrawn.
+   * @param collateralTokenId Asset ID of the collateral LST.
+   * @param lstAppId LST application ID used for exchange-rate validation.
+   */
   @abimethod({ allowActions: 'NoOp' })
   public withdrawCollateral(amountLST: uint64, collateralTokenId: uint64, lstAppId: uint64): void {
     assert(amountLST > 0, 'ZERO_AMOUNT')
@@ -1714,7 +1743,14 @@ export class OrbitalLending extends Contract {
     // 8) Recompute next rate for subsequent slice (utilization may change only if this affects borrows/deposits; harmless to do)
     this.last_apr_bps.value = this.current_apr_bps()
   }
-  // Convert an intended seize value in USD into LST units, capped to what's available.
+  /**
+   * Converts a USD seize value into an LST amount while capping to available collateral.
+   * @param seizeUSD USD value of collateral that should be seized (with bonus).
+   * @param collateralTokenId LST asset representing the collateral.
+   * @param lstAppId External LST app used for exchange-rate lookups.
+   * @param availableLST Total LST currently pledged for the borrower.
+   * @returns LST amount that can be safely seized.
+   */
   private seizeLSTFromUSD(
     seizeUSD: uint64,
     collateralTokenId: UintN64,
@@ -1828,6 +1864,7 @@ export class OrbitalLending extends Contract {
     // Update aggregates
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
+    this.addCash(repayUsed)
 
     if (refundAmount > 0) {
       itxn
@@ -1838,6 +1875,7 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+      this.removeCash(refundAmount)
     }
 
     if (newDebtBase === 0) {
@@ -1955,6 +1993,7 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+      this.removeCash(refundAmount)
     }
 
     const remainingLST: uint64 = collLSTBal - seizeLST
@@ -1962,6 +2001,7 @@ export class OrbitalLending extends Contract {
 
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
+    this.addCash(repayUsed)
 
     if (newDebtBase === 0) {
       if (remainingLST > 0) {
@@ -2043,8 +2083,18 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * No-op method kept for compatibility with interfaces that expect a gas entry point.
+   */
   gas(): void {}
 
+  /**
+   * Performs stateless validation of a borrow request’s collateral transfer and fees.
+   * @param assetTransferTxn Collateral transfer backing the borrow.
+   * @param collateralAmount Amount of collateral pledged.
+   * @param collateralTokenId Asset ID of the collateral LST.
+   * @param mbrTxn Payment covering additional box storage fees.
+   */
   private validateBorrowRequest(
     assetTransferTxn: gtxn.AssetTransferTxn,
     collateralAmount: uint64,
@@ -2062,6 +2112,13 @@ export class OrbitalLending extends Contract {
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
+  /**
+   * Calculates the USD value of a collateral position using the LST exchange rate and oracle price.
+   * @param collateralTokenId LST asset representing the collateral.
+   * @param collateralAmount Amount of LST units held.
+   * @param lstApp LST application ID supplying exchange-rate data.
+   * @returns Collateral value denominated in USD micro-units.
+   */
   public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
     // get collateral and check inputs match
     assert(this.collateralExists(collateralTokenId), 'unknown collateral')
@@ -2095,6 +2152,13 @@ export class OrbitalLending extends Contract {
     return collateralUSD
   }
 
+  /**
+   * Validates a requested loan amount against LTV and utilization caps.
+   * @param requestedLoanAmount Loan amount expressed in base-token units.
+   * @param maxBorrowUSD USD borrowing limit derived from collateral.
+   * @param baseTokenOraclePrice Oracle price for the base token.
+   * @returns Requested loan converted to USD micro-units.
+   */
   private validateLoanAmount(requestedLoanAmount: uint64, maxBorrowUSD: uint64, baseTokenOraclePrice: uint64): uint64 {
     // Convert requested loan to USD
     const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
@@ -2111,11 +2175,20 @@ export class OrbitalLending extends Contract {
     return requestedLoanUSD
   }
 
+  /**
+   * Computes the protocol-level borrow cap based on current deposits and utilization limit.
+   * @returns Maximum allowable aggregate borrow amount in base units.
+   */
   private capBorrowLimit(): uint64 {
     const [h, l] = mulw(this.total_deposits.value, this.util_cap_bps.value)
     return divw(h, l, BASIS_POINTS)
   }
 
+  /**
+   * Splits a requested borrow amount into net disbursement and protocol fee.
+   * @param requestedAmount Total amount requested by the borrower.
+   * @returns Struct containing net disbursement and fee portion.
+   */
   private calculateDisbursement(requestedAmount: uint64): { disbursement: uint64; fee: uint64 } {
     const fee: uint64 = (requestedAmount * this.origination_fee_bps.value) / BASIS_POINTS
     const disbursement: uint64 = requestedAmount - fee
@@ -2126,6 +2199,16 @@ export class OrbitalLending extends Contract {
     return { disbursement, fee }
   }
 
+  /**
+   * Handles top-up logic when an existing borrower draws additional funds.
+   * @param borrower Borrower account being updated.
+   * @param collateralAmount Additional collateral being deposited.
+   * @param disbursement Net new principal issued.
+   * @param maxBorrowUSD Maximum borrowable USD post top-up.
+   * @param baseTokenOraclePrice Oracle price for the base token.
+   * @param requestedLoanAmount Requested delta in base units.
+   * @param collateralTokenId Collateral asset identifier.
+   */
   private processLoanTopUp(
     borrower: Account,
     collateralAmount: uint64,
@@ -2165,6 +2248,11 @@ export class OrbitalLending extends Contract {
     // 6) Update collateral running total
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
   }
+  /**
+   * Sends base-token funds to the borrower via inner transactions.
+   * @param borrower Borrower receiving the funds.
+   * @param amount Amount of base asset to disburse.
+   */
   private disburseFunds(borrower: Account, amount: uint64): void {
     if (this.base_token_id.value.native === 0) {
       itxn
@@ -2186,55 +2274,90 @@ export class OrbitalLending extends Contract {
     }
   }
 
+  /**
+   * Harvests newly accrued consensus rewards for ALGO-based markets.
+   * @dev Admin-only; credits rewards to deposits and commissions to fee buckets.
+   */
+  @abimethod({ allowActions: 'NoOp' })
   pickupAlgoRewards(): void {
     assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
 
-    // total amount of newly paid in consensus rewards
-    let amount: uint64 =
-      Global.currentApplicationAddress.balance -
-      Global.currentApplicationAddress.minBalance -
-      this.total_additional_rewards.value -
-      this.total_deposits.value -
-      this.current_accumulated_commission.value
-    // less commission
-    if (amount > MINIMUM_ADDITIONAL_REWARD) {
-      const newCommissionPayment: uint64 = (amount / 100) * this.commission_percentage.value
-      this.current_accumulated_commission.value = this.current_accumulated_commission.value + newCommissionPayment
-      this.total_commission_earned.value = this.total_commission_earned.value + newCommissionPayment
-      amount = amount - newCommissionPayment
-      this.total_additional_rewards.value = this.total_additional_rewards.value + amount
-      this.total_deposits.value = this.total_deposits.value + amount
+    const spendable: uint64 = Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance
+
+    if (spendable <= this.cash_on_hand.value) {
+      return // no new consensus payout to harvest
     }
+
+    const rawReward: uint64 = spendable - this.cash_on_hand.value
+    if (rawReward <= MINIMUM_ADDITIONAL_REWARD) {
+      return // defer tiny rewards
+    }
+
+    this.addCash(rawReward)
+
+    const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
+    const commission: uint64 = divw(hi, lo, 100)
+
+    this.current_accumulated_commission.value += commission
+    this.total_commission_earned.value += commission
+
+    const netReward: uint64 = rawReward - commission
+    this.total_additional_rewards.value += netReward
+    this.total_deposits.value += netReward
   }
 
+  /**
+   * Harvests newly accrued rewards for ASA-based markets.
+   * @dev Admin-only; mirrors logic of `pickupAlgoRewards` for ASA base tokens.
+   */
+  @abimethod({ allowActions: 'NoOp' })
   pickupASARewards(): void {
     assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
 
     const baseAsset = Asset(this.base_token_id.value.native)
     const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
 
-    // total amount of newly paid in consensus rewards
-    let amount: uint64 =
-      assetBalance -
-      this.total_additional_rewards.value -
-      this.total_deposits.value -
-      this.current_accumulated_commission.value
-    // less commission
-    if (amount > MINIMUM_ADDITIONAL_REWARD) {
-      const newCommissionPayment: uint64 = (amount / 100) * this.commission_percentage.value
-      this.current_accumulated_commission.value = this.current_accumulated_commission.value + newCommissionPayment
-      this.total_commission_earned.value = this.total_commission_earned.value + newCommissionPayment
-      amount = amount - newCommissionPayment
-      this.total_additional_rewards.value = this.total_additional_rewards.value + amount
-      this.total_deposits.value = this.total_deposits.value + amount
+    if (assetBalance <= this.cash_on_hand.value) {
+      return // nothing new arrived
     }
+
+    const rawReward: uint64 = assetBalance - this.cash_on_hand.value
+    if (rawReward <= MINIMUM_ADDITIONAL_REWARD) {
+      return
+    }
+
+    this.addCash(rawReward)
+
+    const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
+    const commission: uint64 = divw(hi, lo, 100)
+
+    this.current_accumulated_commission.value += commission
+    this.total_commission_earned.value += commission
+
+    const netReward: uint64 = rawReward - commission
+    this.total_additional_rewards.value += netReward
+    this.total_deposits.value += netReward
   }
 
+  /**
+   * Reads the global go-online fee required for validator participation.
+   * @returns Fee amount in microALGOs required by consensus staking.
+   */
   private getGoOnlineFee(): uint64 {
     // this will be needed to determine if our pool is currently NOT eligible and we thus need to pay the fee.
     return Global.payoutsGoOnlineFee
   }
 
+  /**
+   * Registers the application account as an Algorand consensus participant.
+   * @param feePayment Payment covering the go-online fee that accompanies the keyreg.
+   * @param votePK Voting public key for participation.
+   * @param selectionPK VRF selection key.
+   * @param stateProofPK State proof key for light-client support.
+   * @param voteFirst First round for which the key is valid.
+   * @param voteLast Last round for which the key is valid.
+   * @param voteKeyDilution Dilution factor for the participation key.
+   */
   goOnline(
     feePayment: gtxn.PaymentTxn,
     votePK: bytes,
@@ -2259,18 +2382,30 @@ export class OrbitalLending extends Contract {
       voteLast: voteLast,
       voteKeyDilution: voteKeyDilution,
       fee: extraFee,
-    })
+    }).submit()
   }
 
+  /**
+   * Unregisters the application account from consensus participation.
+   */
   goOffline(): void {
     assert(op.Txn.sender === this.admin_account.value, 'Only admin can go offline')
     itxn.keyRegistration({ fee: 0 }).submit()
   }
 
+  /**
+   * Increases tracked cash-on-hand when base tokens enter the contract.
+   * @param amount Base-token amount to add to the ledger mirror.
+   */
   private addCash(amount: uint64): void {
     this.cash_on_hand.value = this.cash_on_hand.value + amount
   }
 
+  /**
+   * Decreases tracked cash-on-hand when the contract emits base tokens.
+   * @param amount Base-token amount to deduct from the ledger mirror.
+   * @dev Reverts if the contract lacks sufficient tracked cash.
+   */
   private removeCash(amount: uint64): void {
     assert(this.cash_on_hand.value >= amount, 'INSUFFICIENT_CASH')
     this.cash_on_hand.value = this.cash_on_hand.value - amount
