@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/explicit-member-accessibility */
-import { Account, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
+import { Account, bytes, gtxn, uint64 } from '@algorandfoundation/algorand-typescript'
 import {
   abimethod,
   Application,
@@ -25,6 +25,7 @@ import {
   INDEX_SCALE,
   InterestAccrualReturn,
   LoanRecord,
+  MINIMUM_ADDITIONAL_REWARD,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 import {
@@ -172,6 +173,20 @@ export class OrbitalLending extends Contract {
   liq_bonus_bps = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
+  // EXTERNAL / CONSENSUS REWARDS
+  // ═══════════════════════════════════════════════════════════════════════
+
+  commission_percentage = GlobalState<uint64>()
+
+  current_accumulated_commission = GlobalState<uint64>()
+
+  total_commission_earned = GlobalState<uint64>()
+
+  total_additional_rewards = GlobalState<uint64>()
+
+  cash_on_hand = GlobalState<uint64>()
+
+  // ═══════════════════════════════════════════════════════════════════════
   // DEBUG & OPERATIONAL TRACKING
   // ═══════════════════════════════════════════════════════════════════════
 
@@ -227,6 +242,7 @@ export class OrbitalLending extends Contract {
     protocol_share_bps: uint64,
     oracle_app_id: Application,
     buyout_token_id: uint64,
+    additional_rewards_commission_percentage: uint64,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
 
@@ -271,7 +287,9 @@ export class OrbitalLending extends Contract {
     this.last_apr_bps.value = this.base_bps.value
     this.buyout_token_id.value = new UintN64(buyout_token_id)
     this.liq_bonus_bps.value = liq_bonus_bps
-
+    this.total_commission_earned.value = 0
+    this.current_accumulated_commission.value = 0
+    this.commission_percentage.value = additional_rewards_commission_percentage
     this.total_borrows_principal.value = 0
 
     if (this.base_token_id.value.native !== 0) {
@@ -1271,7 +1289,7 @@ export class OrbitalLending extends Contract {
         itxn
           .payment({
             receiver: paymentReceiver,
-            amount: this.fee_pool.value,
+            amount: this.fee_pool.value + this.current_accumulated_commission.value,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
@@ -1280,12 +1298,13 @@ export class OrbitalLending extends Contract {
           .assetTransfer({
             assetReceiver: paymentReceiver,
             xferAsset: this.base_token_id.value.native,
-            assetAmount: this.fee_pool.value,
+            assetAmount: this.fee_pool.value + this.current_accumulated_commission.value,
             fee: STANDARD_TXN_FEE,
           })
           .submit()
       }
       this.fee_pool.value = 0
+      this.current_accumulated_commission.value = 0
     }
   }
 
@@ -2165,6 +2184,96 @@ export class OrbitalLending extends Contract {
         })
         .submit()
     }
+  }
+
+  pickupAlgoRewards(): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
+
+    // total amount of newly paid in consensus rewards
+    let amount: uint64 =
+      Global.currentApplicationAddress.balance -
+      Global.currentApplicationAddress.minBalance -
+      this.total_additional_rewards.value -
+      this.total_deposits.value -
+      this.current_accumulated_commission.value
+    // less commission
+    if (amount > MINIMUM_ADDITIONAL_REWARD) {
+      const newCommissionPayment: uint64 = (amount / 100) * this.commission_percentage.value
+      this.current_accumulated_commission.value = this.current_accumulated_commission.value + newCommissionPayment
+      this.total_commission_earned.value = this.total_commission_earned.value + newCommissionPayment
+      amount = amount - newCommissionPayment
+      this.total_additional_rewards.value = this.total_additional_rewards.value + amount
+      this.total_deposits.value = this.total_deposits.value + amount
+    }
+  }
+
+  pickupASARewards(): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
+
+    const baseAsset = Asset(this.base_token_id.value.native)
+    const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
+
+    // total amount of newly paid in consensus rewards
+    let amount: uint64 =
+      assetBalance -
+      this.total_additional_rewards.value -
+      this.total_deposits.value -
+      this.current_accumulated_commission.value
+    // less commission
+    if (amount > MINIMUM_ADDITIONAL_REWARD) {
+      const newCommissionPayment: uint64 = (amount / 100) * this.commission_percentage.value
+      this.current_accumulated_commission.value = this.current_accumulated_commission.value + newCommissionPayment
+      this.total_commission_earned.value = this.total_commission_earned.value + newCommissionPayment
+      amount = amount - newCommissionPayment
+      this.total_additional_rewards.value = this.total_additional_rewards.value + amount
+      this.total_deposits.value = this.total_deposits.value + amount
+    }
+  }
+
+  private getGoOnlineFee(): uint64 {
+    // this will be needed to determine if our pool is currently NOT eligible and we thus need to pay the fee.
+    return Global.payoutsGoOnlineFee
+  }
+
+  goOnline(
+    feePayment: gtxn.PaymentTxn,
+    votePK: bytes,
+    selectionPK: bytes,
+    stateProofPK: bytes,
+    voteFirst: uint64,
+    voteLast: uint64,
+    voteKeyDilution: uint64,
+  ): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can go online')
+
+    const extraFee = this.getGoOnlineFee()
+    assertMatch(feePayment, {
+      receiver: Global.currentApplicationAddress,
+      amount: extraFee,
+    })
+    itxn.keyRegistration({
+      voteKey: votePK,
+      selectionKey: selectionPK,
+      stateProofKey: stateProofPK,
+      voteFirst: voteFirst,
+      voteLast: voteLast,
+      voteKeyDilution: voteKeyDilution,
+      fee: extraFee,
+    })
+  }
+
+  goOffline(): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can go offline')
+    itxn.keyRegistration({ fee: 0 }).submit()
+  }
+
+  private addCash(amount: uint64): void {
+    this.cash_on_hand.value = this.cash_on_hand.value + amount
+  }
+
+  private removeCash(amount: uint64): void {
+    assert(this.cash_on_hand.value >= amount, 'INSUFFICIENT_CASH')
+    this.cash_on_hand.value = this.cash_on_hand.value - amount
   }
 }
 
