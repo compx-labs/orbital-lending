@@ -17,7 +17,7 @@ export interface getBoxValueReturnType {
 
 export async function getCollateralBoxValue(
   index: bigint,
-  appClient: OrbitalLendingClient,
+  appClient: any,
   appId: bigint,
 ): Promise<getBoxValueReturnType> {
   const acceptedCollateralType = new algosdk.ABITupleType([
@@ -338,7 +338,6 @@ export function accrueMarketSlice({
   // interest = totalBorrows * simple   (simple in WAD)
   const interest = (totalBorrows * simpleWad) / INDEX_SCALE
 
-  const depositorBps = BASIS_POINTS - 0n // you’ll pass protocol split below
   // We’ll split using protocolBps supplied by the test, so make it a param:
   return { interest, simpleWad, dt }
 }
@@ -349,7 +348,6 @@ export function applyInterestSplit({
   totalBorrows,
   totalDeposits,
   feePool,
-  lastAccrualTs,
   now,
 }: {
   interest: bigint

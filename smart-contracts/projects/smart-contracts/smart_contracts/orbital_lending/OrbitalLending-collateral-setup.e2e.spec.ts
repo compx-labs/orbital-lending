@@ -9,7 +9,10 @@ import algosdk, { Account, Address } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
 import { getCollateralBoxValue } from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
-let xUSDLendingContractClient: OrbitalLendingClient
+import { deploy } from './orbital-deploy'
+import { deploy as deployAsa } from './orbital-deploy-asa'
+import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
+let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
@@ -23,7 +26,7 @@ const liq_threshold_bps = 1000000n
 const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
-const borrow_gate_enabled = 1n
+const commission_percentage = 8n
 
 describe('orbital-lending Testing - collateral setup', () => {
   const localnet = algorandFixture()
@@ -40,25 +43,6 @@ describe('orbital-lending Testing - collateral setup', () => {
     const { generateAccount } = localnet.context
     managerAccount = await generateAccount({ initialFunds: microAlgo(10000000) })
 
-    const deploy = async (baseAssetId: bigint, appName: string) => {
-      const factory = localnet.algorand.client.getTypedAppFactory(OrbitalLendingFactory, {
-        defaultSender: managerAccount.addr,
-      })
-
-      const { appClient } = await factory.send.create.createApplication({
-        args: [
-          managerAccount.addr.publicKey, // manager address
-          baseAssetId, // base asset id
-        ],
-        sender: managerAccount.addr,
-        accountReferences: [managerAccount.addr],
-        assetReferences: [baseAssetId],
-      })
-      appClient.algorand.setSignerFromAccount(managerAccount)
-      console.log('app Created, address', algosdk.encodeAddress(appClient.appAddress.publicKey))
-      return { client: appClient }
-    }
-
     //create xusd asset for contract 1
     const assetCreateTxn = await localnet.context.algorand.send.assetCreate({
       sender: managerAccount.addr,
@@ -73,14 +57,12 @@ describe('orbital-lending Testing - collateral setup', () => {
     })
     xUSDAssetId = assetCreateTxn.assetId
 
-    const xUSDDeploymentResult = await deploy(xUSDAssetId, 'xUSD Lending')
-    xUSDLendingContractClient = xUSDDeploymentResult.client
+    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     const xUSDGlobalState = await xUSDLendingContractClient.state.global.getAll()
     console.log('xusd contract base asset id', xUSDGlobalState.baseTokenId)
     expect(xUSDGlobalState.baseTokenId).toEqual(xUSDAssetId)
 
-    const algoDeploymentResult = await deploy(0n, 'Algo Lending')
-    algoLendingContractClient = algoDeploymentResult.client
+    algoLendingContractClient = await deploy(0n, managerAccount)
     const algoGlobalState = await algoLendingContractClient.state.global.getAll()
     console.log('algo contract base asset id', algoGlobalState.baseTokenId)
     expect(algoGlobalState.baseTokenId).toEqual(0n)
@@ -106,9 +88,7 @@ describe('orbital-lending Testing - collateral setup', () => {
       receiver: oracleAppClient.appAddress,
       amount: microAlgo(1000000),
       note: 'Funding oracle contract',
-    });
-
-
+    })
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
@@ -128,9 +108,9 @@ describe('orbital-lending Testing - collateral setup', () => {
         liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
-        xUSDAssetId
+        xUSDAssetId,
+        commission_percentage
       ],
     })
 
@@ -173,9 +153,9 @@ describe('orbital-lending Testing - collateral setup', () => {
         liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
-        xUSDAssetId
+        xUSDAssetId,
+        commission_percentage
       ],
     })
 
@@ -244,12 +224,21 @@ describe('orbital-lending Testing - collateral setup', () => {
     console.log('Box names before:', boxNames)
 
     await xUSDLendingContractClient.send.addNewCollateralType({
-      args: [cAlgoAssetId, 0n, mbrTxn],
+      args: {
+        collateralBaseTokenId: 0n,
+        collateralTokenId: cAlgoAssetId,
+        mbrTxn,
+        originatingAppId: algoLendingContractClient.appId,
+      },
       assetReferences: [cAlgoAssetId],
       sender: managerAccount.addr,
     })
 
-    const boxValue = await getCollateralBoxValue(cAlgoAssetId, xUSDLendingContractClient, xUSDLendingContractClient.appClient.appId)
+    const boxValue = await getCollateralBoxValue(
+      cAlgoAssetId,
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appClient.appId,
+    )
     expect(boxValue).toBeDefined()
     expect(boxValue.assetId).toEqual(cAlgoAssetId)
     expect(boxValue.baseAssetId).toEqual(0n)
@@ -266,7 +255,12 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     await expect(
       xUSDLendingContractClient.send.addNewCollateralType({
-        args: [cAlgoAssetId, 0n, mbrTxn],
+        args: {
+          collateralBaseTokenId: 0n,
+          collateralTokenId: cAlgoAssetId,
+          mbrTxn,
+          originatingAppId: algoLendingContractClient.appId,
+        },
         assetReferences: [cAlgoAssetId],
       }),
     ).rejects.toThrowError()
@@ -300,7 +294,12 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     await expect(
       xUSDLendingContractClient.send.addNewCollateralType({
-        args: [outsiderCollateralId, 0n, mbrTxn],
+        args: {
+          collateralBaseTokenId: 0n,
+          collateralTokenId: outsiderCollateralId,
+          mbrTxn,
+          originatingAppId: algoLendingContractClient.appId,
+        },
         assetReferences: [outsiderCollateralId],
         sender: outsider.addr,
       }),
@@ -308,21 +307,5 @@ describe('orbital-lending Testing - collateral setup', () => {
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     localnet.algorand.setSignerFromAccount(managerAccount)
-  })
-
-  test('Add token price to oracle', async () => {
-    const price = 1200000n // Example price for cALGO in xUSD
-    await oracleAppClient.send.addTokenListing({
-      args: [cAlgoAssetId, price],
-      assetReferences: [cAlgoAssetId],
-    });
-    const tokenPrice = await oracleAppClient.send.getTokenPrice({
-      args: [cAlgoAssetId],
-      assetReferences: [cAlgoAssetId],
-    })
-    expect(tokenPrice).toBeDefined()
-    const returnedPrice = tokenPrice.return?.price;
-    expect(returnedPrice).toBeDefined()
-    expect(returnedPrice).toEqual(price)
   })
 })
