@@ -12,6 +12,7 @@ export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
 export const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
 export const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 export const MINIMUM_ADDITIONAL_REWARD: uint64 = 10_000
+export const MIGRATION_FEE: uint64 = 500_000 // 0.5 Algo
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
@@ -44,4 +45,15 @@ export class LoanRecord extends arc4.Struct<{
 export class InterestAccrualReturn extends arc4.Struct<{
   change: DebtChange
   totalDebt: arc4.UintN64
+}> {}
+
+export class MigrationSnapshot extends arc4.Struct<{
+  totalDeposits: arc4.UintN64
+  totalBorrows: arc4.UintN64
+  circulatingLst: arc4.UintN64
+  cashOnHand: arc4.UintN64
+  feePool: arc4.UintN64
+  totalAdditionalRewards: arc4.UintN64
+  currentAccumulatedCommission: arc4.UintN64
+  totalCommissionEarned: arc4.UintN64
 }> {}
