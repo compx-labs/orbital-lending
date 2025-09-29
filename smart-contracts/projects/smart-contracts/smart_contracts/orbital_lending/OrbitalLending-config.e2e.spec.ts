@@ -21,7 +21,8 @@ const liq_threshold_bps = 1000000n
 const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
-const borrow_gate_enabled = 1n // 0 = false, 1 = true
+const additional_rewards_commission_percentage = 8n
+
 
 describe('orbital-lending Testing - config', () => {
   const localnet = algorandFixture()
@@ -118,9 +119,9 @@ describe('orbital-lending Testing - config', () => {
         liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
-        xUSDAssetId
+        xUSDAssetId,
+        additional_rewards_commission_percentage
       ],
     })
 
@@ -169,9 +170,10 @@ describe('orbital-lending Testing - config', () => {
         liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
-        xUSDAssetId
+        xUSDAssetId,
+        additional_rewards_commission_percentage
+
       ],
     })
 
@@ -258,9 +260,9 @@ describe('orbital-lending Testing - config', () => {
           liq_bonus_bps,
           origination_fee_bps,
           protocol_interest_fee_bps,
-          borrow_gate_enabled,
           oracleAppClient.appId,
           xUSDAssetId,
+          additional_rewards_commission_percentage
         ],
         sender: outsider.addr,
       })
@@ -281,12 +283,8 @@ describe('orbital-lending Testing - config', () => {
           slope1Bps: 1000n,
           slope2Bps: 2000n,
           maxAprBps: 6000n,
-          borrowGateEnabled: 1n,
-          emaAlphaBps: 0n,
           maxAprStepBps: 0n,
           rateModelType: 0n,
-          powerGammaQ16: 0n,
-          scarcityKBps: 0n,
           liqBonusBps: liq_bonus_bps,
         },
         sender: outsider.addr,
@@ -306,12 +304,8 @@ describe('orbital-lending Testing - config', () => {
           slope1Bps: 1000n,
           slope2Bps: 2000n,
           maxAprBps: 6000n,
-          borrowGateEnabled: 1n,
-          emaAlphaBps: 0n,
           maxAprStepBps: 0n,
           rateModelType: 0n,
-          powerGammaQ16: 0n,
-          scarcityKBps: 0n,
           liqBonusBps: liq_bonus_bps,
         },
       })
@@ -345,12 +339,8 @@ describe('orbital-lending Testing - config', () => {
         slope1Bps: 1000n,
         slope2Bps: 2000n,
         maxAprBps: 6000n,
-        borrowGateEnabled: 1n, // or uint8
-        emaAlphaBps: 0n,
         maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
-        powerGammaQ16: 0n,
-        scarcityKBps: 0n,
         liqBonusBps: 500n
       },
     })
@@ -363,13 +353,9 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.kinkNormBps).toEqual(5000n)
     expect(globalState.slope1Bps).toEqual(1000n)
     expect(globalState.slope2Bps).toEqual(2000n)
-    expect(globalState.borrowGateEnabled).toEqual(1n)
     expect(globalState.maxAprBps).toEqual(6000n)
-    expect(globalState.emaAlphaBps).toEqual(0n)
     expect(globalState.maxAprStepBps).toEqual(0n)
     expect(globalState.rateModelType).toEqual(0n) // kinked
-    expect(globalState.powerGammaQ16).toEqual(0n)
-    expect(globalState.scarcityKBps).toEqual(0n)
     expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
   })
 })

@@ -47,7 +47,7 @@ import {
 
 // Instead of scattered magic numbers, centralize them
 
-@contract({ name: 'orbital-lending', avmVersion: 11 })
+@contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
   // ═══════════════════════════════════════════════════════════════════════
   // CORE TOKEN CONFIGURATION
@@ -636,31 +636,35 @@ export class OrbitalLending extends Contract {
     return divw(hi, lo, circulatingExternalLST)
   }
 
-
   /**
-   * Deposits ALGO into the lending pool and receives LST tokens in return
-   * @param depositTxn - Payment transaction depositing ALGO to the contract
-   * @param amount - Amount of ALGO being deposited (in microALGOs)
+   * Deposits base assets (ASA) into the lending pool and receives LST tokens in return
+   * @param assetTransferTxn - Asset transfer transaction depositing base tokens to the contract
+   * @param amount - Amount of base tokens being deposited
    * @param mbrTxn - Payment transaction covering transaction fees
-   * @dev Similar to depositASA but specifically for ALGO deposits when base_token_id is 0
    * @dev Mints LST tokens proportional to deposit amount based on current exchange rate
+   * @dev If this is the first deposit, LST:asset ratio is 1:1
    */
   @abimethod({ allowActions: 'NoOp' })
-  depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
-    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    assertMatch(depositTxn, {
-      receiver: Global.currentApplicationAddress,
-      amount: amount,
+    assertMatch(assetTransferTxn, {
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: baseToken,
+      assetAmount: amount,
     })
     assertMatch(mbrTxn, {
       amount: STANDARD_TXN_FEE,
     })
+    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.addCash(amount)
 
     const _interestSlice = this.accrueMarket()
 
     let lstDue: uint64 = 0
+    const depositBalance = op.AssetHolding.assetBalance(
+      Global.currentApplicationAddress,
+      this.base_token_id.value.native,
+    )
     if (this.total_deposits.value === 0) {
       lstDue = amount
     } else {
@@ -720,11 +724,11 @@ export class OrbitalLending extends Contract {
     this.removeCash(asaDue)
 
     assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
-
     itxn
-      .payment({
-        receiver: op.Txn.sender,
-        amount: asaDue,
+      .assetTransfer({
+        assetReceiver: op.Txn.sender,
+        xferAsset: this.base_token_id.value.native,
+        assetAmount: asaDue,
         fee: STANDARD_TXN_FEE,
       })
       .submit()
@@ -1053,24 +1057,26 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Repays a loan using ALGO and optionally releases collateral
-   * @param paymentTxn - Payment transaction sending ALGO repayment to contract
-   * @param amount - Amount of ALGO being repaid (in microALGOs)
+   * Repays a loan using ASA tokens and optionally releases collateral
+   * @param assetTransferTxn - Asset transfer transaction sending repayment tokens to contract
+   * @param amount - Amount of base tokens being repaid
    * @param templateReserveAddress - Reserve address for potential future use
-   * @dev Similar to repayLoanASA but specifically for ALGO repayments
    * @dev Accrues interest before processing repayment
    * @dev Full repayment closes loan and returns all collateral
+   * @dev Partial repayment updates remaining debt amount
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
+  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, repaymentAmount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    assertMatch(paymentTxn, {
-      receiver: Global.currentApplicationAddress,
-      amount: repaymentAmount,
+    assertMatch(assetTransferTxn, {
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: baseToken,
+      assetAmount: repaymentAmount,
     })
     const _interestSlice = this.accrueMarket()
     const loanRecord = this.getLoanRecord(op.Txn.sender)
+
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
 
@@ -1128,9 +1134,10 @@ export class OrbitalLending extends Contract {
     const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
     if (payout > 0) {
       itxn
-        .payment({
-          receiver: paymentReceiver,
-          amount: payout,
+        .assetTransfer({
+          assetReceiver: paymentReceiver,
+          xferAsset: this.base_token_id.value.native,
+          assetAmount: payout,
           fee: STANDARD_TXN_FEE,
         })
         .submit()
@@ -1142,23 +1149,21 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Purchases a borrower's collateral at a premium using ALGO payment
+   * Purchases a borrower's collateral at a premium when loan is above liquidation threshold
    * @param buyer - Account that will receive the collateral
    * @param debtor - Account whose loan is being bought out
-   * @param premiumAxferTxn - Asset transfer transaction with buyout token payment (xUSD)
-   * @param repayPayTxn - ALGO payment transaction with base token repayment
-   * @param lstAppId - The LST app backing the collateral
-   * @dev Similar to buyoutASA but uses ALGO payment instead of asset transfer
+   * @param axferTxn - Asset transfer transaction with buyout payment
    * @dev Buyout price includes premium based on how far above liquidation threshold
    * @dev Only available when collateral ratio exceeds liquidation threshold
+   * @dev Closes the loan and transfers collateral to buyer
    */
   @abimethod({ allowActions: 'NoOp' })
-  public buyoutSplitAlgo(
+  public buyoutSplitASA(
     buyer: Account,
     debtor: Account,
     premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
-    repayPayTxn: gtxn.PaymentTxn, // ALGO DEBT repayment
-    lstAppId: uint64,
+    repayAxferTxn: gtxn.AssetTransferTxn, // BASE TOKEN (ASA) full DEBT
+    lstAppId: uint64, // LST app backing the collateral
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
@@ -1166,38 +1171,45 @@ export class OrbitalLending extends Contract {
     // 1) Make time current
     this.accrueMarket()
 
+    // 2) Load state
     const rec = this.loan_record(debtor).value.copy()
     const collateralAmount: uint64 = rec.collateralAmount.native
     const collateralTokenId: UintN64 = rec.collateralTokenId
 
+    // Live debt (base token units)
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     assert(debtBase > 0, 'NO_DEBT')
 
-    // 2) USD legs
+    // 3) USD legs
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
+    // CR in bps
     const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
     const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
 
+    // Premium rate (bps), clamped at 0 below threshold
     let premiumRateBps: uint64 = 0
     if (CR_bps > this.liq_threshold_bps.value) {
       const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-      const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value)
+      const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value) // > 10_000 if CR_bps > thresh
       premiumRateBps = ratio_bps - BASIS_POINTS
     }
 
+    // Premium (USD)
     const [hP, lP] = mulw(collateralUSD, premiumRateBps)
     const premiumUSD: uint64 = divw(hP, lP, BASIS_POINTS)
 
-    // 3) Premium in buyout token
+    // 4) Convert premium USD → buyout token amount
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
-    const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value)
+    const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
 
+    // premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
+    // Validate premium transfer (exact)
     assertMatch(premiumAxferTxn, {
       sender: buyer,
       assetReceiver: Global.currentApplicationAddress,
@@ -1205,14 +1217,16 @@ export class OrbitalLending extends Contract {
       assetAmount: premiumTokens,
     })
 
-    // 4) Debt repayment in ALGO
-    assertMatch(repayPayTxn, {
+    // 5) Debt repayment in market base token (ASA)
+    const baseAssetId = this.base_token_id.value.native
+    assertMatch(repayAxferTxn, {
       sender: buyer,
-      receiver: Global.currentApplicationAddress,
-      amount: debtBase,
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(baseAssetId),
+      assetAmount: debtBase, // full live debt
     })
 
-    // 5) Close loan, transfer collateral, update aggregates
+    // 6) Close loan & transfer collateral
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
 
@@ -1225,6 +1239,7 @@ export class OrbitalLending extends Contract {
       })
       .submit()
 
+    // Update collateral totals
     const acKey = new AcceptedCollateralKey({ assetId: collateralTokenId })
     const acVal = this.accepted_collaterals(acKey).value.copy()
     const updatedTotal: uint64 = acVal.totalCollateral.native - collateralAmount
@@ -1236,11 +1251,14 @@ export class OrbitalLending extends Contract {
       originatingAppId: acVal.originatingAppId,
     }).copy()
 
+    // Market aggregates
     this.total_borrows.value = this.total_borrows.value - debtBase
     this.addCash(debtBase)
 
+    // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
 
+    // 8) Set next-slice APR
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
@@ -1507,23 +1525,22 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Liquidates an undercollateralized loan using ALGO payment
+   * Liquidates an undercollateralized loan by repaying debt and claiming collateral
    * @param debtor - Account whose loan is being liquidated
-   * @param paymentTxn - ALGO payment transaction with full debt repayment
-   * @dev Similar to liquidateASA but uses ALGO payment instead of asset transfer
+   * @param axferTxn - Asset transfer transaction with full debt repayment
    * @dev Only available when collateral ratio falls below liquidation threshold
    * @dev Liquidator must repay full debt amount to claim all collateral
+   * @dev Closes the loan and transfers collateral to liquidator
    */
   @abimethod({ allowActions: 'NoOp' })
-  public liquidatePartialAlgo(
+  public liquidatePartialASA(
     debtor: Account,
-    repayPay: gtxn.PaymentTxn, // liquidator pays ALGO
-    repayBaseAmount: uint64, // amount to repay in microALGO (≤ live debt)
-    lstAppId: uint64,
+    repayAxfer: gtxn.AssetTransferTxn, // liquidator pays base token (ASA)
+    repayBaseAmount: uint64, // amount to repay in base units (≤ live debt)
+    lstAppId: uint64, // LST app backing the collateral
   ): void {
-    assert(this.base_token_id.value.native === 0, 'BASE_NOT_ALGO')
-    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assert(this.loan_record(debtor).exists, 'NO_LOAN')
+    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
 
     const rec = this.loan_record(debtor).value.copy()
@@ -1533,21 +1550,26 @@ export class OrbitalLending extends Contract {
     assert(liveDebt > 0, 'NO_DEBT')
     assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
 
+    // USD legs (for liquidatability & seize math)
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
 
+    // CR_bps = collateralUSD * 10_000 / debtUSD
     const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
     const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
     assert(CR_bps <= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
-    // Validate repayment transfer (ALGO)
-    assertMatch(repayPay, {
+    // Validate repayment transfer (ASA base token)
+    const baseAssetId = this.base_token_id.value.native
+    assertMatch(repayAxfer, {
       sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: repayBaseAmount,
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(baseAssetId),
+      assetAmount: repayBaseAmount,
     })
 
+    // Seize value with bonus: seizeUSD = repayUSD * (1 + bonus)
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
     const closeFactorHalf: uint64 = liveDebt / 2
     const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
@@ -1562,13 +1584,15 @@ export class OrbitalLending extends Contract {
     const [hRU, lRU] = mulw(repayUsed, basePrice)
     const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
-    const bonusBps: uint64 = this.liq_bonus_bps.value
+    const bonusBps: uint64 = this.liq_bonus_bps.value // add this global param
     const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
     const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
 
+    // USD -> LST (cap to available)
     const seizeLST: uint64 = this.seizeLSTFromUSD(seizeUSD, collTok, lstAppId, collLSTBal)
     assert(seizeLST > 0, 'NOTHING_TO_SEIZE')
 
+    // Transfer seized collateral to liquidator
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
@@ -1578,25 +1602,28 @@ export class OrbitalLending extends Contract {
       })
       .submit()
 
+    const remainingLST: uint64 = collLSTBal - seizeLST
+    const newDebtBase: uint64 = liveDebt - repayUsed
+
+    // Update aggregates
+    this.reduceCollateralTotal(collTok, seizeLST)
+    this.total_borrows.value = this.total_borrows.value - repayUsed
+    this.addCash(repayUsed)
+
     if (refundAmount > 0) {
       itxn
-        .payment({
-          amount: refundAmount,
-          receiver: op.Txn.sender,
+        .assetTransfer({
+          assetReceiver: op.Txn.sender,
+          xferAsset: baseAssetId,
+          assetAmount: refundAmount,
           fee: STANDARD_TXN_FEE,
         })
         .submit()
       this.removeCash(refundAmount)
     }
 
-    const remainingLST: uint64 = collLSTBal - seizeLST
-    const newDebtBase: uint64 = liveDebt - repayUsed
-
-    this.reduceCollateralTotal(collTok, seizeLST)
-    this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
-
     if (newDebtBase === 0) {
+      // Close loan and return any leftover collateral to debtor
       if (remainingLST > 0) {
         itxn
           .assetTransfer({
@@ -1611,6 +1638,7 @@ export class OrbitalLending extends Contract {
       this.loan_record(debtor).delete()
       this.active_loan_records.value = this.active_loan_records.value - 1
     } else {
+      // Resnapshot borrower at current index; keep leftover collateral locked
       const newRec = new LoanRecord({
         borrowerAddress: rec.borrowerAddress,
         collateralTokenId: rec.collateralTokenId,
@@ -1621,7 +1649,7 @@ export class OrbitalLending extends Contract {
         lastDebtChange: new DebtChange({
           amount: new UintN64(repayUsed),
           timestamp: new UintN64(Global.latestTimestamp),
-          changeType: new UintN8(4),
+          changeType: new UintN8(4), // 4 = liquidation repay
         }),
       })
       this.loan_record(debtor).value = newRec.copy()
@@ -1847,32 +1875,34 @@ export class OrbitalLending extends Contract {
    */
   private disburseFunds(borrower: Account, amount: uint64): void {
     itxn
-      .payment({
-        receiver: borrower,
-        amount: amount,
+      .assetTransfer({
+        assetReceiver: borrower,
+        xferAsset: this.base_token_id.value.native,
+        assetAmount: amount,
         fee: STANDARD_TXN_FEE,
       })
       .submit()
   }
 
   /**
-   * Harvests newly accrued consensus rewards for ALGO-based markets.
-   * @dev Admin-only; credits rewards to deposits and commissions to fee buckets.
+   * Harvests newly accrued rewards for ASA-based markets.
+   * @dev Admin-only; mirrors logic of `pickupAlgoRewards` for ASA base tokens.
    */
   @abimethod({ allowActions: 'NoOp' })
-  pickupAlgoRewards(): void {
+  pickupASARewards(): void {
     assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
 
-    const spendable: uint64 = Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance
+    const baseAsset = Asset(this.base_token_id.value.native)
+    const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
 
-    if (spendable <= this.cash_on_hand.value) {
-      return // no new consensus payout to harvest
+    if (assetBalance <= this.cash_on_hand.value) {
+      return // nothing new arrived
     }
 
-    const rawReward: uint64 = spendable - this.cash_on_hand.value
+    const rawReward: uint64 = assetBalance - this.cash_on_hand.value
     if (rawReward <= MINIMUM_ADDITIONAL_REWARD) {
-      return // defer tiny rewards
+      return
     }
 
     this.addCash(rawReward)
@@ -1887,6 +1917,7 @@ export class OrbitalLending extends Contract {
     this.total_additional_rewards.value += netReward
     this.total_deposits.value += netReward
   }
+
   /**
    * Initiates migration by sweeping balances from this contract to the migration administrator.
    * @param feeTxn Payment covering all inner-transaction fees required for the sweep.
@@ -1897,7 +1928,6 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
     assertMatch(feeTxn, { amount: MIGRATION_FEE })
-    this.goOffline()
 
     //get lst balance
     const lstAsset = Asset(this.lst_token_id.value.native)
@@ -1912,34 +1942,18 @@ export class OrbitalLending extends Contract {
         fee: STANDARD_TXN_FEE,
       })
       .submit()
-
-    if (this.base_token_id.value.native === 0) {
-      //send ALGO
-      const algoBalance: uint64 =
-        Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance - STANDARD_TXN_FEE
-      if (algoBalance > 0) {
-        itxn
-          .payment({
-            receiver: this.migration_admin.value,
-            amount: algoBalance,
-            fee: STANDARD_TXN_FEE,
-          })
-          .submit()
-      }
-    } else {
-      //send ASA
-      const baseAsset = Asset(this.base_token_id.value.native)
-      const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
-      if (assetBalance > 0) {
-        itxn
-          .assetTransfer({
-            assetReceiver: this.migration_admin.value,
-            xferAsset: this.base_token_id.value.native,
-            assetAmount: assetBalance,
-            fee: STANDARD_TXN_FEE,
-          })
-          .submit()
-      }
+    //send ASA
+    const baseAsset = Asset(this.base_token_id.value.native)
+    const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
+    if (assetBalance > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: this.migration_admin.value,
+          xferAsset: this.base_token_id.value.native,
+          assetAmount: assetBalance,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
     }
 
     return new MigrationSnapshot({
@@ -1963,14 +1977,14 @@ export class OrbitalLending extends Contract {
    * @param migrationAdmin Account expected to have initiated the migration.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public acceptMigrationAlgoContract(
+  public acceptMigrationASAContract(
     lstTransferTxn: gtxn.AssetTransferTxn,
     algoTxn: gtxn.PaymentTxn,
+    baseAssetTransferTxn: gtxn.AssetTransferTxn,
     snapshot: MigrationSnapshot,
     migrationAdmin: Account,
   ): void {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
-
     assertMatch(lstTransferTxn, {
       sender: migrationAdmin,
       assetReceiver: Global.currentApplicationAddress,
@@ -1980,6 +1994,12 @@ export class OrbitalLending extends Contract {
       sender: migrationAdmin,
       receiver: Global.currentApplicationAddress,
     })
+    assertMatch(baseAssetTransferTxn, {
+      sender: migrationAdmin,
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(this.base_token_id.value.native),
+    })
+
     //set accounting state
     this.cash_on_hand.value = snapshot.cashOnHand.native
     this.total_deposits.value = snapshot.totalDeposits.native
@@ -1989,65 +2009,6 @@ export class OrbitalLending extends Contract {
     this.total_commission_earned.value = snapshot.totalCommissionEarned.native
     this.current_accumulated_commission.value = snapshot.currentAccumulatedCommission.native
     this.fee_pool.value = snapshot.feePool.native
-  }
-
-  /**
-   * Reads the global go-online fee required for validator participation.
-   * @returns Fee amount in microALGOs required by consensus staking.
-   */
-  private getGoOnlineFee(): uint64 {
-    // this will be needed to determine if our pool is currently NOT eligible and we thus need to pay the fee.
-    return Global.payoutsGoOnlineFee
-  }
-
-  /**
-   * Registers the application account as an Algorand consensus participant.
-   * @param feePayment Payment covering the go-online fee that accompanies the keyreg.
-   * @param votePK Voting public key for participation.
-   * @param selectionPK VRF selection key.
-   * @param stateProofPK State proof key for light-client support.
-   * @param voteFirst First round for which the key is valid.
-   * @param voteLast Last round for which the key is valid.
-   * @param voteKeyDilution Dilution factor for the participation key.
-   */
-  goOnline(
-    feePayment: gtxn.PaymentTxn,
-    votePK: bytes,
-    selectionPK: bytes,
-    stateProofPK: bytes,
-    voteFirst: uint64,
-    voteLast: uint64,
-    voteKeyDilution: uint64,
-  ): void {
-    assert(op.Txn.sender === this.admin_account.value, 'Only admin can go online')
-
-    const extraFee = this.getGoOnlineFee()
-    assertMatch(feePayment, {
-      receiver: Global.currentApplicationAddress,
-      amount: extraFee,
-    })
-    itxn
-      .keyRegistration({
-        voteKey: votePK,
-        selectionKey: selectionPK,
-        stateProofKey: stateProofPK,
-        voteFirst: voteFirst,
-        voteLast: voteLast,
-        voteKeyDilution: voteKeyDilution,
-        fee: extraFee,
-      })
-      .submit()
-  }
-
-  /**
-   * Unregisters the application account from consensus participation.
-   */
-  goOffline(): void {
-    assert(
-      op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value,
-      'Only admin can go offline',
-    )
-    itxn.keyRegistration({ fee: 0 }).submit()
   }
 
   /**
