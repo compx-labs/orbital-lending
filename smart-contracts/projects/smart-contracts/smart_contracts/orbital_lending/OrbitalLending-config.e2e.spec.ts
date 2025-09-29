@@ -8,8 +8,11 @@ import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbita
 import algosdk, { Account, Address } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
+import { deploy as deployAsa } from './orbital-deploy-asa'
+import { deploy } from './orbital-deploy'
+import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
 
-let xUSDLendingContractClient: OrbitalLendingClient
+let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
@@ -22,7 +25,6 @@ const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 const additional_rewards_commission_percentage = 8n
-
 
 describe('orbital-lending Testing - config', () => {
   const localnet = algorandFixture()
@@ -39,25 +41,6 @@ describe('orbital-lending Testing - config', () => {
     const { generateAccount } = localnet.context
     managerAccount = await generateAccount({ initialFunds: microAlgo(10000000) })
 
-    const deploy = async (baseAssetId: bigint, appName: string) => {
-      const factory = localnet.algorand.client.getTypedAppFactory(OrbitalLendingFactory, {
-        defaultSender: managerAccount.addr,
-      })
-
-      const { appClient } = await factory.send.create.createApplication({
-        args: [
-          managerAccount.addr.publicKey, // manager address
-          baseAssetId, // base asset id
-        ],
-        sender: managerAccount.addr,
-        accountReferences: [managerAccount.addr],
-        assetReferences: [baseAssetId],
-      })
-      appClient.algorand.setSignerFromAccount(managerAccount)
-      console.log('app Created, address', algosdk.encodeAddress(appClient.appAddress.publicKey))
-      return { client: appClient }
-    }
-
     //create xusd asset for contract 1
     const assetCreateTxn = await localnet.context.algorand.send.assetCreate({
       sender: managerAccount.addr,
@@ -72,14 +55,12 @@ describe('orbital-lending Testing - config', () => {
     })
     xUSDAssetId = assetCreateTxn.assetId
 
-    const xUSDDeploymentResult = await deploy(xUSDAssetId, 'xUSD Lending')
-    xUSDLendingContractClient = xUSDDeploymentResult.client
+    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     const xUSDGlobalState = await xUSDLendingContractClient.state.global.getAll()
     console.log('xusd contract base asset id', xUSDGlobalState.baseTokenId)
     expect(xUSDGlobalState.baseTokenId).toEqual(xUSDAssetId)
 
-    const algoDeploymentResult = await deploy(0n, 'Algo Lending')
-    algoLendingContractClient = algoDeploymentResult.client
+    algoLendingContractClient = await deploy(0n, managerAccount)
     const algoGlobalState = await algoLendingContractClient.state.global.getAll()
     console.log('algo contract base asset id', algoGlobalState.baseTokenId)
     expect(algoGlobalState.baseTokenId).toEqual(0n)
@@ -121,7 +102,7 @@ describe('orbital-lending Testing - config', () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        additional_rewards_commission_percentage
+        additional_rewards_commission_percentage,
       ],
     })
 
@@ -172,8 +153,7 @@ describe('orbital-lending Testing - config', () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        additional_rewards_commission_percentage
-
+        additional_rewards_commission_percentage,
       ],
     })
 
@@ -262,10 +242,10 @@ describe('orbital-lending Testing - config', () => {
           protocol_interest_fee_bps,
           oracleAppClient.appId,
           xUSDAssetId,
-          additional_rewards_commission_percentage
+          additional_rewards_commission_percentage,
         ],
         sender: outsider.addr,
-      })
+      }),
     ).rejects.toThrowError()
   })
 
@@ -288,7 +268,7 @@ describe('orbital-lending Testing - config', () => {
           liqBonusBps: liq_bonus_bps,
         },
         sender: outsider.addr,
-      })
+      }),
     ).rejects.toThrowError()
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
@@ -308,7 +288,7 @@ describe('orbital-lending Testing - config', () => {
           rateModelType: 0n,
           liqBonusBps: liq_bonus_bps,
         },
-      })
+      }),
     ).rejects.toThrowError()
   })
 
@@ -333,7 +313,8 @@ describe('orbital-lending Testing - config', () => {
 
     await xUSDLendingContractClient.send.setRateParams({
       /* args: [50n, 8000n, 5000n, 1000n, 2000n, 6000n, 1n, 0n, 0n, 0n, 0n, 0n], */
-      args: {baseBps: 50n,
+      args: {
+        baseBps: 50n,
         utilCapBps: 8000n,
         kinkNormBps: 5000n,
         slope1Bps: 1000n,
@@ -341,7 +322,7 @@ describe('orbital-lending Testing - config', () => {
         maxAprBps: 6000n,
         maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
-        liqBonusBps: 500n
+        liqBonusBps: 500n,
       },
     })
 
@@ -357,5 +338,54 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.maxAprStepBps).toEqual(0n)
     expect(globalState.rateModelType).toEqual(0n) // kinked
     expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
+  })
+
+  test('Set Rate params on ALGO Lending', async () => {
+    const previousNonce = (await algoLendingContractClient.state.global.getAll()).paramsUpdateNonce ?? 0n
+
+    await algoLendingContractClient.send.setRateParams({
+      args: {
+        baseBps: 50n,
+        utilCapBps: 8000n,
+        kinkNormBps: 5000n,
+        slope1Bps: 1000n,
+        slope2Bps: 2000n,
+        maxAprBps: 6000n,
+        maxAprStepBps: 0n,
+        rateModelType: 0n, // or uint8
+        liqBonusBps: 500n,
+      },
+    })
+
+    const globalState = await algoLendingContractClient.state.global.getAll()
+    console.log('ALGO global state', globalState)
+    expect(globalState).toBeDefined()
+    expect(globalState.baseBps).toEqual(50n)
+    expect(globalState.utilCapBps).toEqual(8000n)
+    expect(globalState.kinkNormBps).toEqual(5000n)
+    expect(globalState.slope1Bps).toEqual(1000n)
+    expect(globalState.slope2Bps).toEqual(2000n)
+    expect(globalState.maxAprBps).toEqual(6000n)
+    expect(globalState.maxAprStepBps).toEqual(0n)
+    expect(globalState.rateModelType).toEqual(0n) // kinked
+    expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
+  })
+
+  test("set migration admin and verify it's set - algo lending", async () => {
+    const newAdmin = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
+    await algoLendingContractClient.send.setMigrationAdmin({
+      args: [newAdmin.addr.toString()],
+    })
+    const globalState = await algoLendingContractClient.state.global.getAll()
+    expect(globalState.migrationAdmin).toEqual(newAdmin.addr.toString())
+  })
+
+  test("set migration admin and verify it's set - xUSD lending", async () => {
+    const newAdmin = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
+    await xUSDLendingContractClient.send.setMigrationAdmin({
+      args: [newAdmin.addr.toString()],
+    })
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    expect(globalState.migrationAdmin).toEqual(newAdmin.addr.toString())
   })
 })
