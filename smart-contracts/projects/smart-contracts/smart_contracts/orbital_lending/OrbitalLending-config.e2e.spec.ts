@@ -266,6 +266,9 @@ describe('orbital-lending Testing - config', () => {
           maxAprStepBps: 0n,
           rateModelType: 0n,
           liqBonusBps: liq_bonus_bps,
+          emaAlphaBps: 200n,
+          powerGammaQ16: 65536n,
+          scarcityKBps: 200n,
         },
         sender: outsider.addr,
       }),
@@ -287,6 +290,9 @@ describe('orbital-lending Testing - config', () => {
           maxAprStepBps: 0n,
           rateModelType: 0n,
           liqBonusBps: liq_bonus_bps,
+          emaAlphaBps: 200n,
+          powerGammaQ16: 65536n,
+          scarcityKBps: 200n,
         },
       }),
     ).rejects.toThrowError()
@@ -323,6 +329,9 @@ describe('orbital-lending Testing - config', () => {
         maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
         liqBonusBps: 500n,
+        emaAlphaBps: 200n,
+        powerGammaQ16: 65536n,
+        scarcityKBps: 200n,
       },
     })
 
@@ -354,6 +363,9 @@ describe('orbital-lending Testing - config', () => {
         maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
         liqBonusBps: 500n,
+        emaAlphaBps: 200n,
+        powerGammaQ16: 65536n,
+        scarcityKBps: 200n,
       },
     })
 

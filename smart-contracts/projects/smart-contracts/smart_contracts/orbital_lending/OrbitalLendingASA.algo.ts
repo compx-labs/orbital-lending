@@ -115,6 +115,8 @@ export class OrbitalLending extends Contract {
 
   /** (Optional) Absolute APR ceiling in bps (0 = no cap). */
   max_apr_bps = GlobalState<uint64>()
+  /** (Optional) Utilization EMA weight in bps (0..10_000; 0 disables smoothing). */
+  ema_alpha_bps = GlobalState<uint64>()
 
   /** (Optional) Max APR change per accrual step in bps (0 = no limit). */
   max_apr_step_bps = GlobalState<uint64>()
@@ -122,8 +124,17 @@ export class OrbitalLending extends Contract {
   /** (Optional, mutable) Last applied APR in bps (for step limiting). */
   prev_apr_bps = GlobalState<uint64>()
 
+  /** (Optional, mutable) Stored EMA of normalized utilization in bps. */
+  util_ema_bps = GlobalState<uint64>()
+
   /** (Optional) Rate model selector (e.g., 0=kinked, 1=linear, 2=power, 3=asymptote). */
   rate_model_type = GlobalState<uint64>()
+
+  /** (Optional) Power-curve exponent γ in Q16.16 fixed-point. */
+  power_gamma_q16 = GlobalState<uint64>()
+
+  /** (Optional) Strength parameter for asymptotic/scarcity escalator (bps-scaled). */
+  scarcity_K_bps = GlobalState<uint64>()
 
   /** Total outstanding borrower principal + accrued interest (debt) */
   total_borrows = GlobalState<uint64>()
@@ -196,10 +207,15 @@ export class OrbitalLending extends Contract {
   /** Last requested loan amount in USD (for debugging) */
   last_requested_loan = GlobalState<uint64>()
 
+  /** Difference between max borrow and requested (for debugging) */
+  debug_diff = GlobalState<uint64>()
+
   params_updated_at = GlobalState<uint64>() // last params change timestamp (ledger seconds)
   params_update_nonce = GlobalState<uint64>() // monotonic counter
 
   last_interest_applied = GlobalState<uint64>() // last interest application timestamp (ledger seconds)
+
+  delta_debug = GlobalState<uint64>()
 
   calculateledSimpleWad = GlobalState<uint64>() // debug variable to track last calculated simple wad
 
@@ -270,10 +286,15 @@ export class OrbitalLending extends Contract {
     this.slope1_bps.value = 1000 // 10% slope to kink
     this.slope2_bps.value = 2000 // 20% slope after kink
     this.max_apr_bps.value = 6000 // 60% APR Cap by Default
-    this.prev_apr_bps.value = 50 // Same as base_bps by default
     this.last_scaled_down_disbursement.value = 0
+    this.ema_alpha_bps.value = 0 // No EMA smoothing by default
+    this.prev_apr_bps.value = 50 // Same as base_bps by default
+    this.util_ema_bps.value = 0 // No utilization EMA by default
+    this.power_gamma_q16.value = 0 // No power curve by default
+    this.scarcity_K_bps.value = 0 // No scarcity parameter by default
     this.last_max_borrow.value = 0
     this.last_requested_loan.value = 0
+    this.debug_diff.value = 0
     this.params_updated_at.value = Global.latestTimestamp
     this.params_update_nonce.value = 0
     this.borrow_index_wad.value = INDEX_SCALE
@@ -285,6 +306,7 @@ export class OrbitalLending extends Contract {
     this.current_accumulated_commission.value = 0
     this.commission_percentage.value = additional_rewards_commission_percentage
     this.total_borrows_principal.value = 0
+    this.cash_on_hand.value = 0
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -333,6 +355,9 @@ export class OrbitalLending extends Contract {
     slope2_bps: uint64,
     max_apr_bps: uint64,
     max_apr_step_bps: uint64,
+    ema_alpha_bps: uint64,
+    power_gamma_q16: uint64,
+    scarcity_K_bps: uint64,
     rate_model_type: uint64, // or uint8
     liq_bonus_bps: uint64,
   ) {
@@ -345,6 +370,8 @@ export class OrbitalLending extends Contract {
     if (max_apr_bps > 0) {
       assert(max_apr_bps >= base_bps, 'BAD_MAX_APR')
     }
+    assert(ema_alpha_bps <= 10_000, 'BAD_EMA_ALPHA')
+
     // (optional) restrict model types you actually implement now
     assert(rate_model_type === 0 /* kinked */ || rate_model_type === 255 /* fixed */, 'UNSUPPORTED_MODEL')
     this.base_bps.value = base_bps
@@ -358,7 +385,9 @@ export class OrbitalLending extends Contract {
     this.liq_bonus_bps.value = liq_bonus_bps
     this.params_update_nonce.value += 1
     this.params_updated_at.value = Global.latestTimestamp
-
+    this.ema_alpha_bps.value = ema_alpha_bps
+    this.power_gamma_q16.value = power_gamma_q16
+    this.scarcity_K_bps.value = scarcity_K_bps
     // Optional: clamp prev_apr if a new max is lower
     if (this.max_apr_bps.value > 0 && this.prev_apr_bps.value > this.max_apr_bps.value) {
       this.prev_apr_bps.value = this.max_apr_bps.value
@@ -381,7 +410,29 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     this.migration_admin.value = migrationAdmin
   }
+  /**
+   * Returns the current amount of LST tokens in circulation
+   * @returns Total LST tokens representing all depositor claims
+   */
+  getCirculatingLST(): uint64 {
+    return this.circulating_lst.value
+  }
 
+  /**
+   * Returns the total amount of base assets deposited in the protocol
+   * @returns Total underlying assets available for lending
+   */
+  getTotalDeposits(): uint64 {
+    return this.total_deposits.value
+  }
+
+  /**
+   * Returns the number of different collateral types accepted by the protocol
+   * @returns Count of registered collateral asset types
+   */
+  getAcceptedCollateralsCount(): uint64 {
+    return this.accepted_collaterals_count.value
+  }
   /**
    * Generates a new LST (Liquidity Staking Token) for the base lending token.
    * @param mbrTxn Payment transaction covering asset-creation minimum balance.
@@ -903,17 +954,17 @@ export class OrbitalLending extends Contract {
     const U_used: uint64 = U_raw // No EMA smoothing for now
 
     // Model selection (0=kinked; 255=fixed fallback)
-    let apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
+    const apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
 
     // Optional per-step change limiter
-    const stepMax: uint64 = this.max_apr_step_bps.value
+    /* const stepMax: uint64 = this.max_apr_step_bps.value
     if (stepMax > 0) {
       const prevApr: uint64 = this.prev_apr_bps.value === 0 ? this.base_bps.value : this.prev_apr_bps.value
       const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
       const hi: uint64 = prevApr + stepMax
       if (apr < lo) apr = lo
       if (apr > hi) apr = hi
-    }
+    } */
 
     this.prev_apr_bps.value = apr
     return apr

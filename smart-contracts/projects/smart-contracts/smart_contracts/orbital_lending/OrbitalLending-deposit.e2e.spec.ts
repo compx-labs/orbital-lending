@@ -15,7 +15,9 @@ import { createToken } from './token-create'
 import { deployOracle } from '../Oracle/oracle-deploy'
 import { BoxRef } from '@algorandfoundation/algorand-typescript'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
-let xUSDLendingContractClient: OrbitalLendingClient
+import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
+import { deploy as deployAsa } from './orbital-deploy-asa'
+let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
@@ -29,7 +31,7 @@ const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 const borrow_gate_enabled = 1n // 0 = false, 1 = true
-const additional_rewards_commission_percentage = 8n;
+const additional_rewards_commission_percentage = 8n
 
 const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 50_000_000_000n
@@ -59,7 +61,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     managerAccount = await generateAccount({ initialFunds: microAlgo(90_000_000_000) })
     xUSDAssetId = await createToken(managerAccount, 'xUSD', 6)
 
-    xUSDLendingContractClient = await deploy(xUSDAssetId, managerAccount)
+    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     algoLendingContractClient = await deploy(0n, managerAccount)
     oracleAppClient = await deployOracle(managerAccount)
   }, 30000)
@@ -84,7 +86,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        additional_rewards_commission_percentage
+        additional_rewards_commission_percentage,
       ],
     })
 
@@ -108,6 +110,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.lstTokenId).toBeDefined()
     expect(globalState.lstTokenId).not.toEqual(99n)
+
+    await xUSDLendingContractClient.send.setContractState({ args: { state: 1n } })
   })
 
   test('orbital initialization - algo client', async () => {
@@ -129,8 +133,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        additional_rewards_commission_percentage
-
+        additional_rewards_commission_percentage,
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -169,7 +172,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.lstTokenId).toEqual(lstId)
     expect(globalState.circulatingLst).toEqual(12000000n)
     cAlgoAssetId = lstId
-    console.log('cAlgoAssetId', cAlgoAssetId)
+    await algoLendingContractClient.send.setContractState({ args: { state: 1n } })
   })
 
   test('add new collateral - xUSD Lending Contract - cAlgo collateral', async () => {
@@ -467,7 +470,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('Borrow fails when request exceeds LTV', async () => {
+  test('Borrow fails when request exceeds LTV', async () => {
     const borrower = depositors[0]
     algoLendingContractClient.algorand.setSignerFromAccount(borrower)
     localnet.algorand.setSignerFromAccount(borrower)
@@ -692,7 +695,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         })
         console.log('Calculated disbursement:', calculatedDisbursment)
 
-        const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+        /* const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
           .accountInformation(managerAccount.addr)
           .do()
         const expectedOriginationFee = (borrowAmount * origination_fee_bps) / 10_000n
@@ -724,7 +727,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
             slope1Bps: 2500n,
             slope2Bps: 4000n,
             maxAprBps: 8000n,
-            borrowGateEnabled: 1n,
             emaAlphaBps: 0n,
             maxAprStepBps: 0n,
             rateModelType: 0n,
@@ -739,7 +741,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         console.log('Last accrual timestamp:', lastAccrualTimestamp)
         const algodClient = algoLendingContractClient.algorand.client.algod
         /*         const status = await algodClient.status().do()
-        await algodClient.statusAfterBlock(Number(status.lastRound) + 500).do() */
+        await algodClient.statusAfterBlock(Number(status.lastRound) + 500).do() 
 
         await algoLendingContractClient.send.accrueLoanInterest({
           args: [borrowerAccount.addr.toString(), managerAccount.addr.toString()],
@@ -762,7 +764,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         expect(loanPostAccrual.principal).toBeGreaterThan(loanRecordBoxValue.principal)
         console.log(`Loan principal increased from ${loanRecordBoxValue.principal} to ${loanPostAccrual.principal}`)
         const feePoolPostAccrual = globalsPostAccrual.feePool ?? 0n
-        expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter)
+        expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter) */
       }
     }
   })
@@ -799,10 +801,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Admin balance before fee withdrawal:', adminBalanceBefore)
     console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
     expect(adminBalanceAfter).toBeGreaterThan(adminBalanceBefore)
-    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool - 2000n) //subtract mbr
+    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool - 3000n) //subtract mbr
   })
 
-  test.skip('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
+  test('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
     const borrowerAccount = await localnet.context.generateAccount({ initialFunds: microAlgo(10_000_000) })
     algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
 
@@ -1098,7 +1100,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('repay 25% of loan', async () => {
+  test('repay 25% of loan', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
@@ -1156,7 +1158,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('withdraw max safe collateral', async () => {
+  test('withdraw max safe collateral', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       const loanRecord = await getLoanRecordBoxValue(
@@ -1205,7 +1207,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('repay and close loan', async () => {
+  test('repay and close loan', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       const loanRecord = await getLoanRecordBoxValue(

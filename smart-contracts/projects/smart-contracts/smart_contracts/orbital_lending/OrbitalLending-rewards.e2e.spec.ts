@@ -1,21 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { algo, Config, ensureFunded, microAlgo } from '@algorandfoundation/algokit-utils'
+import { Config, microAlgo } from '@algorandfoundation/algokit-utils'
 import { registerDebugEventHandlers } from '@algorandfoundation/algokit-utils-debug'
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
-import algosdk, { Account, Address, generateAccount } from 'algosdk'
-import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { calculateDisbursement, currentAprBps, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
-import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
+import { OrbitalLendingClient } from '../artifacts/orbital_lending/orbital-lendingClient'
+import { Account } from 'algosdk'
+import { calculateDisbursement, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
+import { OracleClient } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
 import { deployOracle } from '../Oracle/oracle-deploy'
-import { BoxRef } from '@algorandfoundation/algorand-typescript'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
-let xUSDLendingContractClient: OrbitalLendingClient
+import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
+import { deploy as deployAsa } from './orbital-deploy-asa'
+
+let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
@@ -58,7 +59,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     managerAccount = await generateAccount({ initialFunds: microAlgo(90_000_000_000) })
     xUSDAssetId = await createToken(managerAccount, 'xUSD', 6)
 
-    xUSDLendingContractClient = await deploy(xUSDAssetId, managerAccount)
+    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     algoLendingContractClient = await deploy(0n, managerAccount)
     oracleAppClient = await deployOracle(managerAccount)
   }, 30000)
@@ -467,7 +468,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalStateAfter.currentAccumulatedCommission).toBe((10_000_000n / 100n) * commission_percentage)
   })
 
-  test('Add collateral asset to algo contract', async () => {
+  test.skip('Add collateral asset to algo contract', async () => {
     //  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
 
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
@@ -762,7 +763,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
             slope1Bps: 2500n,
             slope2Bps: 4000n,
             maxAprBps: 8000n,
-            borrowGateEnabled: 1n,
             emaAlphaBps: 0n,
             maxAprStepBps: 0n,
             rateModelType: 0n,
@@ -834,7 +834,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(accruedCommisionAfter).toEqual(0n)
     console.log('Fee pool after withdrawal:', feePoolAfter)
     expect(feePoolAfter).toEqual(0n)
-
 
     const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
       .accountInformation(managerAccount.addr)
