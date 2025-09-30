@@ -491,6 +491,67 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalStateAfter.totalDeposits).toEqual(expectedTotalDeposits)
   })
 
+  test('Send xUSD to xusd contract as rewards', async () => {
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    const xusdBalanceRequestBefore = await algod
+      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+      .do()
+    const xusdBalanceBefore = xusdBalanceRequestBefore.assetHolding?.amount || 0n
+
+    const xusdRewardTxn = await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: 10_000_000n,
+      note: 'Sending xusd rewards to contract',
+    })
+    const contractxUSDBalanceAfterRequest= await algod
+      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+      .do()
+    const contractxUSDBalanceAfter = contractxUSDBalanceAfterRequest.assetHolding?.amount || 0n
+    expect(contractxUSDBalanceAfter).toEqual(xusdBalanceBefore + 10_000_000n)
+  
+    const globalStateBefore = await xUSDLendingContractClient.state.global.getAll()
+
+    const spendableBalance = contractxUSDBalanceAfter
+    const cashOnHand = globalStateBefore.cashOnHand!
+    const commission_percentage = globalStateBefore.commissionPercentage!
+    const rawReward = spendableBalance - cashOnHand
+
+    /* const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
+        const commission: uint64 = divw(hi, lo, 100)
+    
+        this.current_accumulated_commission.value += commission
+        this.total_commission_earned.value += commission
+    
+        const netReward: uint64 = rawReward - commission
+        this.total_additional_rewards.value += netReward
+        this.total_deposits.value += netReward */
+
+    const expectedcommission = (rawReward / 100n) * commission_percentage
+    const expectedAccumulatedCommission = globalStateBefore.currentAccumulatedCommission! + expectedcommission
+    const expectedTotalCommission = globalStateBefore.totalCommissionEarned! + expectedcommission
+    const expectednetReward = rawReward - expectedcommission
+    const expectedTotalAdditionalRewards = globalStateBefore.totalAdditionalRewards! + expectednetReward
+    const expectedTotalDeposits = globalStateBefore.totalDeposits! + expectednetReward
+
+    // pickup rewards
+    await xUSDLendingContractClient.send.pickupAsaRewards({ args: [] })
+
+    const contractxUSDBalanceAfterPickupRequest = await algod
+      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+      .do()
+    const contractxUSDBalanceAfterPickup = contractxUSDBalanceAfterPickupRequest.assetHolding?.amount || 0n
+
+    const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
+    expect(globalStateAfter.currentAccumulatedCommission).toEqual(expectedAccumulatedCommission)
+    expect(globalStateAfter.totalCommissionEarned).toEqual(expectedTotalCommission)
+    expect(globalStateAfter.totalAdditionalRewards).toEqual(expectedTotalAdditionalRewards)
+    expect(globalStateAfter.totalDeposits).toEqual(expectedTotalDeposits)
+
+    // pay fees
+  })
+
   test.skip('Add collateral asset to algo contract', async () => {
     //  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
 
@@ -865,6 +926,49 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
     expect(adminBalanceAfter).toBeGreaterThan(adminBalanceBefore)
     expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool + accruedCommision - 3000n) //subtract mbr
+  })
+
+  test('withdraw platform fees - xusd Lending Contract', async () => {
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const adminXusdBalanceBeforeRequest = await xUSDLendingContractClient.algorand.client.algod
+      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
+      .do()
+    const adminXusdBalanceBefore = adminXusdBalanceBeforeRequest.assetHolding?.amount || 0n
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const feePool = globalState.feePool ?? 0n
+    const accruedCommision = globalState.currentAccumulatedCommission ?? 0n
+    expect(accruedCommision).toBeGreaterThan(0n)
+    console.log('Fee pool before withdrawal:', feePool)
+    expect(feePool).toBe(0n)
+
+    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(1000n),
+      note: 'Funding fee withdrawal',
+    })
+    await xUSDLendingContractClient.send.withdrawPlatformFees({
+      args: [managerAccount.addr.toString(), mbrTxn],
+      sender: managerAccount.addr,
+    })
+
+    const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
+    const feePoolAfter = globalStateAfter.feePool ?? 0n
+    const accruedCommisionAfter = globalStateAfter.currentAccumulatedCommission ?? 0n
+    expect(accruedCommisionAfter).toEqual(0n)
+    console.log('Fee pool after withdrawal:', feePoolAfter)
+    expect(feePoolAfter).toEqual(0n)
+
+    const adminxUSDBalanceAfterRequest = await xUSDLendingContractClient.algorand.client.algod
+      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
+      .do()
+    const adminBalanceAfter = adminxUSDBalanceAfterRequest.assetHolding?.amount || 0n
+
+    console.log('Admin balance before fee withdrawal:', adminXusdBalanceBefore)
+    console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
+    expect(adminBalanceAfter).toBeGreaterThan(adminXusdBalanceBefore)
+    expect(adminBalanceAfter).toEqual(adminXusdBalanceBefore + feePool + accruedCommision) //subtract mbr
   })
 
   test.skip('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
