@@ -307,6 +307,7 @@ export class OrbitalLending extends Contract {
     this.commission_percentage.value = additional_rewards_commission_percentage
     this.total_borrows_principal.value = 0
     this.cash_on_hand.value = 0
+    this.total_additional_rewards.value = 0
 
     if (this.base_token_id.value.native !== 0) {
       itxn

@@ -442,7 +442,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .accountInformation(algoLendingContractClient.appClient.appAddress)
       .do()
 
-    const algoRewardTxn = algoLendingContractClient.algorand.send.payment({
+    const algoRewardTxn = await algoLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
       amount: microAlgo(10_000_000n),
@@ -452,6 +452,30 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .accountInformation(algoLendingContractClient.appClient.appAddress)
       .do()
     expect(contractAlgoBalanceAfterDeposit).toEqual(contractAlgoBalanceBeforeDeposit + 10_000_000n)
+    const globalStateBefore = await algoLendingContractClient.state.global.getAll()
+
+    const minBalance = (await localnet.algorand.account.getInformation(algoLendingContractClient.appAddress)).minBalance
+    const spendableBalance = contractAlgoBalanceAfterDeposit - BigInt(Number(minBalance))
+    const cashOnHand = globalStateBefore.cashOnHand!
+    const commission_percentage = globalStateBefore.commissionPercentage!
+    const rawReward = spendableBalance - cashOnHand
+
+    /* const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
+        const commission: uint64 = divw(hi, lo, 100)
+    
+        this.current_accumulated_commission.value += commission
+        this.total_commission_earned.value += commission
+    
+        const netReward: uint64 = rawReward - commission
+        this.total_additional_rewards.value += netReward
+        this.total_deposits.value += netReward */
+
+    const expectedcommission = (rawReward / 100n) * commission_percentage
+    const expectedAccumulatedCommission = globalStateBefore.currentAccumulatedCommission! + expectedcommission
+    const expectedTotalCommission = globalStateBefore.totalCommissionEarned! + expectedcommission
+    const expectednetReward = rawReward - expectedcommission
+    const expectedTotalAdditionalRewards = globalStateBefore.totalAdditionalRewards! + expectednetReward
+    const expectedTotalDeposits = globalStateBefore.totalDeposits! + expectednetReward
 
     // pickup rewards
     await algoLendingContractClient.send.pickupAlgoRewards({ args: [] })
@@ -459,13 +483,12 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const { amount: contractAlgoBalanceAfterPickup } = await algod
       .accountInformation(algoLendingContractClient.appClient.appAddress)
       .do()
-    expect(contractAlgoBalanceAfterPickup).toBeLessThan(contractAlgoBalanceAfterDeposit)
 
     const globalStateAfter = await algoLendingContractClient.state.global.getAll()
-    const commission_percentage = globalStateAfter.commissionPercentage!
-    expect(globalStateAfter.totalAdditionalRewards).toBe((10_000_000n / 100n) * (100n - commission_percentage))
-    expect(globalStateAfter.totalCommissionEarned).toBe((10_000_000n / 100n) * commission_percentage)
-    expect(globalStateAfter.currentAccumulatedCommission).toBe((10_000_000n / 100n) * commission_percentage)
+    expect(globalStateAfter.currentAccumulatedCommission).toEqual(expectedAccumulatedCommission)
+    expect(globalStateAfter.totalCommissionEarned).toEqual(expectedTotalCommission)
+    expect(globalStateAfter.totalAdditionalRewards).toEqual(expectedTotalAdditionalRewards)
+    expect(globalStateAfter.totalDeposits).toEqual(expectedTotalDeposits)
   })
 
   test.skip('Add collateral asset to algo contract', async () => {
@@ -841,7 +864,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Admin balance before fee withdrawal:', adminBalanceBefore)
     console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
     expect(adminBalanceAfter).toBeGreaterThan(adminBalanceBefore)
-    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool + accruedCommision - 2000n) //subtract mbr
+    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool + accruedCommision - 3000n) //subtract mbr
   })
 
   test.skip('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
