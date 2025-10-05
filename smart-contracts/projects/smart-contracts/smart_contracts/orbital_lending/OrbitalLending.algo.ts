@@ -1950,6 +1950,21 @@ export class OrbitalLending extends Contract {
     this.total_additional_rewards.value += netReward
     this.total_deposits.value += netReward
   }
+
+  public migrateCollateralTokenId(collateralTokenId: uint64, mbrTxn: gtxn.PaymentTxn): void {
+    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate collateral')
+    const collateralBalance = Asset(collateralTokenId).balance(Global.currentApplicationAddress)
+    if (collateralBalance > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: this.migration_admin.value,
+          xferAsset: collateralTokenId,
+          assetAmount: collateralBalance,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
+  }
   /**
    * Initiates migration by sweeping balances from this contract to the migration administrator.
    * @param feeTxn Payment covering all inner-transaction fees required for the sweep.
@@ -1957,7 +1972,7 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public migrateContract(feeTxn: gtxn.PaymentTxn): MigrationSnapshot {
-    //assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
+    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
     //assertMatch(feeTxn, { amount: MIGRATION_FEE })
     this.goOffline()
@@ -2042,7 +2057,7 @@ export class OrbitalLending extends Contract {
   ): void {
     //assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
 
-    /* assertMatch(lstTransferTxn, {
+    assertMatch(lstTransferTxn, {
       sender: migrationAdmin,
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(this.lst_token_id.value.native),
@@ -2050,7 +2065,7 @@ export class OrbitalLending extends Contract {
     assertMatch(algoTxn, {
       sender: migrationAdmin,
       receiver: Global.currentApplicationAddress,
-    }) */
+    })
     //set accounting state
     this.cash_on_hand.value = snapshot.cash_on_hand.native
     this.total_deposits.value = snapshot.total_deposits.native
@@ -2068,6 +2083,8 @@ export class OrbitalLending extends Contract {
     this.commission_percentage.value = snapshot.commission_percentage.native
     this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
     this.active_loan_records.value = snapshot.active_loan_records.native
+
+    this.contract_state.value = new UintN64(1) // active
   }
 
   /**
@@ -2122,7 +2139,7 @@ export class OrbitalLending extends Contract {
    * Unregisters the application account from consensus participation.
    */
   goOffline(): void {
-   /*  assert(
+    /*  assert(
       op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value,
       'Only admin can go offline',
     ) */

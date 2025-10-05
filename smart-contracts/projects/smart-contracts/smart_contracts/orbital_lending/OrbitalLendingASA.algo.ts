@@ -1984,6 +1984,24 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += netReward
   }
 
+  public migrateCollateralTokenId(collateralTokenId: uint64, mbrTxn: gtxn.PaymentTxn): void {
+    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate collateral')
+    // validate collateral exists
+    const acKey = new AcceptedCollateralKey({ assetId: new UintN64(collateralTokenId) })
+    assert(this.accepted_collaterals(acKey).exists, 'collateral not found')
+    const collateralBalance = Asset(collateralTokenId).balance(Global.currentApplicationAddress)
+    if (collateralBalance > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: this.migration_admin.value,
+          xferAsset: collateralTokenId,
+          assetAmount: collateralBalance,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
+  }
+
   /**
    * Initiates migration by sweeping balances from this contract to the migration administrator.
    * @param feeTxn Payment covering all inner-transaction fees required for the sweep.
@@ -2091,6 +2109,8 @@ export class OrbitalLending extends Contract {
     this.commission_percentage.value = snapshot.commission_percentage.native
     this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
     this.active_loan_records.value = snapshot.active_loan_records.native
+
+    this.contract_state.value = new UintN64(1) // active
   }
 
   /**

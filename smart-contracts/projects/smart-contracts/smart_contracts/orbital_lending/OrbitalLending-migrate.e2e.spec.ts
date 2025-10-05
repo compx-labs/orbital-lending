@@ -1232,6 +1232,70 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const migrationAdminLstBalanceBeforeAmount = migrationAdminLSTBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
 
     localnet.algorand.setSignerFromAccount(migrationAdmin)
+
+    // Copy collateral records
+    secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const collateralBox = await algoLendingContractClient.state.box.acceptedCollaterals.getMap()
+    console.log('collateralBox:', collateralBox)
+    for await (const collat of collateralBox) {
+      const collMbrTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
+        sender: managerAccount.addr,
+        receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+        amount: microAlgo(101_000n),
+        note: 'Funding add collateral',
+      })
+      secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+      await secondaryAlgoLendingContractClient.send.addNewCollateralType({
+        args: {
+          collateralBaseTokenId: collat[1].baseAssetId,
+          collateralTokenId: collat[1].assetId,
+          originatingAppId: collat[1].originatingAppId,
+          mbrTxn: collMbrTxn,
+        },
+        sender: managerAccount.addr,
+      })
+    }
+    const newCollateralBox = await secondaryAlgoLendingContractClient.state.box.acceptedCollaterals.getMap()
+    console.log('New collateral box:', newCollateralBox)
+
+    // Migrate collateral balances
+    for await (const collat of collateralBox) {
+      const assetId = collat[1].assetId
+      const contractBalanceRequest = await algoLendingContractClient.algorand.client.algod
+        .accountAssetInformation(algoLendingContractClient.appClient.appAddress, assetId)
+        .do()
+      const contractBalance = contractBalanceRequest.assetHolding?.amount || BigInt(0)
+      console.log(`Migrating collateral asset ID ${assetId} with balance ${contractBalance}`)
+      if (contractBalance > 0n) {
+        const collMbrTxn2 = localnet.algorand.createTransaction.payment({
+          sender: migrationAdmin.addr,
+          receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+          amount: microAlgo(1_000_000n),
+          note: 'Funding collateral migration',
+        })
+        await localnet.algorand.send.assetOptIn({
+          sender: migrationAdmin.addr,
+          assetId,
+          note: 'Opt-in for collateral migration',
+        })
+        await algoLendingContractClient.send.migrateCollateralTokenId({
+          args: {
+            collateralTokenId: assetId,
+            mbrTxn: collMbrTxn2,
+          },
+          sender: migrationAdmin.addr,
+          populateAppCallResources: true,
+        })
+        await localnet.algorand.send.assetTransfer({
+          sender: migrationAdmin.addr,
+          receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+          assetId,
+          amount: contractBalance,
+          note: 'Transferring collateral for migration',
+        })
+      }
+    }
+
     const feeTxn = localnet.algorand.createTransaction.payment({
       sender: migrationAdmin.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
@@ -1257,7 +1321,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     expect(migrationAdminAlgoBalanceAfter).toBeGreaterThan(migrationAdminAlgoBalanceBefore) // algo balance should go down by roughly fee txn + inner txns
     expect(migrationAdminLstBalanceAfterAmount).toBeGreaterThan(migrationAdminLstBalanceBeforeAmount) // should gain some LST from migration
-    expect(migrationAdminAlgoBalanceAfter).toBe(originalContractAlgoBalance + 9_508_000n)
+    expect(migrationAdminAlgoBalanceAfter).toBe(originalContractAlgoBalance + 8503000n)
     expect(migrationAdminLstBalanceAfterAmount).toBe(originalContractLstBalance)
 
     secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
@@ -1300,7 +1364,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         migrationAdmin: migrationAdmin.addr.toString(),
         snapshot: {
           cashOnHand: snapShot!.cashOnHand,
-          totalBorrows: snapShot!.totalBorrows,
+          totalBorrows: 0n,
           totalDeposits: snapShot!.totalDeposits,
           feePool: snapShot!.feePool,
           circulatingLst: snapShot!.circulatingLst,
@@ -1308,49 +1372,26 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           totalAdditionalRewards: snapShot!.totalAdditionalRewards,
           totalCommissionEarned: snapShot!.totalCommissionEarned,
           borrowIndexWad: snapShot!.borrowIndexWad,
-          acceptedCollateralsCount: 0n,
+          acceptedCollateralsCount: snapShot!.acceptedCollateralsCount,
           baseTokenId: snapShot!.baseTokenId,
           lstTokenId: snapShot!.lstTokenId,
           buyoutTokenId: snapShot!.buyoutTokenId,
           commissionPercentage: snapShot!.commissionPercentage,
           liqBonusBps: snapShot!.liqBonusBps,
-          activeLoanRecords: snapShot!.activeLoanRecords,
+          activeLoanRecords: 0n,
         },
       },
       sender: migrationAdmin.addr,
       populateAppCallResources: true,
     })
-    // Copy collateral records
-    secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
-    const collateralBox = await algoLendingContractClient.state.box.acceptedCollaterals.getMap()
-    console.log('collateralBox:', collateralBox)
-    for await (const collat of collateralBox) {
-      const collMbrTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
-        sender: managerAccount.addr,
-        receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
-        amount: microAlgo(101_000n),
-        note: 'Funding add collateral',
-      })
-      secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
-      await secondaryAlgoLendingContractClient.send.addNewCollateralType({
-        args: {
-          collateralBaseTokenId: collat[1].baseAssetId,
-          collateralTokenId: collat[1].assetId,
-          originatingAppId: collat[1].originatingAppId,
-          mbrTxn: collMbrTxn,
-        },
-        sender: managerAccount.addr,
-      })
-    }
-    const newCollateralBox = await secondaryAlgoLendingContractClient.state.box.acceptedCollaterals.getMap()
-    console.log('New collateral box:', newCollateralBox)
+
     // same for loan records
     const loanRecordBox = await algoLendingContractClient.state.box.loanRecord.getMap()
     console.log('loanRecordBox:', loanRecordBox)
     for await (const loanRecord of loanRecordBox) {
       console.log('Migrating loan record', loanRecord)
       console.log('Loan record value:', loanRecord[1])
-      secondaryAlgoLendingContractClient.send.addLoanRecordExternal({
+      await secondaryAlgoLendingContractClient.send.addLoanRecordExternal({
         args: {
           borrowerAddress: loanRecord[1].borrowerAddress,
           collateralAmount: loanRecord[1].collateralAmount,
@@ -1381,7 +1422,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const loanRecordBoxNewContract = await secondaryAlgoLendingContractClient.state.box.loanRecord.getMap()
     console.log('New contract loan record box:', loanRecordBoxNewContract)
 
-    expect(loanRecordBoxNewContract.size).toBe(snapShot!.activeLoanRecords)
+    expect(loanRecordBoxNewContract.size).toBe(Number(snapShot!.activeLoanRecords))
 
     // Check migrated loans
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -1406,6 +1447,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   }, 600000)
 
   test('repay and close loan', async () => {
+    const contractAlgoBalance = await secondaryAlgoLendingContractClient.algorand.client.algod
+      .accountInformation(secondaryAlgoLendingContractClient.appClient.appAddress)
+      .do()
+    console.log('Contract algo balance:', contractAlgoBalance.amount)
+    expect(contractAlgoBalance.amount).toBeGreaterThan(0n)
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       const loanRecord = await getLoanRecordBoxValue(
@@ -1417,11 +1463,12 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const { amount: algoBalanceBefore } = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountInformation(borrowerAccount.addr)
         .do()
+      console.log('Borrower algo balance before:', algoBalanceBefore)
       const lstBalanceBeforeRequest = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
         .do()
       const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
-
+      secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
       const payTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
         receiver: secondaryAlgoLendingContractClient.appAddress,
         amount: AlgoAmount.MicroAlgos(currentDebt),
