@@ -1222,7 +1222,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     // get migration admin balances prior to migration
-     const { amount: migrationAdminAlgoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+    const { amount: migrationAdminAlgoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
       .accountInformation(migrationAdmin.addr)
       .do()
 
@@ -1292,7 +1292,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: globalStateAfterContractStateChange.lstTokenId!,
       amount: migrationAdminLstBalanceAfterAmount,
       note: 'Accepting migration',
-    }) 
+    })
     await secondaryAlgoLendingContractClient.send.acceptMigrationAlgoContract({
       args: {
         algoTxn,
@@ -1308,7 +1308,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           totalAdditionalRewards: snapShot!.totalAdditionalRewards,
           totalCommissionEarned: snapShot!.totalCommissionEarned,
           borrowIndexWad: snapShot!.borrowIndexWad,
-          acceptedCollateralsCount: snapShot!.acceptedCollateralsCount,
+          acceptedCollateralsCount: 0n,
           baseTokenId: snapShot!.baseTokenId,
           lstTokenId: snapShot!.lstTokenId,
           buyoutTokenId: snapShot!.buyoutTokenId,
@@ -1323,6 +1323,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     // Copy collateral records
     secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     const collateralBox = await algoLendingContractClient.state.box.acceptedCollaterals.getMap()
+    console.log('collateralBox:', collateralBox)
     for await (const collat of collateralBox) {
       const collMbrTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
         sender: managerAccount.addr,
@@ -1335,15 +1336,20 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         args: {
           collateralBaseTokenId: collat[1].baseAssetId,
           collateralTokenId: collat[1].assetId,
-          originatingAppId: algoLendingContractClient.appId,
+          originatingAppId: collat[1].originatingAppId,
           mbrTxn: collMbrTxn,
         },
         sender: managerAccount.addr,
       })
     }
+    const newCollateralBox = await secondaryAlgoLendingContractClient.state.box.acceptedCollaterals.getMap()
+    console.log('New collateral box:', newCollateralBox)
     // same for loan records
     const loanRecordBox = await algoLendingContractClient.state.box.loanRecord.getMap()
+    console.log('loanRecordBox:', loanRecordBox)
     for await (const loanRecord of loanRecordBox) {
+      console.log('Migrating loan record', loanRecord)
+      console.log('Loan record value:', loanRecord[1])
       secondaryAlgoLendingContractClient.send.addLoanRecordExternal({
         args: {
           borrowerAddress: loanRecord[1].borrowerAddress,
@@ -1352,45 +1358,88 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           disbursement: loanRecord[1].principal,
         },
         sender: managerAccount.addr,
-      }) 
+      })
     }
-  }, 600000)
+    const globalStateNewContract = await secondaryAlgoLendingContractClient.state.global.getAll()
+    console.log('New contract global state:', globalStateNewContract)
+    expect(globalStateNewContract.totalBorrows).toBe(snapShot!.totalBorrows)
+    expect(globalStateNewContract.totalDeposits).toBe(snapShot!.totalDeposits)
+    expect(globalStateNewContract.feePool).toBe(snapShot!.feePool)
+    expect(globalStateNewContract.circulatingLst).toBe(snapShot!.circulatingLst)
+    expect(globalStateNewContract.currentAccumulatedCommission).toBe(snapShot!.currentAccumulatedCommission)
+    expect(globalStateNewContract.totalCommissionEarned).toBe(snapShot!.totalCommissionEarned)
+    expect(globalStateNewContract.borrowIndexWad).toBe(snapShot!.borrowIndexWad)
+    expect(globalStateNewContract.cashOnHand).toBe(snapShot!.cashOnHand)
+    expect(globalStateNewContract.activeLoanRecords).toBe(snapShot!.activeLoanRecords)
+    expect(globalStateNewContract.acceptedCollateralsCount).toBe(snapShot!.acceptedCollateralsCount)
+    expect(globalStateNewContract.baseTokenId).toBe(snapShot!.baseTokenId)
+    expect(globalStateNewContract.lstTokenId).toBe(snapShot!.lstTokenId)
+    expect(globalStateNewContract.buyoutTokenId).toBe(snapShot!.buyoutTokenId)
+    expect(globalStateNewContract.commissionPercentage).toBe(snapShot!.commissionPercentage)
+    expect(globalStateNewContract.liqBonusBps).toBe(snapShot!.liqBonusBps)
 
-  test.skip('repay and close loan', async () => {
+    const loanRecordBoxNewContract = await secondaryAlgoLendingContractClient.state.box.loanRecord.getMap()
+    console.log('New contract loan record box:', loanRecordBoxNewContract)
+
+    expect(loanRecordBoxNewContract.size).toBe(snapShot!.activeLoanRecords)
+
+    // Check migrated loans
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
-      const loanRecord = await getLoanRecordBoxValue(
+      const oldLoanRecord = await getLoanRecordBoxValue(
         borrowerAccount.addr.toString(),
         algoLendingContractClient,
         algoLendingContractClient.appId,
       )
+      const newLoanRecord = await getLoanRecordBoxValue(
+        borrowerAccount.addr.toString(),
+        secondaryAlgoLendingContractClient,
+        secondaryAlgoLendingContractClient.appId,
+      )
+      console.log('Old loan record:', oldLoanRecord)
+      console.log('New loan record:', newLoanRecord)
+      expect(newLoanRecord.collateralAmount).toBe(oldLoanRecord.collateralAmount)
+      expect(newLoanRecord.collateralTokenId).toBe(oldLoanRecord.collateralTokenId)
+      expect(newLoanRecord.principal).toBe(oldLoanRecord.principal)
+      expect(newLoanRecord.userIndexWad).toBe(oldLoanRecord.userIndexWad)
+    }
+  }, 600000)
+
+  test('repay and close loan', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      const loanRecord = await getLoanRecordBoxValue(
+        borrowerAccount.addr.toString(),
+        secondaryAlgoLendingContractClient,
+        secondaryAlgoLendingContractClient.appId,
+      )
       const currentDebt = loanRecord.principal
-      const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+      const { amount: algoBalanceBefore } = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountInformation(borrowerAccount.addr)
         .do()
-      const lstBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
+      const lstBalanceBeforeRequest = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
         .do()
       const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
 
-      const payTxn = algoLendingContractClient.algorand.createTransaction.payment({
-        receiver: algoLendingContractClient.appAddress,
+      const payTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
+        receiver: secondaryAlgoLendingContractClient.appAddress,
         amount: AlgoAmount.MicroAlgos(currentDebt),
         sender: borrowerAccount.addr,
       })
-      const result = await algoLendingContractClient.send.repayLoanAlgo({
+      const result = await secondaryAlgoLendingContractClient.send.repayLoanAlgo({
         args: [payTxn, currentDebt],
         sender: borrowerAccount.addr,
       })
 
       const totalFees = result.transactions.reduce((sum, txn) => sum + Number(txn.fee), 0)
 
-      const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+      const { amount: algoBalanceAfter } = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountInformation(borrowerAccount.addr)
         .do()
       expect(algoBalanceAfter).toBeLessThan(algoBalanceBefore)
       expect(algoBalanceAfter).toBe(algoBalanceBefore - currentDebt - BigInt(totalFees))
-      const lstBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
+      const lstBalanceAfterRequest = await secondaryAlgoLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
         .do()
       const lstBalanceAfter = lstBalanceAfterRequest.assetHolding?.amount || BigInt(0)
