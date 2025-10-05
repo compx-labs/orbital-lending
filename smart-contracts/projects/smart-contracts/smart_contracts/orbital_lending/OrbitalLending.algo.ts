@@ -393,8 +393,8 @@ export class OrbitalLending extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   public setContractState(state: uint64): void {
-    /* assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
-    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating */
+    assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
+    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating
     this.contract_state.value = new UintN64(state)
   }
 
@@ -575,7 +575,7 @@ export class OrbitalLending extends Contract {
     originatingAppId: UintN64,
   ): void {
     const baseToken = Asset(this.base_token_id.value.native)
-    /* assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
     assert(!this.collateralExists(collateralTokenId), 'COLLATERAL_ALREADY_EXISTS')
     assertMatch(
@@ -585,7 +585,7 @@ export class OrbitalLending extends Contract {
         amount: MBR_COLLATERAL,
       },
       'INSUFFICIENT_MBR',
-    ) */
+    )
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
@@ -744,7 +744,7 @@ export class OrbitalLending extends Contract {
     }
     this.removeCash(asaDue)
 
-    assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
+    assert(Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance >= asaDue)
 
     itxn
       .payment({
@@ -859,7 +859,7 @@ export class OrbitalLending extends Contract {
     borrowerAddress: Account,
     collateralAmount: uint64,
   ): void {
-    /* assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED') */
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     this.mintLoanRecord(disbursement, collateralTokenId, borrowerAddress, collateralAmount)
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
     this.total_borrows.value = this.total_borrows.value + disbursement
@@ -1974,7 +1974,7 @@ export class OrbitalLending extends Contract {
   public migrateContract(feeTxn: gtxn.PaymentTxn): MigrationSnapshot {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
-    //assertMatch(feeTxn, { amount: MIGRATION_FEE })
+    assertMatch(feeTxn, { amount: MIGRATION_FEE })
     this.goOffline()
 
     //get lst balance
@@ -2055,7 +2055,7 @@ export class OrbitalLending extends Contract {
     snapshot: MigrationSnapshot,
     migrationAdmin: Account,
   ): void {
-    //assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
+    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
 
     assertMatch(lstTransferTxn, {
       sender: migrationAdmin,
