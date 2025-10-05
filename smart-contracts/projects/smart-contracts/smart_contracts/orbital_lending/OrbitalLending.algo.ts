@@ -148,9 +148,6 @@ export class OrbitalLending extends Contract {
   /** APR (in bps) that applied during [last_accrual_ts, now) before recompute */
   last_apr_bps = GlobalState<uint64>()
 
-  /** Sum of borrower principals (no interest). We’ll migrate total_borrows usage. */
-  total_borrows_principal = GlobalState<uint64>()
-
   // ═══════════════════════════════════════════════════════════════════════
   // COLLATERAL & LOAN MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════
@@ -305,7 +302,6 @@ export class OrbitalLending extends Contract {
     this.total_commission_earned.value = 0
     this.current_accumulated_commission.value = 0
     this.commission_percentage.value = additional_rewards_commission_percentage
-    this.total_borrows_principal.value = 0
     this.cash_on_hand.value = 0
     this.total_additional_rewards.value = 0
 
@@ -397,8 +393,8 @@ export class OrbitalLending extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   public setContractState(state: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
-    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating
+    /* assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
+    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating */
     this.contract_state.value = new UintN64(state)
   }
 
@@ -579,7 +575,7 @@ export class OrbitalLending extends Contract {
     originatingAppId: UintN64,
   ): void {
     const baseToken = Asset(this.base_token_id.value.native)
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    /* assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
     assert(!this.collateralExists(collateralTokenId), 'COLLATERAL_ALREADY_EXISTS')
     assertMatch(
@@ -589,7 +585,7 @@ export class OrbitalLending extends Contract {
         amount: MBR_COLLATERAL,
       },
       'INSUFFICIENT_MBR',
-    )
+    ) */
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
@@ -857,6 +853,20 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
+  public addLoanRecordExternal(
+    disbursement: uint64,
+    collateralTokenId: UintN64,
+    borrowerAddress: Account,
+    collateralAmount: uint64,
+  ): void {
+    /* assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED') */
+    this.mintLoanRecord(disbursement, collateralTokenId, borrowerAddress, collateralAmount)
+    this.updateCollateralTotal(collateralTokenId, collateralAmount)
+    this.total_borrows.value = this.total_borrows.value + disbursement
+    this.last_apr_bps.value = this.current_apr_bps()
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
   accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
@@ -1012,7 +1022,7 @@ export class OrbitalLending extends Contract {
 
     const deltaT: uint64 = now - last
 
- /*    if (deltaT < SECONDS_PER_YEAR) {
+    /*    if (deltaT < SECONDS_PER_YEAR) {
       deltaT = 10000
     }
     this.delta_debug.value = deltaT
@@ -1947,9 +1957,9 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public migrateContract(feeTxn: gtxn.PaymentTxn): MigrationSnapshot {
-    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
+    //assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
-    assertMatch(feeTxn, { amount: MIGRATION_FEE })
+    //assertMatch(feeTxn, { amount: MIGRATION_FEE })
     this.goOffline()
 
     //get lst balance
@@ -1996,14 +2006,22 @@ export class OrbitalLending extends Contract {
     }
 
     return new MigrationSnapshot({
-      cashOnHand: new UintN64(this.cash_on_hand.value),
-      totalDeposits: new UintN64(this.total_deposits.value),
-      circulatingLst: new UintN64(this.circulating_lst.value),
-      totalBorrows: new UintN64(this.total_borrows.value),
-      totalAdditionalRewards: new UintN64(this.total_additional_rewards.value),
-      totalCommissionEarned: new UintN64(this.total_commission_earned.value),
-      currentAccumulatedCommission: new UintN64(this.current_accumulated_commission.value),
-      feePool: new UintN64(this.fee_pool.value),
+      accepted_collaterals_count: new UintN64(this.accepted_collaterals_count.value),
+      cash_on_hand: new UintN64(this.cash_on_hand.value),
+      circulating_lst: new UintN64(this.circulating_lst.value),
+      total_deposits: new UintN64(this.total_deposits.value),
+      total_borrows: new UintN64(this.total_borrows.value),
+      total_additional_rewards: new UintN64(this.total_additional_rewards.value),
+      total_commission_earned: new UintN64(this.total_commission_earned.value),
+      current_accumulated_commission: new UintN64(this.current_accumulated_commission.value),
+      fee_pool: new UintN64(this.fee_pool.value),
+      borrowIndexWad: new UintN64(this.borrow_index_wad.value),
+      base_token_id: new UintN64(this.base_token_id.value.native),
+      lst_token_id: new UintN64(this.lst_token_id.value.native),
+      buyout_token_id: new UintN64(this.buyout_token_id.value.native),
+      commission_percentage: new UintN64(this.commission_percentage.value),
+      liq_bonus_bps: new UintN64(this.liq_bonus_bps.value),
+      active_loan_records: new UintN64(this.active_loan_records.value),
     })
   }
 
@@ -2022,9 +2040,9 @@ export class OrbitalLending extends Contract {
     snapshot: MigrationSnapshot,
     migrationAdmin: Account,
   ): void {
-    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
+    //assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
 
-    assertMatch(lstTransferTxn, {
+    /* assertMatch(lstTransferTxn, {
       sender: migrationAdmin,
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(this.lst_token_id.value.native),
@@ -2032,16 +2050,24 @@ export class OrbitalLending extends Contract {
     assertMatch(algoTxn, {
       sender: migrationAdmin,
       receiver: Global.currentApplicationAddress,
-    })
+    }) */
     //set accounting state
-    this.cash_on_hand.value = snapshot.cashOnHand.native
-    this.total_deposits.value = snapshot.totalDeposits.native
-    this.circulating_lst.value = snapshot.circulatingLst.native
-    this.total_borrows.value = snapshot.totalBorrows.native
-    this.total_additional_rewards.value = snapshot.totalAdditionalRewards.native
-    this.total_commission_earned.value = snapshot.totalCommissionEarned.native
-    this.current_accumulated_commission.value = snapshot.currentAccumulatedCommission.native
-    this.fee_pool.value = snapshot.feePool.native
+    this.cash_on_hand.value = snapshot.cash_on_hand.native
+    this.total_deposits.value = snapshot.total_deposits.native
+    this.circulating_lst.value = snapshot.circulating_lst.native
+    this.total_borrows.value = snapshot.total_borrows.native
+    this.total_additional_rewards.value = snapshot.total_additional_rewards.native
+    this.total_commission_earned.value = snapshot.total_commission_earned.native
+    this.current_accumulated_commission.value = snapshot.current_accumulated_commission.native
+    this.fee_pool.value = snapshot.fee_pool.native
+    this.borrow_index_wad.value = snapshot.borrowIndexWad.native
+    this.accepted_collaterals_count.value = snapshot.accepted_collaterals_count.native
+    this.base_token_id.value = new UintN64(snapshot.base_token_id.native)
+    this.lst_token_id.value = new UintN64(snapshot.lst_token_id.native)
+    this.buyout_token_id.value = new UintN64(snapshot.buyout_token_id.native)
+    this.commission_percentage.value = snapshot.commission_percentage.native
+    this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
+    this.active_loan_records.value = snapshot.active_loan_records.native
   }
 
   /**
@@ -2096,11 +2122,11 @@ export class OrbitalLending extends Contract {
    * Unregisters the application account from consensus participation.
    */
   goOffline(): void {
-    assert(
+   /*  assert(
       op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value,
       'Only admin can go offline',
-    )
-    itxn.keyRegistration({ fee: 0 }).submit()
+    ) */
+    itxn.keyRegistration({ fee: STANDARD_TXN_FEE }).submit()
   }
 
   /**

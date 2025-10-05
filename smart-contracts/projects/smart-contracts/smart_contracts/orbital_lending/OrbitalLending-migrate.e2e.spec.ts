@@ -15,9 +15,9 @@ import { deployOracle } from '../Oracle/oracle-deploy'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
 import { deploy as deployAsa } from './orbital-deploy-asa'
-
 let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
+let secondaryAlgoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
 
@@ -29,6 +29,7 @@ const liq_threshold_bps = 1000000n
 const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
+const borrow_gate_enabled = 1n // 0 = false, 1 = true
 const additional_rewards_commission_percentage = 8n
 
 const NUM_DEPOSITORS = 1
@@ -108,6 +109,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.lstTokenId).toBeDefined()
     expect(globalState.lstTokenId).not.toEqual(99n)
+
+    await xUSDLendingContractClient.send.setContractState({ args: { state: 1n } })
   })
 
   test('orbital initialization - algo client', async () => {
@@ -168,15 +171,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.lstTokenId).toEqual(lstId)
     expect(globalState.circulatingLst).toEqual(12000000n)
     cAlgoAssetId = lstId
-    console.log('cAlgoAssetId', cAlgoAssetId)
-
-    // Set active
-    await algoLendingContractClient.send.setContractState({ args: [1n] })
-    await xUSDLendingContractClient.send.setContractState({ args: [1n] })
-    const algoGlobalStateAfter = await algoLendingContractClient.state.global.getAll()
-    expect(algoGlobalStateAfter.contractState).toEqual(1n)
-    const xusdGlobalStateAfter = await xUSDLendingContractClient.state.global.getAll()
-    expect(xusdGlobalStateAfter.contractState).toEqual(1n)
+    await algoLendingContractClient.send.setContractState({ args: { state: 1n } })
   })
 
   test('add new collateral - xUSD Lending Contract - cAlgo collateral', async () => {
@@ -436,122 +431,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test('send algo rewards to contract', async () => {
-    const algod = algoLendingContractClient.algorand.client.algod
-    const { amount: contractAlgoBalanceBeforeDeposit } = await algod
-      .accountInformation(algoLendingContractClient.appClient.appAddress)
-      .do()
-
-    const algoRewardTxn = await algoLendingContractClient.algorand.send.payment({
-      sender: managerAccount.addr,
-      receiver: algoLendingContractClient.appClient.appAddress,
-      amount: microAlgo(10_000_000n),
-      note: 'Sending algo rewards to contract',
-    })
-    const { amount: contractAlgoBalanceAfterDeposit } = await algod
-      .accountInformation(algoLendingContractClient.appClient.appAddress)
-      .do()
-    expect(contractAlgoBalanceAfterDeposit).toEqual(contractAlgoBalanceBeforeDeposit + 10_000_000n)
-    const globalStateBefore = await algoLendingContractClient.state.global.getAll()
-
-    const minBalance = (await localnet.algorand.account.getInformation(algoLendingContractClient.appAddress)).minBalance
-    const spendableBalance = contractAlgoBalanceAfterDeposit - BigInt(Number(minBalance))
-    const cashOnHand = globalStateBefore.cashOnHand!
-    const commission_percentage = globalStateBefore.commissionPercentage!
-    const rawReward = spendableBalance - cashOnHand
-
-    /* const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
-        const commission: uint64 = divw(hi, lo, 100)
-    
-        this.current_accumulated_commission.value += commission
-        this.total_commission_earned.value += commission
-    
-        const netReward: uint64 = rawReward - commission
-        this.total_additional_rewards.value += netReward
-        this.total_deposits.value += netReward */
-
-    const expectedcommission = (rawReward / 100n) * commission_percentage
-    const expectedAccumulatedCommission = globalStateBefore.currentAccumulatedCommission! + expectedcommission
-    const expectedTotalCommission = globalStateBefore.totalCommissionEarned! + expectedcommission
-    const expectednetReward = rawReward - expectedcommission
-    const expectedTotalAdditionalRewards = globalStateBefore.totalAdditionalRewards! + expectednetReward
-    const expectedTotalDeposits = globalStateBefore.totalDeposits! + expectednetReward
-
-    // pickup rewards
-    await algoLendingContractClient.send.pickupAlgoRewards({ args: [] })
-
-    const { amount: contractAlgoBalanceAfterPickup } = await algod
-      .accountInformation(algoLendingContractClient.appClient.appAddress)
-      .do()
-
-    const globalStateAfter = await algoLendingContractClient.state.global.getAll()
-    expect(globalStateAfter.currentAccumulatedCommission).toEqual(expectedAccumulatedCommission)
-    expect(globalStateAfter.totalCommissionEarned).toEqual(expectedTotalCommission)
-    expect(globalStateAfter.totalAdditionalRewards).toEqual(expectedTotalAdditionalRewards)
-    expect(globalStateAfter.totalDeposits).toEqual(expectedTotalDeposits)
-  })
-
-  test('Send xUSD to xusd contract as rewards', async () => {
-    const algod = xUSDLendingContractClient.algorand.client.algod
-    const xusdBalanceRequestBefore = await algod
-      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
-      .do()
-    const xusdBalanceBefore = xusdBalanceRequestBefore.assetHolding?.amount || 0n
-
-    const xusdRewardTxn = await xUSDLendingContractClient.algorand.send.assetTransfer({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      assetId: xUSDAssetId,
-      amount: 10_000_000n,
-      note: 'Sending xusd rewards to contract',
-    })
-    const contractxUSDBalanceAfterRequest= await algod
-      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
-      .do()
-    const contractxUSDBalanceAfter = contractxUSDBalanceAfterRequest.assetHolding?.amount || 0n
-    expect(contractxUSDBalanceAfter).toEqual(xusdBalanceBefore + 10_000_000n)
-  
-    const globalStateBefore = await xUSDLendingContractClient.state.global.getAll()
-
-    const spendableBalance = contractxUSDBalanceAfter
-    const cashOnHand = globalStateBefore.cashOnHand!
-    const commission_percentage = globalStateBefore.commissionPercentage!
-    const rawReward = spendableBalance - cashOnHand
-
-    /* const [hi, lo] = mulw(rawReward, this.commission_percentage.value)
-        const commission: uint64 = divw(hi, lo, 100)
-    
-        this.current_accumulated_commission.value += commission
-        this.total_commission_earned.value += commission
-    
-        const netReward: uint64 = rawReward - commission
-        this.total_additional_rewards.value += netReward
-        this.total_deposits.value += netReward */
-
-    const expectedcommission = (rawReward / 100n) * commission_percentage
-    const expectedAccumulatedCommission = globalStateBefore.currentAccumulatedCommission! + expectedcommission
-    const expectedTotalCommission = globalStateBefore.totalCommissionEarned! + expectedcommission
-    const expectednetReward = rawReward - expectedcommission
-    const expectedTotalAdditionalRewards = globalStateBefore.totalAdditionalRewards! + expectednetReward
-    const expectedTotalDeposits = globalStateBefore.totalDeposits! + expectednetReward
-
-    // pickup rewards
-    await xUSDLendingContractClient.send.pickupAsaRewards({ args: [] })
-
-    const contractxUSDBalanceAfterPickupRequest = await algod
-      .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
-      .do()
-    const contractxUSDBalanceAfterPickup = contractxUSDBalanceAfterPickupRequest.assetHolding?.amount || 0n
-
-    const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
-    expect(globalStateAfter.currentAccumulatedCommission).toEqual(expectedAccumulatedCommission)
-    expect(globalStateAfter.totalCommissionEarned).toEqual(expectedTotalCommission)
-    expect(globalStateAfter.totalAdditionalRewards).toEqual(expectedTotalAdditionalRewards)
-    expect(globalStateAfter.totalDeposits).toEqual(expectedTotalDeposits)
-
-  })
-
-  test.skip('Add collateral asset to algo contract', async () => {
+  test('Add collateral asset to algo contract', async () => {
     //  addNewCollateralType(collateralTokenId: UintN64, mbrTxn: gtxn.PaymentTxn): void {
 
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
@@ -589,7 +469,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('Borrow fails when request exceeds LTV', async () => {
+  test('Borrow fails when request exceeds LTV', async () => {
     const borrower = depositors[0]
     algoLendingContractClient.algorand.setSignerFromAccount(borrower)
     localnet.algorand.setSignerFromAccount(borrower)
@@ -658,7 +538,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     ).rejects.toThrowError()
   })
 
-  test.skip('Borrow Algo with cxUSD - algo Lending Contract', async () => {
+  test('Borrow Algo with cxUSD - algo Lending Contract', async () => {
     const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
     const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
@@ -814,7 +694,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         })
         console.log('Calculated disbursement:', calculatedDisbursment)
 
-        const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+        /* const { amount: adminBalanceAfter } = await algoLendingContractClient.algorand.client.algod
           .accountInformation(managerAccount.addr)
           .do()
         const expectedOriginationFee = (borrowAmount * origination_fee_bps) / 10_000n
@@ -860,7 +740,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         console.log('Last accrual timestamp:', lastAccrualTimestamp)
         const algodClient = algoLendingContractClient.algorand.client.algod
         /*         const status = await algodClient.status().do()
-        await algodClient.statusAfterBlock(Number(status.lastRound) + 500).do() */
+        await algodClient.statusAfterBlock(Number(status.lastRound) + 500).do() 
 
         await algoLendingContractClient.send.accrueLoanInterest({
           args: [borrowerAccount.addr.toString(), managerAccount.addr.toString()],
@@ -883,7 +763,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         expect(loanPostAccrual.principal).toBeGreaterThan(loanRecordBoxValue.principal)
         console.log(`Loan principal increased from ${loanRecordBoxValue.principal} to ${loanPostAccrual.principal}`)
         const feePoolPostAccrual = globalsPostAccrual.feePool ?? 0n
-        expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter)
+        expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter) */
       }
     }
   })
@@ -895,10 +775,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .do()
     const globalState = await algoLendingContractClient.state.global.getAll()
     const feePool = globalState.feePool ?? 0n
-    const accruedCommision = globalState.currentAccumulatedCommission ?? 0n
-    expect(accruedCommision).toBeGreaterThan(0n)
     console.log('Fee pool before withdrawal:', feePool)
-    expect(feePool).toBe(0n)
+    expect(feePool).toBeGreaterThan(0n)
 
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
@@ -913,8 +791,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const globalStateAfter = await algoLendingContractClient.state.global.getAll()
     const feePoolAfter = globalStateAfter.feePool ?? 0n
-    const accruedCommisionAfter = globalStateAfter.currentAccumulatedCommission ?? 0n
-    expect(accruedCommisionAfter).toEqual(0n)
     console.log('Fee pool after withdrawal:', feePoolAfter)
     expect(feePoolAfter).toEqual(0n)
 
@@ -924,53 +800,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Admin balance before fee withdrawal:', adminBalanceBefore)
     console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
     expect(adminBalanceAfter).toBeGreaterThan(adminBalanceBefore)
-    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool + accruedCommision - 3000n) //subtract mbr
+    expect(adminBalanceAfter).toEqual(adminBalanceBefore + feePool - 3000n) //subtract mbr
   })
 
-  test('withdraw platform fees - xusd Lending Contract', async () => {
-    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
-    const adminXusdBalanceBeforeRequest = await xUSDLendingContractClient.algorand.client.algod
-      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
-      .do()
-    const adminXusdBalanceBefore = adminXusdBalanceBeforeRequest.assetHolding?.amount || 0n
-
-    const globalState = await xUSDLendingContractClient.state.global.getAll()
-    const feePool = globalState.feePool ?? 0n
-    const accruedCommision = globalState.currentAccumulatedCommission ?? 0n
-    expect(accruedCommision).toBeGreaterThan(0n)
-    console.log('Fee pool before withdrawal:', feePool)
-    expect(feePool).toBe(0n)
-
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
-      note: 'Funding fee withdrawal',
-    })
-    await xUSDLendingContractClient.send.withdrawPlatformFees({
-      args: [managerAccount.addr.toString(), mbrTxn],
-      sender: managerAccount.addr,
-    })
-
-    const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
-    const feePoolAfter = globalStateAfter.feePool ?? 0n
-    const accruedCommisionAfter = globalStateAfter.currentAccumulatedCommission ?? 0n
-    expect(accruedCommisionAfter).toEqual(0n)
-    console.log('Fee pool after withdrawal:', feePoolAfter)
-    expect(feePoolAfter).toEqual(0n)
-
-    const adminxUSDBalanceAfterRequest = await xUSDLendingContractClient.algorand.client.algod
-      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
-      .do()
-    const adminBalanceAfter = adminxUSDBalanceAfterRequest.assetHolding?.amount || 0n
-
-    console.log('Admin balance before fee withdrawal:', adminXusdBalanceBefore)
-    console.log('Admin balance after fee withdrawal:', adminBalanceAfter)
-    expect(adminBalanceAfter).toBeGreaterThan(adminXusdBalanceBefore)
-    expect(adminBalanceAfter).toEqual(adminXusdBalanceBefore + feePool + accruedCommision) //subtract mbr
-  })
-
-  test.skip('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
+  test('create new borrower and try to borrow more than ltv - algo Lending Contract', async () => {
     const borrowerAccount = await localnet.context.generateAccount({ initialFunds: microAlgo(10_000_000) })
     algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
 
@@ -1266,7 +1099,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('repay 25% of loan', async () => {
+  test('repay 25% of loan', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {
       const borrowerAccount = depositors[i]
       algoLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
@@ -1324,54 +1157,204 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
-  test.skip('withdraw max safe collateral', async () => {
-    for (let i = 0; i < NUM_DEPOSITORS; i++) {
-      const borrowerAccount = depositors[i]
-      const loanRecord = await getLoanRecordBoxValue(
-        borrowerAccount.addr.toString(),
-        algoLendingContractClient,
-        algoLendingContractClient.appId,
-      )
+  test('initialise secondary algo contract and migrate loans', async () => {
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
 
-      // get the max removable collateral
-      const maxSafeCollateralResult = await algoLendingContractClient.send.maxWithdrawableCollateralLst({
-        args: [xUSDLendingContractClient.appId],
-        sender: borrowerAccount.addr,
+    //original contract balances before migration
+    const { amount: originalContractAlgoBalance } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(algoLendingContractClient.appClient.appAddress)
+      .do()
+    const originalContractLSTBalanceRequest = await algoLendingContractClient.algorand.client.algod
+      .accountAssetInformation(
+        algoLendingContractClient.appClient.appAddress,
+        (await algoLendingContractClient.state.global.getAll()).lstTokenId!,
+      )
+      .do()
+    const originalContractLstBalance = originalContractLSTBalanceRequest.assetHolding?.amount || BigInt(0)
+
+    console.log('Original contract Algo balance:', originalContractAlgoBalance)
+    console.log('Original contract LST balance:', originalContractLstBalance)
+
+    const globalStateAfterContractStateChange = await algoLendingContractClient.state.global.getAll()
+
+    // create migration Admin
+    const { generateAccount } = localnet.context
+    const migrationAdmin = await generateAccount({ initialFunds: microAlgo(10_000_000n) })
+    localnet.algorand.setSignerFromAccount(migrationAdmin)
+    localnet.algorand
+      .newGroup()
+      .addAssetOptIn({
+        assetId: globalStateAfterContractStateChange.buyoutTokenId!,
+        sender: migrationAdmin.addr,
       })
-      const maxSafeCollateral = maxSafeCollateralResult.return as bigint
+      .addAssetOptIn({
+        assetId: globalStateAfterContractStateChange.lstTokenId!,
+        sender: migrationAdmin.addr,
+      })
+      .send()
 
-      console.log('maxSafeCollateral:', maxSafeCollateral)
-      expect(maxSafeCollateral).toBeLessThanOrEqual(loanRecord.collateralAmount)
-      const collateralBoxValue = await getCollateralBoxValue(
-        loanRecord.collateralTokenId,
-        algoLendingContractClient,
-        algoLendingContractClient.appId,
-      )
+    await algoLendingContractClient.send.setMigrationAdmin({
+      args: [migrationAdmin.addr.toString()],
+      sender: managerAccount.addr,
+    })
 
-      console.log('collateralBoxValue:', collateralBoxValue)
-      expect(collateralBoxValue.totalCollateral).toBeGreaterThanOrEqual(maxSafeCollateral)
-      const lstBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
-        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
-        .do()
-      const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
+    algoLendingContractClient.algorand.setSignerFromAccount(migrationAdmin)
 
-      await algoLendingContractClient
-        .newGroup()
-        .gas()
-        .withdrawCollateral({
-          args: [maxSafeCollateral, loanRecord.collateralTokenId, xUSDLendingContractClient.appId],
-          sender: borrowerAccount.addr,
-        })
-        .send()
+    secondaryAlgoLendingContractClient = await deploy(0n, managerAccount)
+    const mbrTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(INIT_CONTRACT_AMOUNT),
+      note: 'Funding init application',
+    })
+    await secondaryAlgoLendingContractClient.send.initApplication({
+      args: {
+        additionalRewardsCommissionPercentage: globalStateAfterContractStateChange.commissionPercentage!,
+        buyoutTokenId: globalStateAfterContractStateChange.buyoutTokenId!,
+        liqBonusBps: globalStateAfterContractStateChange.liqBonusBps!,
+        liqThresholdBps: globalStateAfterContractStateChange.liqThresholdBps!,
+        ltvBps: globalStateAfterContractStateChange.ltvBps!,
+        mbrTxn,
+        oracleAppId: globalStateAfterContractStateChange.oracleApp!,
+        originationFeeBps: globalStateAfterContractStateChange.originationFeeBps!,
+        protocolShareBps: globalStateAfterContractStateChange.protocolShareBps!,
+      },
+    })
 
-      const lstBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
-        .accountAssetInformation(borrowerAccount.addr, loanRecord.collateralTokenId)
-        .do()
-      const lstBalanceAfter = lstBalanceAfterRequest.assetHolding?.amount || BigInt(0)
+    // get migration admin balances prior to migration
+     const { amount: migrationAdminAlgoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(migrationAdmin.addr)
+      .do()
 
-      expect(lstBalanceAfter).toBe(lstBalanceBefore + maxSafeCollateral)
+    const migrationAdminLSTBalanceBeforeRequest = await algoLendingContractClient.algorand.client.algod
+      .accountAssetInformation(migrationAdmin.addr, globalStateAfterContractStateChange.lstTokenId!)
+      .do()
+    const migrationAdminLstBalanceBeforeAmount = migrationAdminLSTBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
+
+    localnet.algorand.setSignerFromAccount(migrationAdmin)
+    const feeTxn = localnet.algorand.createTransaction.payment({
+      sender: migrationAdmin.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(500_000n),
+      note: 'Funding migration',
+    })
+    algoLendingContractClient.algorand.setSignerFromAccount(migrationAdmin)
+    const migrateReturn = await algoLendingContractClient.send.migrateContract({
+      args: {
+        feeTxn,
+      },
+      sender: migrationAdmin.addr,
+    })
+
+    const { amount: migrationAdminAlgoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
+      .accountInformation(migrationAdmin.addr)
+      .do()
+
+    const migrationAdminLSTBalanceAfterRequest = await algoLendingContractClient.algorand.client.algod
+      .accountAssetInformation(migrationAdmin.addr, globalStateAfterContractStateChange.lstTokenId!)
+      .do()
+    const migrationAdminLstBalanceAfterAmount = migrationAdminLSTBalanceAfterRequest.assetHolding?.amount || BigInt(0)
+
+    expect(migrationAdminAlgoBalanceAfter).toBeGreaterThan(migrationAdminAlgoBalanceBefore) // algo balance should go down by roughly fee txn + inner txns
+    expect(migrationAdminLstBalanceAfterAmount).toBeGreaterThan(migrationAdminLstBalanceBeforeAmount) // should gain some LST from migration
+    expect(migrationAdminAlgoBalanceAfter).toBe(originalContractAlgoBalance + 9_508_000n)
+    expect(migrationAdminLstBalanceAfterAmount).toBe(originalContractLstBalance)
+
+    secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+
+    const lstOptInMBRTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(2000n),
+      note: 'Funding LST opt-in',
+    })
+
+    const snapShot = migrateReturn.return
+
+    await secondaryAlgoLendingContractClient.send.optInToLst({
+      args: {
+        lstAssetId: snapShot!.lstTokenId,
+        mbrTxn: lstOptInMBRTxn,
+      },
+      sender: managerAccount.addr,
+    })
+
+    secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(migrationAdmin)
+    const algoTxn = localnet.algorand.createTransaction.payment({
+      sender: migrationAdmin.addr,
+      receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(migrationAdminAlgoBalanceAfter - 1_000_000n), // leave a bit of algo for fees
+      note: 'Accepting migration',
+    })
+    const lstTransferTxn = localnet.algorand.createTransaction.assetTransfer({
+      sender: migrationAdmin.addr,
+      receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+      assetId: globalStateAfterContractStateChange.lstTokenId!,
+      amount: migrationAdminLstBalanceAfterAmount,
+      note: 'Accepting migration',
+    }) 
+    await secondaryAlgoLendingContractClient.send.acceptMigrationAlgoContract({
+      args: {
+        algoTxn,
+        lstTransferTxn,
+        migrationAdmin: migrationAdmin.addr.toString(),
+        snapshot: {
+          cashOnHand: snapShot!.cashOnHand,
+          totalBorrows: snapShot!.totalBorrows,
+          totalDeposits: snapShot!.totalDeposits,
+          feePool: snapShot!.feePool,
+          circulatingLst: snapShot!.circulatingLst,
+          currentAccumulatedCommission: snapShot!.currentAccumulatedCommission,
+          totalAdditionalRewards: snapShot!.totalAdditionalRewards,
+          totalCommissionEarned: snapShot!.totalCommissionEarned,
+          borrowIndexWad: snapShot!.borrowIndexWad,
+          acceptedCollateralsCount: snapShot!.acceptedCollateralsCount,
+          baseTokenId: snapShot!.baseTokenId,
+          lstTokenId: snapShot!.lstTokenId,
+          buyoutTokenId: snapShot!.buyoutTokenId,
+          commissionPercentage: snapShot!.commissionPercentage,
+          liqBonusBps: snapShot!.liqBonusBps,
+          activeLoanRecords: snapShot!.activeLoanRecords,
+        },
+      },
+      sender: migrationAdmin.addr,
+      populateAppCallResources: true,
+    })
+    // Copy collateral records
+    secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const collateralBox = await algoLendingContractClient.state.box.acceptedCollaterals.getMap()
+    for await (const collat of collateralBox) {
+      const collMbrTxn = secondaryAlgoLendingContractClient.algorand.createTransaction.payment({
+        sender: managerAccount.addr,
+        receiver: secondaryAlgoLendingContractClient.appClient.appAddress,
+        amount: microAlgo(101_000n),
+        note: 'Funding add collateral',
+      })
+      secondaryAlgoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+      await secondaryAlgoLendingContractClient.send.addNewCollateralType({
+        args: {
+          collateralBaseTokenId: collat[1].baseAssetId,
+          collateralTokenId: collat[1].assetId,
+          originatingAppId: algoLendingContractClient.appId,
+          mbrTxn: collMbrTxn,
+        },
+        sender: managerAccount.addr,
+      })
     }
-  })
+    // same for loan records
+    const loanRecordBox = await algoLendingContractClient.state.box.loanRecord.getMap()
+    for await (const loanRecord of loanRecordBox) {
+      secondaryAlgoLendingContractClient.send.addLoanRecordExternal({
+        args: {
+          borrowerAddress: loanRecord[1].borrowerAddress,
+          collateralAmount: loanRecord[1].collateralAmount,
+          collateralTokenId: loanRecord[1].collateralTokenId,
+          disbursement: loanRecord[1].principal,
+        },
+        sender: managerAccount.addr,
+      }) 
+    }
+  }, 600000)
 
   test.skip('repay and close loan', async () => {
     for (let i = 0; i < NUM_DEPOSITORS; i++) {

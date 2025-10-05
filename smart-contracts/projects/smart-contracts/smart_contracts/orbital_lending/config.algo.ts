@@ -48,12 +48,20 @@ export class InterestAccrualReturn extends arc4.Struct<{
 }> {}
 
 export class MigrationSnapshot extends arc4.Struct<{
-  totalDeposits: arc4.UintN64
-  totalBorrows: arc4.UintN64
-  circulatingLst: arc4.UintN64
-  cashOnHand: arc4.UintN64
-  feePool: arc4.UintN64
-  totalAdditionalRewards: arc4.UintN64
-  currentAccumulatedCommission: arc4.UintN64
-  totalCommissionEarned: arc4.UintN64
+  total_deposits: arc4.UintN64
+  total_borrows: arc4.UintN64
+  circulating_lst: arc4.UintN64
+  cash_on_hand: arc4.UintN64
+  borrowIndexWad: arc4.UintN64
+  base_token_id: arc4.UintN64
+  commission_percentage: arc4.UintN64
+  lst_token_id: arc4.UintN64
+  fee_pool: arc4.UintN64
+  accepted_collaterals_count: arc4.UintN64
+  buyout_token_id: arc4.UintN64
+  liq_bonus_bps: arc4.UintN64
+  current_accumulated_commission: arc4.UintN64
+  total_commission_earned: arc4.UintN64
+  total_additional_rewards: arc4.UintN64
+  active_loan_records: arc4.UintN64
 }> {}

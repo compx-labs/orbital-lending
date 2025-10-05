@@ -636,6 +636,20 @@ export class OrbitalLending extends Contract {
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
   }
 
+  @abimethod({ allowActions: 'NoOp' })
+  public addLoanRecordExternal(
+    disbursement: uint64,
+    collateralTokenId: UintN64,
+    borrowerAddress: Account,
+    collateralAmount: uint64,
+  ): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    this.mintLoanRecord(disbursement, collateralTokenId, borrowerAddress, collateralAmount)
+    this.updateCollateralTotal(collateralTokenId, collateralAmount)
+    this.total_borrows.value = this.total_borrows.value + disbursement
+    this.last_apr_bps.value = this.current_apr_bps()
+  }
+
   /**
    * Computes the LST amount owed for a deposit based on local exchange rate.
    * @param amount Base token amount being deposited.
@@ -2009,14 +2023,22 @@ export class OrbitalLending extends Contract {
     }
 
     return new MigrationSnapshot({
-      cashOnHand: new UintN64(this.cash_on_hand.value),
-      totalDeposits: new UintN64(this.total_deposits.value),
-      circulatingLst: new UintN64(this.circulating_lst.value),
-      totalBorrows: new UintN64(this.total_borrows.value),
-      totalAdditionalRewards: new UintN64(this.total_additional_rewards.value),
-      totalCommissionEarned: new UintN64(this.total_commission_earned.value),
-      currentAccumulatedCommission: new UintN64(this.current_accumulated_commission.value),
-      feePool: new UintN64(this.fee_pool.value),
+      accepted_collaterals_count: new UintN64(this.accepted_collaterals_count.value),
+      cash_on_hand: new UintN64(this.cash_on_hand.value),
+      circulating_lst: new UintN64(this.circulating_lst.value),
+      total_deposits: new UintN64(this.total_deposits.value),
+      total_borrows: new UintN64(this.total_borrows.value),
+      total_additional_rewards: new UintN64(this.total_additional_rewards.value),
+      total_commission_earned: new UintN64(this.total_commission_earned.value),
+      current_accumulated_commission: new UintN64(this.current_accumulated_commission.value),
+      fee_pool: new UintN64(this.fee_pool.value),
+      borrowIndexWad: new UintN64(this.borrow_index_wad.value),
+      base_token_id: new UintN64(this.base_token_id.value.native),
+      lst_token_id: new UintN64(this.lst_token_id.value.native),
+      buyout_token_id: new UintN64(this.buyout_token_id.value.native),
+      commission_percentage: new UintN64(this.commission_percentage.value),
+      liq_bonus_bps: new UintN64(this.liq_bonus_bps.value),
+      active_loan_records: new UintN64(this.active_loan_records.value),
     })
   }
 
@@ -2053,14 +2075,22 @@ export class OrbitalLending extends Contract {
     })
 
     //set accounting state
-    this.cash_on_hand.value = snapshot.cashOnHand.native
-    this.total_deposits.value = snapshot.totalDeposits.native
-    this.circulating_lst.value = snapshot.circulatingLst.native
-    this.total_borrows.value = snapshot.totalBorrows.native
-    this.total_additional_rewards.value = snapshot.totalAdditionalRewards.native
-    this.total_commission_earned.value = snapshot.totalCommissionEarned.native
-    this.current_accumulated_commission.value = snapshot.currentAccumulatedCommission.native
-    this.fee_pool.value = snapshot.feePool.native
+    this.cash_on_hand.value = snapshot.cash_on_hand.native
+    this.total_deposits.value = snapshot.total_deposits.native
+    this.circulating_lst.value = snapshot.circulating_lst.native
+    this.total_borrows.value = snapshot.total_borrows.native
+    this.total_additional_rewards.value = snapshot.total_additional_rewards.native
+    this.total_commission_earned.value = snapshot.total_commission_earned.native
+    this.current_accumulated_commission.value = snapshot.current_accumulated_commission.native
+    this.fee_pool.value = snapshot.fee_pool.native
+    this.borrow_index_wad.value = snapshot.borrowIndexWad.native
+    this.accepted_collaterals_count.value = snapshot.accepted_collaterals_count.native
+    this.base_token_id.value = new UintN64(snapshot.base_token_id.native)
+    this.lst_token_id.value = new UintN64(snapshot.lst_token_id.native)
+    this.buyout_token_id.value = new UintN64(snapshot.buyout_token_id.native)
+    this.commission_percentage.value = snapshot.commission_percentage.native
+    this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
+    this.active_loan_records.value = snapshot.active_loan_records.native
   }
 
   /**
