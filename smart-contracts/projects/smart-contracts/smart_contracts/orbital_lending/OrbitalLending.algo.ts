@@ -43,9 +43,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-// Number of seconds in a (e.g.) 365-day year
-
-// Instead of scattered magic numbers, centralize them
+const CONTRACT_VERSION: uint64 = 1600
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -218,6 +216,8 @@ export class OrbitalLending extends Contract {
 
   contract_state = GlobalState<UintN64>() // 0 = inactive, 1 = active, 2 = migrating
 
+  contract_version = GlobalState<UintN64>() // contract version number
+
   /**
    * Creates the lending application contract with initial configuration
    * @param admin - The administrative account that will have privileged access
@@ -230,9 +230,10 @@ export class OrbitalLending extends Contract {
     this.base_token_id.value = new UintN64(baseTokenId)
     this.migration_admin.value = admin
     this.contract_state.value = new UintN64(0) // inactive
+    this.contract_version.value = new UintN64(CONTRACT_VERSION)
   }
 
-  /**
+  /*
    * Initializes the lending protocol with core parameters and configurations
    * @param mbrTxn - Payment transaction covering minimum balance requirements
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
@@ -1237,12 +1238,12 @@ export class OrbitalLending extends Contract {
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
-    assertMatch(premiumAxferTxn, {
-      sender: buyer,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(buyoutTokenId),
-      assetAmount: premiumTokens,
-    })
+    assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
+    assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
+    assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
+
+    const paidAmount: uint64 = premiumAxferTxn.assetAmount
+    const refund: uint64 = paidAmount - premiumTokens
 
     // 4) Debt repayment in ALGO
     assertMatch(repayPayTxn, {
@@ -1279,6 +1280,17 @@ export class OrbitalLending extends Contract {
     this.addCash(debtBase)
 
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
+
+    if (refund > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: buyer,
+          xferAsset: buyoutTokenId,
+          assetAmount: refund,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+    }
 
     this.last_apr_bps.value = this.current_apr_bps()
   }

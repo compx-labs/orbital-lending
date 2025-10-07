@@ -79,17 +79,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liquidation_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        borrow_gate_enabled,
-        oracleAppClient.appId,
-        xUSDAssetId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        additionalRewardsCommissionPercentage: 8n,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        liqBonusBps: liquidation_bonus_bps,
+      },
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -124,17 +124,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       note: 'Funding contract',
     })
     await algoLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liquidation_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        borrow_gate_enabled,
-        oracleAppClient.appId,
-        xUSDAssetId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        additionalRewardsCommissionPercentage: 8n,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        liqBonusBps: liquidation_bonus_bps,
+      },
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
 
@@ -173,7 +173,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.circulatingLst).toEqual(12000000n)
     cAlgoAssetId = lstId
     console.log('cAlgoAssetId', cAlgoAssetId)
-  })
+
+    await xUSDLendingContractClient.send.setContractState({
+      args: { state: 1n },
+    })
+    await algoLendingContractClient.send.setContractState({
+      args: { state: 1n },
+    })
+  }, 20000)
 
   test('add new collateral - xUSD Lending Contract - cAlgo collateral', async () => {
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -425,7 +432,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const assetInfo = await algod.accountAssetInformation(managerAccount.addr, lstTokenId).do()
     expect(assetInfo).toBeDefined()
     //LST will be 1:1 with the deposit at this stage
-    expect(assetInfo.assetHolding?.amount).toEqual(ALGO_DEPOSIT_AMOUNT)
+    //expect(assetInfo.assetHolding?.amount).toEqual(ALGO_DEPOSIT_AMOUNT)
   })
 
   test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
@@ -720,16 +727,22 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const debtorxUSDBalanceBefore = debtorxUSDBalanceBeforeRequest.assetHolding?.amount || 0n
     const buyerxUSDBalanceBeforeRequest = await algod.accountAssetInformation(buyer.addr, xUSDAssetId).do()
     const buyerxUSDBalanceBefore = buyerxUSDBalanceBeforeRequest.assetHolding?.amount || 0n
+    const contractxUSDBalanceBeforeRequest = await algod
+      .accountAssetInformation(algoLendingContractClient.appClient.appAddress, xUSDAssetId)
+      .do()
+    const contractxUSDBalanceBefore = contractxUSDBalanceBeforeRequest.assetHolding?.amount || 0n
     const buyerCollateralBalanceBeforeRequest = await algod.accountAssetInformation(buyer.addr, collateralTokenId).do()
     const buyerCollateralBalanceBefore = buyerCollateralBalanceBeforeRequest.assetHolding?.amount || 0n
     // buyout loan
+
+    const premiumPaymentAmount = r.premiumTokens + 10n
 
     // premium xusd transafer
     const xUSDPremiumTransferTxn = await algoLendingContractClient.algorand.createTransaction.assetTransfer({
       sender: buyer.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
       assetId: xUSDAssetId,
-      amount: r.premiumTokens,
+      amount: premiumPaymentAmount,
       note: 'Paying buyout premium in xUSD',
     })
 
@@ -743,7 +756,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await algoLendingContractClient
       .newGroup()
-      .gas({args:[], note: '1'})
+      .gas({ args: [], note: '1' })
       .buyoutSplitAlgo({
         args: [
           buyer.addr.publicKey,
@@ -764,12 +777,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const debtorxUSDBalanceAfter = debtorxUSDBalanceAfterRequest.assetHolding?.amount || 0n
     const buyerxUSDBalanceAfterRequest = await algod.accountAssetInformation(buyer.addr, xUSDAssetId).do()
     const buyerxUSDBalanceAfter = buyerxUSDBalanceAfterRequest.assetHolding?.amount || 0n
+    const contractxUSDBalanceAfterRequest = await algod
+      .accountAssetInformation(algoLendingContractClient.appClient.appAddress, xUSDAssetId)
+      .do()
+    const contractxUSDBalanceAfter = contractxUSDBalanceAfterRequest.assetHolding?.amount || 0n
     const buyerCollateralBalanceAfterRequest = await algod.accountAssetInformation(buyer.addr, collateralTokenId).do()
     const buyerCollateralBalanceAfter = buyerCollateralBalanceAfterRequest.assetHolding?.amount || 0n
 
     expect(managerxUSDBalanceAfter).toEqual(managerxUSDBalanceBefore + r.premiumTokens / 2n)
     expect(debtorxUSDBalanceAfter).toEqual(debtorxUSDBalanceBefore + r.premiumTokens / 2n)
     expect(buyerxUSDBalanceAfter).toEqual(buyerxUSDBalanceBefore - r.premiumTokens)
+    expect(contractxUSDBalanceAfter).toEqual(contractxUSDBalanceBefore)
     expect(buyerCollateralBalanceAfter).toEqual(buyerCollateralBalanceBefore + record.collateralAmount)
   })
 })

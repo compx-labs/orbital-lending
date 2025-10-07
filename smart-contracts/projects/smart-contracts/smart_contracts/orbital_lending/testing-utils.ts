@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import algosdk from 'algosdk'
 import { OrbitalLendingClient } from '../artifacts/orbital_lending/orbital-lendingClient'
+import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
 
 export const BASIS_POINTS: bigint = 10_000n
 export const USD_MICRO_UNITS: bigint = 1_000_000n
@@ -77,13 +78,66 @@ export interface getLoanRecordReturnType {
   boxRef: algosdk.BoxReference
 }
 
-/* borrowerAddress: arc4.Address
-  collateralTokenId: arc4.UintN64
-  collateralAmount: arc4.UintN64
-  lastDebtChange: DebtChange
-  borrowedTokenId: arc4.UintN64
-  principal: arc4.UintN64 
-  userIndexWad: arc4.UintN64 */
+export async function getLoanRecordBoxValueASA(
+  borrower: string,
+  appClient: OrbitalLendingAsaClient,
+  appId: bigint,
+): Promise<getLoanRecordReturnType> {
+  const loanRecordType = new algosdk.ABITupleType([
+    new algosdk.ABIAddressType(), // borrowerAddress
+    new algosdk.ABIUintType(64), // collateralTokenId
+    new algosdk.ABIUintType(64), // collateralAmount
+    new algosdk.ABITupleType([
+      // struct
+      new algosdk.ABIUintType(64), // debtChange amount
+      new algosdk.ABIUintType(8), // changeType
+      new algosdk.ABIUintType(64), // timestamp
+    ]),
+    new algosdk.ABIUintType(64), // principal
+    new algosdk.ABIUintType(64), // borrowedTokenId
+    new algosdk.ABIUintType(64), // userIndexWad
+  ])
+
+  const boxNames = await appClient.appClient.getBoxNames()
+  for (const boxName of boxNames) {
+    console.log('boxname getloanrecord', boxName.name)
+    console.log('Box name (base64):', Buffer.from(boxName.name).toString('base64'))
+  }
+  // Encode the key as "loan_records" + <borrower address as bytes>
+  const prefix = new TextEncoder().encode('loan_record')
+  const addressBytes = algosdk.decodeAddress(borrower).publicKey
+  const boxName = new Uint8Array(prefix.length + addressBytes.length)
+  boxName.set(prefix, 0)
+  boxName.set(addressBytes, prefix.length)
+
+  const value = await appClient.appClient.getBoxValueFromABIType(boxName, loanRecordType)
+  const [
+    borrowerAddress,
+    collateralTokenId,
+    collateralAmount,
+    lastDebtChange,
+    borrowedTokenId,
+    principal,
+    userIndexWad,
+  ] = value as any[]
+
+  console.log('value from box:', value)
+
+  return {
+    borrowerAddress,
+    collateralTokenId,
+    collateralAmount,
+    lastDebtChange,
+    principal,
+    borrowedTokenId,
+    userIndexWad,
+    boxRef: {
+      appIndex: appId,
+      name: boxName,
+    },
+  }
+}
+
 export async function getLoanRecordBoxValue(
   borrower: string,
   appClient: OrbitalLendingClient,
