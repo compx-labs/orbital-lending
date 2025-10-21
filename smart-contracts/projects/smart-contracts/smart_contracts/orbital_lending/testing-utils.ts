@@ -60,6 +60,79 @@ export function liveDebtFromSnapshot(principal: bigint, userIndexWad: bigint, bo
   return (principal * borrowIndexWad) / userIndexWad
 }
 
+export interface PartialLiquidationParams {
+  repayBaseAmount: bigint
+  liveDebt: bigint
+  collateralLSTBalance: bigint
+  totalDeposits: bigint
+  circulatingLst: bigint
+  basePrice: bigint
+  collateralUnderlyingPrice: bigint
+  bonusBps: bigint
+}
+
+export interface PartialLiquidationOutcome {
+  repayUsed: bigint
+  seizeLST: bigint
+  refundAmount: bigint
+}
+
+export function computePartialLiquidationOutcome({
+  repayBaseAmount,
+  liveDebt,
+  collateralLSTBalance,
+  totalDeposits,
+  circulatingLst,
+  basePrice,
+  collateralUnderlyingPrice,
+  bonusBps,
+}: PartialLiquidationParams): PartialLiquidationOutcome {
+  if (repayBaseAmount === 0n || liveDebt === 0n || collateralLSTBalance === 0n) {
+    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount }
+  }
+
+  const safeTotalDeposits = totalDeposits === 0n ? 1n : totalDeposits
+  const safeCirculatingLst = circulatingLst === 0n ? 1n : circulatingLst
+
+  const closeFactorHalf = liveDebt / 2n
+  const maxRepayAllowed = closeFactorHalf > 0n ? closeFactorHalf : liveDebt
+
+  let repayCandidate = repayBaseAmount
+  if (repayCandidate > maxRepayAllowed) {
+    repayCandidate = maxRepayAllowed
+  }
+
+  if (basePrice === 0n || collateralUnderlyingPrice === 0n) {
+    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount }
+  }
+
+  const repayUSD = (repayCandidate * basePrice) / USD_MICRO_UNITS
+  const seizeUSD = (repayUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
+  const seizeUnderlying = (seizeUSD * USD_MICRO_UNITS) / collateralUnderlyingPrice
+  let seizeLST = (seizeUnderlying * safeCirculatingLst) / safeTotalDeposits
+  if (seizeLST > collateralLSTBalance) {
+    seizeLST = collateralLSTBalance
+  }
+
+  if (seizeLST === collateralLSTBalance) {
+    repayCandidate = repayBaseAmount
+  }
+
+  const seizedUnderlying = (seizeLST * safeTotalDeposits) / safeCirculatingLst
+  const seizeUSDActual = (seizedUnderlying * collateralUnderlyingPrice) / USD_MICRO_UNITS
+  const repayUSDActual = (seizeUSDActual * BASIS_POINTS) / (BASIS_POINTS + bonusBps)
+  let repaySupported = (repayUSDActual * USD_MICRO_UNITS) / basePrice
+
+  if (repaySupported > liveDebt) {
+    repaySupported = liveDebt
+  }
+
+  const repayUsed = repayCandidate <= repaySupported ? repayCandidate : repaySupported
+  const refundAmount = repayBaseAmount > repayUsed ? repayBaseAmount - repayUsed : 0n
+
+  return { repayUsed, seizeLST, refundAmount }
+}
+
 /* borrowerAddress: arc4.Address
   collateralTokenId: arc4.UintN64
   collateralAmount: arc4.UintN64

@@ -1557,6 +1557,42 @@ export class OrbitalLending extends Contract {
     return seizeLST
   }
 
+  private repayBaseFromSeizedLST(
+    seizeLST: uint64,
+    collateralTokenId: UintN64,
+    lstAppId: uint64,
+    bonusBps: uint64,
+    basePrice: uint64,
+  ): uint64 {
+    if (seizeLST === 0) return 0
+
+    const collateral = this.getCollateral(collateralTokenId)
+    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
+
+    const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const total = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const [hUnderlying, lUnderlying] = mulw(seizeLST, total)
+    const seizedUnderlying: uint64 = divw(hUnderlying, lUnderlying, circ)
+
+    const underlyingPrice = this.getOraclePrice(collateral.baseAssetId) // µUSD
+    const [hSeizeUSD, lSeizeUSD] = mulw(seizedUnderlying, underlyingPrice)
+    const seizeUSDActual: uint64 = divw(hSeizeUSD, lSeizeUSD, USD_MICRO_UNITS)
+
+    const [hRepayUSD, lRepayUSD] = mulw(seizeUSDActual, BASIS_POINTS)
+    const repayUSD: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps)
+
+    const [hRepayBase, lRepayBase] = mulw(repayUSD, USD_MICRO_UNITS)
+    const repayBase: uint64 = divw(hRepayBase, lRepayBase, basePrice)
+
+    return repayBase
+  }
+
   /**
    * Returns the current amount of LST tokens in circulation
    * @returns Total LST tokens representing all depositor claims
@@ -1627,22 +1663,33 @@ export class OrbitalLending extends Contract {
     const closeFactorHalf: uint64 = liveDebt / 2
     const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
 
-    let repayUsed: uint64 = repayBaseAmount
-    let refundAmount: uint64 = 0
-    if (repayUsed > maxRepayAllowed) {
-      refundAmount = repayUsed - maxRepayAllowed
-      repayUsed = maxRepayAllowed
+    const bonusBps: uint64 = this.liq_bonus_bps.value
+    let repayCandidate: uint64 = repayBaseAmount
+    if (repayCandidate > maxRepayAllowed) {
+      repayCandidate = maxRepayAllowed
     }
 
-    const [hRU, lRU] = mulw(repayUsed, basePrice)
+    const [hRU, lRU] = mulw(repayCandidate, basePrice)
     const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
 
-    const bonusBps: uint64 = this.liq_bonus_bps.value
     const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
     const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
 
     const seizeLST: uint64 = this.seizeLSTFromUSD(seizeUSD, collTok, lstAppId, collLSTBal)
     assert(seizeLST > 0, 'NOTHING_TO_SEIZE')
+
+    let repaySupported: uint64 = this.repayBaseFromSeizedLST(seizeLST, collTok, lstAppId, bonusBps, basePrice)
+    if (repaySupported > liveDebt) {
+      repaySupported = liveDebt
+    }
+
+    if (seizeLST === collLSTBal) {
+      repayCandidate = repayBaseAmount
+    }
+
+    const repayUsed: uint64 = repayCandidate <= repaySupported ? repayCandidate : repaySupported
+    assert(repayUsed > 0, 'ZERO_REPAY_USED')
+    const refundAmount: uint64 = repayBaseAmount - repayUsed
 
     itxn
       .assetTransfer({

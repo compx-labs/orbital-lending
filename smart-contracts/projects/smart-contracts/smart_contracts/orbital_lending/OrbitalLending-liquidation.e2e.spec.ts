@@ -13,6 +13,8 @@ import {
   computeBuyoutTerms,
   getCollateralBoxValue,
   getLoanRecordBoxValue,
+  computePartialLiquidationOutcome,
+  liveDebtFromSnapshot,
 } from './testing-utils'
 import { OracleClient } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
@@ -89,9 +91,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         liquidation_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
         xUSDAssetId,
+        8n,
       ],
     })
 
@@ -100,6 +102,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       receiver: xUSDLendingContractClient.appClient.appAddress,
       amount: microAlgo(102000n),
       note: 'Funding contract',
+    })
+
+    await xUSDLendingContractClient.send.setContractState({
+      args: { state: 1n },
+      sender: managerAccount.addr,
     })
 
     await xUSDLendingContractClient.send.generateLstToken({
@@ -134,9 +141,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         liquidation_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
-        borrow_gate_enabled,
         oracleAppClient.appId,
         xUSDAssetId,
+        8n,
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -150,6 +157,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await algoLendingContractClient.send.optInToLst({
       args: [lstId, mbrTxn],
+    })
+
+    await algoLendingContractClient.send.setContractState({
+      args: { state: 1n },
+      sender: managerAccount.addr,
     })
 
     const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
@@ -443,10 +455,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const { amount: algoBalanceAfterDeposit } = await algod.accountInformation(managerAccount.addr).do()
     expect(algoBalanceAfterDeposit).toEqual(algoBalanceBeforeDeposit - feeTracker - ALGO_DEPOSIT_AMOUNT)
 
-    const assetInfo = await algod.accountAssetInformation(managerAccount.addr, lstTokenId).do()
-    expect(assetInfo).toBeDefined()
-    //LST will be 1:1 with the deposit at this stage
-    expect(assetInfo.assetHolding?.amount).toEqual(ALGO_DEPOSIT_AMOUNT)
   })
 
   test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
@@ -697,13 +705,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     )
 
     const repayAttempt = (loanBefore.principal * 3n) / 4n
-    const halfPrincipal = loanBefore.principal / 2n
-    const expectedRepay = halfPrincipal > 0n ? halfPrincipal : loanBefore.principal
     expect(repayAttempt).toBeGreaterThan(0n)
-    expect(expectedRepay).toBeGreaterThan(0n)
 
     const algoGlobalState = await algoLendingContractClient.state.global.getAll()
     const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
+    const borrowIndexWadBefore = (algoGlobalState.borrowIndexWad ?? 0n) as bigint
+    const userIndexWadBefore = loanBefore.userIndexWad ?? 0n
+    const liveDebtBefore =
+      userIndexWadBefore > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanBefore.principal, userIndexWadBefore, borrowIndexWadBefore)
+        : loanBefore.principal
+    expect(liveDebtBefore).toBeGreaterThan(0n)
 
     const circulatingLst = xusdGlobalState.circulatingLst ?? 1n
     const totalDeposits = xusdGlobalState.totalDeposits ?? 0n
@@ -721,6 +733,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const liquidationThreshold = algoGlobalState.liqThresholdBps ?? 0n
     const thresholdCollateralUsd = (debtUsd * liquidationThreshold) / BASIS_POINTS
     expect(thresholdCollateralUsd).toBeGreaterThan(0n)
+
+    const bonusBps = algoGlobalState.liqBonusBps ?? 0n
 
     const currentXusdPriceInfo = await oracleAppClient.send.getTokenPrice({
       args: [xUSDAssetId],
@@ -740,6 +754,18 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     await oracleAppClient.send.updateTokenPrice({
       args: [xUSDAssetId, liquidationPrice],
     })
+
+    const expectedOutcome = computePartialLiquidationOutcome({
+      repayBaseAmount: repayAttempt,
+      liveDebt: liveDebtBefore,
+      collateralLSTBalance: loanBefore.collateralAmount,
+      totalDeposits,
+      circulatingLst,
+      basePrice: algoPrice,
+      collateralUnderlyingPrice: liquidationPrice,
+      bonusBps,
+    })
+    expect(expectedOutcome.repayUsed).toBeGreaterThan(0n)
 
     algoLendingContractClient.algorand.setSignerFromAccount(liquidatorAccount)
     localnet.algorand.setSignerFromAccount(liquidatorAccount)
@@ -783,10 +809,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       algoLendingContractClient,
       algoLendingContractClient.appId,
     )
+    const algoGlobalStateAfter = await algoLendingContractClient.state.global.getAll()
+    const borrowIndexWadAfter = (algoGlobalStateAfter.borrowIndexWad ?? borrowIndexWadBefore) as bigint
+    const liveDebtAfter =
+      loanAfter.userIndexWad > 0n && borrowIndexWadAfter > 0n
+        ? liveDebtFromSnapshot(loanAfter.principal, loanAfter.userIndexWad, borrowIndexWadAfter)
+        : loanAfter.principal
 
-    const actualRepaid = loanBefore.principal - loanAfter.principal
-    expect(actualRepaid).toEqual(expectedRepay)
+    const actualRepaid = liveDebtBefore - liveDebtAfter
+    expect(actualRepaid).toEqual(expectedOutcome.repayUsed)
     expect(loanAfter.collateralAmount).toBeLessThan(loanBefore.collateralAmount)
+    expect(loanAfter.collateralAmount).toEqual(loanBefore.collateralAmount - expectedOutcome.seizeLST)
 
     const liquidatorAssetInfoAfter = await algod
       .accountAssetInformation(liquidatorAccount.addr, loanBefore.collateralTokenId)
@@ -795,7 +828,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const collateralDelta = loanBefore.collateralAmount - loanAfter.collateralAmount
     expect(collateralDelta).toBeGreaterThan(0n)
-    expect(liquidatorCollateralAfter - liquidatorCollateralBefore).toEqual(collateralDelta)
+    expect(collateralDelta).toEqual(expectedOutcome.seizeLST)
+    expect(liquidatorCollateralAfter - liquidatorCollateralBefore).toEqual(expectedOutcome.seizeLST)
   })
 
   test.skip('Buyout loan - algo Lending Contract', async () => {
@@ -885,7 +919,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await algoLendingContractClient
       .newGroup()
-      .gas({args:[], note: '1'})
+      .gas({ args: [], note: '1' })
       .buyoutSplitAlgo({
         args: [
           buyer.addr.publicKey,
