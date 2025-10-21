@@ -21,9 +21,12 @@ import { divw, mulw } from '@algorandfoundation/algorand-typescript/op'
 import {
   AcceptedCollateral,
   AcceptedCollateralKey,
+  BUYOUT_MBR,
+  DEPOSIT_MBR,
   DebtChange,
+  DepositRecord,
+  DepositRecordKey,
   INDEX_SCALE,
-  InterestAccrualReturn,
   LoanRecord,
   MIGRATION_FEE,
   MINIMUM_ADDITIONAL_REWARD,
@@ -37,13 +40,12 @@ import {
   MBR_OPT_IN_LST,
   STANDARD_TXN_FEE,
   BASIS_POINTS,
-  DEBUG_TIMESTAMP_OFFSET,
   VALIDATE_BORROW_FEE,
   USD_MICRO_UNITS,
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 1800
+const CONTRACT_VERSION: uint64 = 1900
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -79,6 +81,9 @@ export class OrbitalLending extends Contract {
 
   /** External oracle application for asset price feeds */
   oracle_app = GlobalState<Application>()
+
+  /** External oracle application for user flux tier feeds */
+  flux_oracle_app = GlobalState<Application>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // LENDING PARAMETERS (ALL IN BASIS POINTS)
@@ -171,6 +176,8 @@ export class OrbitalLending extends Contract {
   /** Liquidation bonus in bps (e.g., 500 = 5% bonus to liquidators) */
   liq_bonus_bps = GlobalState<uint64>()
 
+  deposit_record = BoxMap<DepositRecordKey, DepositRecord>({ keyPrefix: 'deposit_record' })
+
   // ═══════════════════════════════════════════════════════════════════════
   // EXTERNAL / CONSENSUS REWARDS
   // ═══════════════════════════════════════════════════════════════════════
@@ -258,6 +265,7 @@ export class OrbitalLending extends Contract {
     oracle_app_id: Application,
     buyout_token_id: uint64,
     additional_rewards_commission_percentage: uint64,
+    flux_oracle_app_id: Application,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
 
@@ -309,6 +317,7 @@ export class OrbitalLending extends Contract {
     this.total_borrows_principal.value = 0
     this.cash_on_hand.value = 0
     this.total_additional_rewards.value = 0
+    this.flux_oracle_app.value = flux_oracle_app_id
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -720,7 +729,7 @@ export class OrbitalLending extends Contract {
       assetAmount: amount,
     })
     assertMatch(mbrTxn, {
-      amount: STANDARD_TXN_FEE,
+      amount: DEPOSIT_MBR,
     })
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.addCash(amount)
@@ -749,6 +758,23 @@ export class OrbitalLending extends Contract {
     this.circulating_lst.value += lstDue
     this.total_deposits.value += amount
     this.last_apr_bps.value = this.current_apr_bps()
+    const depositKey = new DepositRecordKey({
+      assetId: new UintN64(this.base_token_id.value.native),
+      userAddress: new Address(op.Txn.sender),
+    })
+    if (this.deposit_record(depositKey).exists) {
+      const existingRecord = this.deposit_record(depositKey).value.copy()
+      const newAmount: uint64 = existingRecord.depositAmount.native + amount
+      this.deposit_record(depositKey).value = new DepositRecord({
+        assetId: existingRecord.assetId,
+        depositAmount: new UintN64(newAmount),
+      }).copy()
+    } else {
+      this.deposit_record(depositKey).value = new DepositRecord({
+        assetId: new UintN64(this.base_token_id.value.native),
+        depositAmount: new UintN64(amount),
+      }).copy()
+    }
   }
 
   /**
@@ -803,6 +829,22 @@ export class OrbitalLending extends Contract {
     this.circulating_lst.value -= amount // LST burned
     this.total_deposits.value -= asaDue // ASA returned
     this.last_apr_bps.value = this.current_apr_bps()
+    const depositKey = new DepositRecordKey({
+      assetId: new UintN64(this.base_token_id.value.native),
+      userAddress: new Address(op.Txn.sender),
+    })
+    if (this.deposit_record(depositKey).exists) {
+      const existingRecord = this.deposit_record(depositKey).value.copy()
+      const newAmount: uint64 = existingRecord.depositAmount.native - amount
+      if (newAmount === 0) {
+        this.deposit_record(depositKey).delete()
+      } else {
+        this.deposit_record(depositKey).value = new DepositRecord({
+          assetId: existingRecord.assetId,
+          depositAmount: new UintN64(newAmount),
+        }).copy()
+      }
+    }
   }
 
   /**
@@ -843,7 +885,22 @@ export class OrbitalLending extends Contract {
     this.last_max_borrow.value = maxBorrowUSD
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
     this.validateLoanAmount(requestedLoanAmount, maxBorrowUSD, baseTokenOraclePrice)
-    const { disbursement, fee } = this.calculateDisbursement(requestedLoanAmount)
+
+    // get flux tier
+    let userTier: UintN64 = new UintN64(0)
+    if (this.flux_oracle_app.value.id !== 0) {
+      userTier = abiCall(FluxGateStub.prototype.getUserTier, {
+        appId: this.flux_oracle_app.value.id,
+        args: [new Address(op.Txn.sender)],
+        sender: Global.currentApplicationAddress,
+        fee: STANDARD_TXN_FEE,
+        apps: [this.flux_oracle_app.value],
+        accounts: [op.Txn.sender],
+      }).returnValue
+    }
+    const calculatedFee = this.computeFees(requestedLoanAmount, userTier.native)
+
+    const { disbursement, fee } = this.calculateDisbursement(requestedLoanAmount, calculatedFee)
 
     if (hasLoan) {
       this.processLoanTopUp(
@@ -956,6 +1013,29 @@ export class OrbitalLending extends Contract {
     const maxCap: uint64 = this.max_apr_bps.value
     if (maxCap > 0 && apr > maxCap) apr = maxCap
     return apr
+  }
+
+  private computeFees(depositAmount: uint64, userTier: uint64): uint64 {
+    const initialFee: uint64 = this.origination_fee_bps.value
+    let effectiveFeeBps: uint64 = initialFee
+
+    if (userTier === 1) {
+      const [hi, lo] = mulw(initialFee, 90)
+      effectiveFeeBps = divw(hi, lo, 100)
+    } else if (userTier === 2) {
+      const [hi, lo] = mulw(initialFee, 75)
+      effectiveFeeBps = divw(hi, lo, 100)
+    } else if (userTier === 3) {
+      const [hi, lo] = mulw(initialFee, 50)
+      effectiveFeeBps = divw(hi, lo, 100)
+    } else if (userTier >= 4) {
+      const [hi, lo] = mulw(initialFee, 25)
+      effectiveFeeBps = divw(hi, lo, 100)
+    }
+
+    const [feeHi, feeLo] = mulw(depositAmount, effectiveFeeBps)
+    const fee: uint64 = divw(feeHi, feeLo, 10_000)
+    return fee
   }
 
   // SINGLE public entrypoint to get the current APR (bps)
@@ -1231,9 +1311,14 @@ export class OrbitalLending extends Contract {
     premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
     repayAxferTxn: gtxn.AssetTransferTxn, // BASE TOKEN (ASA) full DEBT
     lstAppId: uint64, // LST app backing the collateral
+    mbrTxn: gtxn.PaymentTxn,
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+
+    assertMatch(mbrTxn, {
+      amount: BUYOUT_MBR,
+    })
 
     // 1) Make time current
     this.accrueMarket()
@@ -1932,16 +2017,16 @@ export class OrbitalLending extends Contract {
   /**
    * Splits a requested borrow amount into net disbursement and protocol fee.
    * @param requestedAmount Total amount requested by the borrower.
+   * @param calculatedFee Fee amount computed for this borrow.
    * @returns Struct containing net disbursement and fee portion.
    */
-  private calculateDisbursement(requestedAmount: uint64): { disbursement: uint64; fee: uint64 } {
-    const fee: uint64 = (requestedAmount * this.origination_fee_bps.value) / BASIS_POINTS
-    const disbursement: uint64 = requestedAmount - fee
+  private calculateDisbursement(requestedAmount: uint64, calculatedFee: uint64): { disbursement: uint64; fee: uint64 } {
+    const disbursement: uint64 = requestedAmount - calculatedFee
 
-    this.fee_pool.value += fee
+    this.fee_pool.value += calculatedFee
     this.last_scaled_down_disbursement.value = disbursement
 
-    return { disbursement, fee }
+    return { disbursement, fee: calculatedFee }
   }
 
   /**
@@ -2207,6 +2292,13 @@ export abstract class TargetContract extends Contract {
 export abstract class PriceOracleStub extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   getTokenPrice(assetId: UintN64): TokenPrice {
+    err('stub only')
+  }
+}
+
+export abstract class FluxGateStub extends Contract {
+  @abimethod({ allowActions: 'NoOp' })
+  getUserTier(user: Address): UintN64 {
     err('stub only')
   }
 }

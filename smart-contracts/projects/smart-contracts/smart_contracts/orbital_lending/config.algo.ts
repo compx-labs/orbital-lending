@@ -13,6 +13,8 @@ export const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
 export const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
 export const MINIMUM_ADDITIONAL_REWARD: uint64 = 10_000
 export const MIGRATION_FEE: uint64 = 500_000 // 0.5 Algo
+export const BUYOUT_MBR: uint64 = 10_000
+export const DEPOSIT_MBR: uint64 = 10_000
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
@@ -64,4 +66,14 @@ export class MigrationSnapshot extends arc4.Struct<{
   total_commission_earned: arc4.UintN64
   total_additional_rewards: arc4.UintN64
   active_loan_records: arc4.UintN64
+}> {}
+
+export class DepositRecord extends arc4.Struct<{
+  depositAmount: arc4.UintN64
+  assetId: arc4.UintN64
+}> {}
+
+export class DepositRecordKey extends arc4.Struct<{
+  userAddress: arc4.Address
+  assetId: arc4.UintN64
 }> {}
