@@ -109,9 +109,6 @@ export function computePartialLiquidationOutcome({
     return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount, fullRepayRequired: false }
   }
 
-  const collateralUSD = collateralUSDFromLST(collateralLSTBalance, safeTotalDeposits, safeCirculatingLst, collateralUnderlyingPrice)
-  const debtUSDv = debtUSD(liveDebt, basePrice)
-
   const repayUSD = (repayCandidate * basePrice) / USD_MICRO_UNITS
   const seizeUSD = (repayUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
   const seizeUnderlying = (seizeUSD * USD_MICRO_UNITS) / collateralUnderlyingPrice
@@ -134,24 +131,13 @@ export function computePartialLiquidationOutcome({
   }
 
   const proposedRepayUsed = repayCandidate <= repaySupported ? repayCandidate : repaySupported
-  const repayUsedUSD = (proposedRepayUsed * basePrice) / USD_MICRO_UNITS
 
-  if (!isFullRepayRequest) {
-    const remainingDebtBase = liveDebt - proposedRepayUsed
-    if (remainingDebtBase > 0n) {
-      const remainingDebtUSD = debtUSDv > repayUsedUSD ? debtUSDv - repayUsedUSD : 0n
-      const seizedUSDActual = (repayUsedUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
-      const remainingCollateralUSD = collateralUSD > seizedUSDActual ? collateralUSD - seizedUSDActual : 0n
-      const lhs = remainingCollateralUSD * BASIS_POINTS
-      const rhs = remainingDebtUSD * (BASIS_POINTS + bonusBps)
-      if (lhs < rhs) {
-        return {
-          repayUsed: 0n,
-          seizeLST: 0n,
-          refundAmount: repayBaseAmount,
-          fullRepayRequired: true,
-        }
-      }
+  if (!isFullRepayRequest && seizeLST === collateralLSTBalance && proposedRepayUsed < liveDebt) {
+    return {
+      repayUsed: 0n,
+      seizeLST: 0n,
+      refundAmount: repayBaseAmount,
+      fullRepayRequired: true,
     }
   }
 

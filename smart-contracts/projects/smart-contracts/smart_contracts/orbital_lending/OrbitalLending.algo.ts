@@ -1276,12 +1276,11 @@ export class OrbitalLending extends Contract {
     const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
     const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
 
-    let premiumRateBps: uint64 = 0
-    if (CR_bps > this.liq_threshold_bps.value) {
-      const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-      const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value)
-      premiumRateBps = ratio_bps - BASIS_POINTS
-    }
+    assert(CR_bps > this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
+
+    const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
+    const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value)
+    const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
 
     const [hP, lP] = mulw(collateralUSD, premiumRateBps)
     const premiumUSD: uint64 = divw(hP, lP, BASIS_POINTS)
@@ -1746,30 +1745,8 @@ export class OrbitalLending extends Contract {
 
     const proposedRepayUsed: uint64 = repayCandidate <= repaySupported ? repayCandidate : repaySupported
 
-    if (!isFullRepayRequest) {
-      const remainingDebtBase: uint64 = liveDebt - proposedRepayUsed
-      if (remainingDebtBase > 0) {
-        const [hRepayUsedUSD, lRepayUsedUSD] = mulw(proposedRepayUsed, basePrice)
-        const repayUsedUSD: uint64 = divw(hRepayUsedUSD, lRepayUsedUSD, USD_MICRO_UNITS)
-
-        let remainingDebtUSD: uint64 = 0
-        if (debtUSDv > repayUsedUSD) {
-          remainingDebtUSD = debtUSDv - repayUsedUSD
-        }
-
-        const [hSeizedUSDActual, lSeizedUSDActual] = mulw(repayUsedUSD, BASIS_POINTS + bonusBps)
-        const seizedUSDActual: uint64 = divw(hSeizedUSDActual, lSeizedUSDActual, BASIS_POINTS)
-
-        let remainingCollateralUSD: uint64 = 0
-        if (collateralUSD > seizedUSDActual) {
-          remainingCollateralUSD = collateralUSD - seizedUSDActual
-        }
-
-        const [hLeft, lLeft] = mulw(remainingCollateralUSD, BASIS_POINTS)
-        const [hRight, lRight] = mulw(remainingDebtUSD, BASIS_POINTS + bonusBps)
-        const supports = hLeft > hRight || (hLeft === hRight && lLeft >= lRight)
-        assert(supports, 'FULL_REPAY_REQUIRED')
-      }
+    if (!isFullRepayRequest && seizeLST === collLSTBal && proposedRepayUsed < liveDebt) {
+      assert(false, 'FULL_REPAY_REQUIRED')
     }
 
     const repayUsed: uint64 = isFullRepayRequest ? repayBaseAmount : proposedRepayUsed
