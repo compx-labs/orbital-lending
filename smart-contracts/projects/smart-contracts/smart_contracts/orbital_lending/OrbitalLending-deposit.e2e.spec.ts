@@ -662,16 +662,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
         // Confirm borrow was succesful
         //Check for algo increase in account
-        const globalStateAlgo = await algoLendingContractClient.state.global.getAll()
-        const maxBorrow = globalStateAlgo.lastMaxBorrow
-        console.log('Max borrow amount:', maxBorrow)
-        const lastRequestedLoan = globalStateAlgo.lastRequestedLoan
-        console.log('Last requested loan amount:', lastRequestedLoan)
-        const theDiff = globalStateAlgo.debugDiff
-        console.log('Debug diff:', theDiff)
-
-        const globalState = await algoLendingContractClient.state.global.getAll()
-        console.log('last scaled disbursed amount:', globalState.lastScaledDownDisbursement)
 
         const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
           .accountInformation(borrowerAccount.addr)
@@ -755,10 +745,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           algoLendingContractClient.appId,
         )
         console.log('Loan record after accrual:', loanPostAccrual)
-        const lastDelta = globalsPostAccrual.deltaDebug
-        console.log('Last delta:', lastDelta)
-        const calcualtedWAD = globalsPostAccrual.calculateledSimpleWad!
-        console.log('Calculated WAD:', calcualtedWAD)
         expect(globalsPostAccrual.totalBorrows).toBeGreaterThan(globalStateAfter.totalBorrows as bigint)
 
         expect(loanPostAccrual.principal).toBeGreaterThan(loanRecordBoxValue.principal)
@@ -909,13 +895,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .send(),
     ).rejects.toThrow()
 
-    const globalStateAfter = await algoLendingContractClient.state.global.getAll()
+    await algoLendingContractClient.state.global.getAll()
     const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
-    const maxBorrow = globalStateAfter.lastMaxBorrow
-    console.log('Max borrow amount:', maxBorrow)
-    const lastRequestedLoan = globalStateAfter.lastRequestedLoan
-    console.log('Last requested loan amount:', lastRequestedLoan)
-
     const totalDeposits = xusdGlobalState.totalDeposits
     const circulatingcXUSD = xusdGlobalState.circulatingLst
     console.log('Total deposits:', totalDeposits)

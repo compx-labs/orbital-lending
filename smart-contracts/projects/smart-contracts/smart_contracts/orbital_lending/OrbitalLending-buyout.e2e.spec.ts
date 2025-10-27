@@ -613,16 +613,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
         // Confirm borrow was succesful
         //Check for algo increase in account
-        const globalStateAlgo = await algoLendingContractClient.state.global.getAll()
-        const maxBorrow = globalStateAlgo.lastMaxBorrow
-        console.log('Max borrow amount:', maxBorrow)
-        const lastRequestedLoan = globalStateAlgo.lastRequestedLoan
-        console.log('Last requested loan amount:', lastRequestedLoan)
-        const theDiff = globalStateAlgo.debugDiff
-        console.log('Debug diff:', theDiff)
-
-        const globalState = await algoLendingContractClient.state.global.getAll()
-        console.log('last scaled disbursed amount:', globalState.lastScaledDownDisbursement)
+        await algoLendingContractClient.state.global.getAll()
 
         const { amount: algoBalanceAfter } = await algoLendingContractClient.algorand.client.algod
           .accountInformation(borrowerAccount.addr)

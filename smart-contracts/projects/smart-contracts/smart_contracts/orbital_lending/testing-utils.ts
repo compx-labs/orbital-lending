@@ -75,6 +75,7 @@ export interface PartialLiquidationOutcome {
   repayUsed: bigint
   seizeLST: bigint
   refundAmount: bigint
+  fullRepayRequired: boolean
 }
 
 export function computePartialLiquidationOutcome({
@@ -88,7 +89,7 @@ export function computePartialLiquidationOutcome({
   bonusBps,
 }: PartialLiquidationParams): PartialLiquidationOutcome {
   if (repayBaseAmount === 0n || liveDebt === 0n || collateralLSTBalance === 0n) {
-    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount }
+    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount, fullRepayRequired: false }
   }
 
   const safeTotalDeposits = totalDeposits === 0n ? 1n : totalDeposits
@@ -97,14 +98,19 @@ export function computePartialLiquidationOutcome({
   const closeFactorHalf = liveDebt / 2n
   const maxRepayAllowed = closeFactorHalf > 0n ? closeFactorHalf : liveDebt
 
+  const isFullRepayRequest = repayBaseAmount === liveDebt
+
   let repayCandidate = repayBaseAmount
-  if (repayCandidate > maxRepayAllowed) {
+  if (!isFullRepayRequest && repayCandidate > maxRepayAllowed) {
     repayCandidate = maxRepayAllowed
   }
 
   if (basePrice === 0n || collateralUnderlyingPrice === 0n) {
-    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount }
+    return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount, fullRepayRequired: false }
   }
+
+  const collateralUSD = collateralUSDFromLST(collateralLSTBalance, safeTotalDeposits, safeCirculatingLst, collateralUnderlyingPrice)
+  const debtUSDv = debtUSD(liveDebt, basePrice)
 
   const repayUSD = (repayCandidate * basePrice) / USD_MICRO_UNITS
   const seizeUSD = (repayUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
@@ -127,10 +133,33 @@ export function computePartialLiquidationOutcome({
     repaySupported = liveDebt
   }
 
-  const repayUsed = repayCandidate <= repaySupported ? repayCandidate : repaySupported
-  const refundAmount = repayBaseAmount > repayUsed ? repayBaseAmount - repayUsed : 0n
+  const proposedRepayUsed = repayCandidate <= repaySupported ? repayCandidate : repaySupported
+  const repayUsedUSD = (proposedRepayUsed * basePrice) / USD_MICRO_UNITS
 
-  return { repayUsed, seizeLST, refundAmount }
+  if (!isFullRepayRequest) {
+    const remainingDebtBase = liveDebt - proposedRepayUsed
+    if (remainingDebtBase > 0n) {
+      const remainingDebtUSD = debtUSDv > repayUsedUSD ? debtUSDv - repayUsedUSD : 0n
+      const seizedUSDActual = (repayUsedUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
+      const remainingCollateralUSD = collateralUSD > seizedUSDActual ? collateralUSD - seizedUSDActual : 0n
+      const lhs = remainingCollateralUSD * BASIS_POINTS
+      const rhs = remainingDebtUSD * (BASIS_POINTS + bonusBps)
+      if (lhs < rhs) {
+        return {
+          repayUsed: 0n,
+          seizeLST: 0n,
+          refundAmount: repayBaseAmount,
+          fullRepayRequired: true,
+        }
+      }
+    }
+  }
+
+  const repayUsed = isFullRepayRequest ? repayBaseAmount : proposedRepayUsed
+  const refundAmount =
+    isFullRepayRequest || repayBaseAmount <= repayUsed ? 0n : repayBaseAmount - repayUsed
+
+  return { repayUsed, seizeLST, refundAmount, fullRepayRequired: false }
 }
 
 /* borrowerAddress: arc4.Address
