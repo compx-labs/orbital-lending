@@ -7665,14 +7665,14 @@
       "stack_out": []
     },
     "2026": {
-      "op": "pushbytess \"contract_version\" 0x000000000000076c // \"contract_version\", 0x000000000000076c",
+      "op": "pushbytess \"contract_version\" 0x00000000000007d0 // \"contract_version\", 0x00000000000007d0",
       "defined_out": [
         "\"contract_version\"",
-        "0x000000000000076c"
+        "0x00000000000007d0"
       ],
       "stack_out": [
         "\"contract_version\"",
-        "0x000000000000076c"
+        "0x00000000000007d0"
       ]
     },
     "2054": {
