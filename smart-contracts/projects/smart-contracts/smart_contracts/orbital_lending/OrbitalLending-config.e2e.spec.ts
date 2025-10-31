@@ -298,6 +298,92 @@ describe('orbital-lending Testing - config', () => {
     ).rejects.toThrowError()
   })
 
+  test('non-admin cannot set contract state', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(1_000_000) })
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      xUSDLendingContractClient.send.setContractState({
+        args: { state: 1n },
+        sender: outsider.addr,
+      }),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('non-admin cannot set migration admin', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(1_000_000) })
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      xUSDLendingContractClient.send.setMigrationAdmin({
+        args: [outsider.addr.toString()],
+        sender: outsider.addr,
+      }),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('non-admin cannot withdraw platform fees', async () => {
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
+    const feeTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: outsider.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(1000n),
+      note: 'Attempt unauthorized fee withdrawal',
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      xUSDLendingContractClient.send.withdrawPlatformFees({
+        args: [outsider.addr.toString(), feeTxn],
+        sender: outsider.addr,
+      }),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('non-admin cannot add new collateral type', async () => {
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const { assetId: collateralAssetId } = await localnet.context.algorand.send.assetCreate({
+      sender: managerAccount.addr,
+      total: 1_000_000n,
+      decimals: 6,
+      defaultFrozen: false,
+      unitName: 'nCOL',
+      assetName: 'Non Admin Collateral',
+      manager: managerAccount.addr,
+      reserve: managerAccount.addr,
+      clawback: managerAccount.addr,
+      freeze: managerAccount.addr,
+    })
+
+    const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
+    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: outsider.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(101000n),
+      note: 'Attempt unauthorized collateral add',
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
+
+    await expect(
+      xUSDLendingContractClient.send.addNewCollateralType({
+        args: [collateralAssetId, 0n, mbrTxn, algoLendingContractClient.appId],
+        assetReferences: [collateralAssetId],
+        appReferences: [algoLendingContractClient.appId],
+        sender: outsider.addr,
+      }),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+  })
+
   /* 
   public setRateParams(
       base_bps: uint64,

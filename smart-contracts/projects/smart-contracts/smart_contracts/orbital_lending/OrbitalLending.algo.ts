@@ -1239,8 +1239,8 @@ export class OrbitalLending extends Contract {
    * @param repayPayTxn - ALGO payment transaction with base token repayment
    * @param lstAppId - The LST app backing the collateral
    * @dev Similar to buyoutASA but uses ALGO payment instead of asset transfer
-   * @dev Buyout price includes premium based on how far above liquidation threshold
-   * @dev Only available when collateral ratio exceeds liquidation threshold
+   * @dev Buyout price includes premium based on how far below liquidation threshold the LTV sits
+   * @dev Only available when loan LTV is strictly below the liquidation threshold
    */
   @abimethod({ allowActions: 'NoOp' })
   public buyoutSplitAlgo(
@@ -1272,14 +1272,15 @@ export class OrbitalLending extends Contract {
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
+    assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
-    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
+    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
+    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
 
-    assert(CR_bps > this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
+    assert(ltvBps < this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
 
-    const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-    const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value)
+    const [hR, lR] = mulw(this.liq_threshold_bps.value, BASIS_POINTS)
+    const ratio_bps: uint64 = divw(hR, lR, ltvBps)
     const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
 
     const [hP, lP] = mulw(collateralUSD, premiumRateBps)
@@ -1676,7 +1677,7 @@ export class OrbitalLending extends Contract {
    * @param debtor - Account whose loan is being liquidated
    * @param paymentTxn - ALGO payment transaction with full debt repayment
    * @dev Similar to liquidateASA but uses ALGO payment instead of asset transfer
-   * @dev Only available when collateral ratio falls below liquidation threshold
+   * @dev Only available when loan LTV meets or exceeds the liquidation threshold
    * @dev Liquidator must repay full debt amount to claim all collateral
    */
   @abimethod({ allowActions: 'NoOp' })
@@ -1701,10 +1702,11 @@ export class OrbitalLending extends Contract {
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
+    assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
-    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
-    assert(CR_bps <= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
+    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
+    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
+    assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
     // Validate repayment transfer (ALGO)
     assertMatch(repayPay, {

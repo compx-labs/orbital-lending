@@ -46,10 +46,10 @@ Higher LTV increases capital efficiency but reduces the safety buffer.
 
 ### **liq_threshold_bps — Liquidation Threshold**
 
-The collateral ratio below which a position may be liquidated.
-*Example: 8,500 bps = 85%.*
-If your collateral falls under this level, liquidators can repay debt and seize collateral.
-Always set above LTV to create a buffer.
+The loan-to-value (debt ÷ collateral) ratio at or above which a position becomes liquidatable.
+*Example: 9,000 bps = 90%.*
+If debt grows to 90% of collateral value, liquidators can repay debt and seize collateral.
+Always configure this above the borrow LTV cap to maintain a safety buffer.
 
 ---
 
@@ -249,4 +249,3 @@ When proposing a market:
 4. **Specify model type** (default kinked, or future model later).
 
 ---
-

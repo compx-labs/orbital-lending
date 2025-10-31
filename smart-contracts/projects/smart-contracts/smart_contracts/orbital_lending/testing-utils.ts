@@ -624,11 +624,11 @@ export function debtUSD(
  *  - liq_threshold_bps: liquidation threshold in bps (e.g., 8500)
  *
  * @returns
- *  - eligible: whether CR_bps > liq_threshold_bps
+ *  - eligible: whether ltv_bps < liq_threshold_bps
  *  - premiumTokens: amount of buyout token (xUSD) needed to pay the premium
  *  - premiumUSD: premium value in µUSD (for debugging/asserts)
  *  - debtRepayAmountBase: full live debt in base token units (ASA/ALGO) to be repaid
- *  - collateralUSD, debtUSDv, CR_bps, premiumRateBps: intermediates for assertions
+ *  - collateralUSD, debtUSDv, ltv_bps, premiumRateBps: intermediates for assertions
  */
 export function computeBuyoutTerms(params: {
   // Collateral (LST)
@@ -666,27 +666,27 @@ export function computeBuyoutTerms(params: {
   const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice)
 
   // Edge cases (no debt → premium 0, repay 0)
-  if (debtRepayAmountBase === 0n || debtUSDv === 0n) {
+  if (debtRepayAmountBase === 0n || debtUSDv === 0n || collateralUSD === 0n) {
     return {
       premiumTokens: 0n,
       premiumUSD: 0n,
       premiumRateBps: 0n,
-      CR_bps: 0n,
+      ltv_bps: 0n,
       collateralUSD,
       debtUSDv,
       debtRepayAmountBase,
     }
   }
 
-  // 2) CR in bps
-  const CR_bps = (collateralUSD * BASIS_POINTS) / debtUSDv
-  console.log('CR_bps:', CR_bps)
+  // 2) LTV in bps
+  const ltv_bps = (debtUSDv * BASIS_POINTS) / collateralUSD
+  console.log('ltv_bps:', ltv_bps)
   console.log('liq_threshold_bps:', liq_threshold_bps)
-  // 3) Premium rate (bps). 0 at/below threshold; grows unbounded above it.
+  // 3) Premium rate (bps). 0 at/above threshold; grows as LTV drops.
   let premiumRateBps = 0n
-  if (CR_bps > liq_threshold_bps) {
-    // (CR_bps * 10_000 / liq_threshold_bps) - 10_000
-    premiumRateBps = (CR_bps * BASIS_POINTS) / liq_threshold_bps - BASIS_POINTS
+  if (ltv_bps < liq_threshold_bps) {
+    // (liq_threshold_bps * 10_000 / ltv_bps) - 10_000
+    premiumRateBps = (liq_threshold_bps * BASIS_POINTS) / ltv_bps - BASIS_POINTS
     console.log('premiumRateBps:', premiumRateBps)
   }
 
@@ -700,7 +700,7 @@ export function computeBuyoutTerms(params: {
     premiumTokens, // amount of buyout token to send (xUSD)
     premiumUSD, // µUSD
     premiumRateBps, // for assertions/logs
-    CR_bps, // for assertions/logs
+    ltv_bps, // for assertions/logs
     collateralUSD, // µUSD
     debtUSDv, // µUSD
     debtRepayAmountBase, // base token units to repay (ASA/ALGO)

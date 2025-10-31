@@ -1263,12 +1263,12 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Purchases a borrower's collateral at a premium when loan is above liquidation threshold
+   * Purchases a borrower's collateral at a premium when loan is below liquidation threshold
    * @param buyer - Account that will receive the collateral
    * @param debtor - Account whose loan is being bought out
    * @param axferTxn - Asset transfer transaction with buyout payment
-   * @dev Buyout price includes premium based on how far above liquidation threshold
-   * @dev Only available when collateral ratio exceeds liquidation threshold
+   * @dev Buyout price includes premium based on how far below liquidation threshold the LTV sits
+   * @dev Only available when loan LTV is strictly below the liquidation threshold
    * @dev Closes the loan and transfers collateral to buyer
    */
   @abimethod({ allowActions: 'NoOp' })
@@ -1303,16 +1303,17 @@ export class OrbitalLending extends Contract {
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
+    assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    // CR in bps
-    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
-    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
+    // LTV in bps
+    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
+    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
 
-    // Premium rate (bps), clamped at 0 below threshold
-    assert(CR_bps > this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
+    // Premium rate (bps), clamped at 0 when at/above threshold
+    assert(ltvBps < this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
 
-    const [hR, lR] = mulw(CR_bps, BASIS_POINTS)
-    const ratio_bps: uint64 = divw(hR, lR, this.liq_threshold_bps.value) // > 10_000 if CR_bps > thresh
+    const [hR, lR] = mulw(this.liq_threshold_bps.value, BASIS_POINTS)
+    const ratio_bps: uint64 = divw(hR, lR, ltvBps) // > 10_000 if ltvBps < thresh
     const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
 
     // Premium (USD)
@@ -1692,7 +1693,7 @@ export class OrbitalLending extends Contract {
    * Liquidates an undercollateralized loan by repaying debt and claiming collateral
    * @param debtor - Account whose loan is being liquidated
    * @param axferTxn - Asset transfer transaction with full debt repayment
-   * @dev Only available when collateral ratio falls below liquidation threshold
+   * @dev Only available when loan LTV meets or exceeds the liquidation threshold
    * @dev Liquidator must repay full debt amount to claim all collateral
    * @dev Closes the loan and transfers collateral to liquidator
    */
@@ -1718,11 +1719,12 @@ export class OrbitalLending extends Contract {
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
+    assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    // CR_bps = collateralUSD * 10_000 / debtUSD
-    const [hCR, lCR] = mulw(collateralUSD, BASIS_POINTS)
-    const CR_bps: uint64 = divw(hCR, lCR, debtUSDv)
-    assert(CR_bps <= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
+    // LTV_bps = debtUSD * 10_000 / collateralUSD
+    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
+    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
+    assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
     // Validate repayment transfer (ASA base token)
     const baseAssetId = this.base_token_id.value.native
