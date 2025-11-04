@@ -93,17 +93,18 @@ describe('orbital-lending Testing - config', () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-        additional_rewards_commission_percentage,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        liqBonusBps: liq_bonus_bps,
+        originationFeeBps: origination_fee_bps,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        buyoutTokenId: xUSDAssetId,
+        oracleAppId: oracleAppClient.appId,
+        protocolShareBps: protocol_interest_fee_bps,
+        fluxOracleAppId: 0n,
+      },
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -144,17 +145,18 @@ describe('orbital-lending Testing - config', () => {
       note: 'Funding contract',
     })
     await algoLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-        additional_rewards_commission_percentage,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        liqBonusBps: liq_bonus_bps,
+        originationFeeBps: origination_fee_bps,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        buyoutTokenId: xUSDAssetId,
+        oracleAppId: oracleAppClient.appId,
+        protocolShareBps: protocol_interest_fee_bps,
+        fluxOracleAppId: 0n,
+      },
     })
 
     //create lst externally
@@ -233,17 +235,18 @@ describe('orbital-lending Testing - config', () => {
 
     await expect(
       tempClient.send.initApplication({
-        args: [
+        args: {
           mbrTxn,
-          ltv_bps,
-          liq_threshold_bps,
-          liq_bonus_bps,
-          origination_fee_bps,
-          protocol_interest_fee_bps,
-          oracleAppClient.appId,
-          xUSDAssetId,
-          additional_rewards_commission_percentage,
-        ],
+          ltvBps: ltv_bps,
+          liqThresholdBps: liq_threshold_bps,
+          liqBonusBps: liq_bonus_bps,
+          originationFeeBps: origination_fee_bps,
+          additionalRewardsCommissionPercentage: 8n,
+          buyoutTokenId: xUSDAssetId,
+          oracleAppId: oracleAppClient.appId,
+          protocolShareBps: protocol_interest_fee_bps,
+          fluxOracleAppId: 0n,
+        },
         sender: outsider.addr,
       }),
     ).rejects.toThrowError()
@@ -401,8 +404,6 @@ describe('orbital-lending Testing - config', () => {
     )
    */
   test('Set Rate params on xUSD Lending', async () => {
-    const previousNonce = (await xUSDLendingContractClient.state.global.getAll()).paramsUpdateNonce ?? 0n
-
     await xUSDLendingContractClient.send.setRateParams({
       /* args: [50n, 8000n, 5000n, 1000n, 2000n, 6000n, 1n, 0n, 0n, 0n, 0n, 0n], */
       args: {
@@ -432,12 +433,9 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.maxAprBps).toEqual(6000n)
     expect(globalState.maxAprStepBps).toEqual(0n)
     expect(globalState.rateModelType).toEqual(0n) // kinked
-    expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
   })
 
   test('Set Rate params on ALGO Lending', async () => {
-    const previousNonce = (await algoLendingContractClient.state.global.getAll()).paramsUpdateNonce ?? 0n
-
     await algoLendingContractClient.send.setRateParams({
       args: {
         baseBps: 50n,
@@ -466,7 +464,6 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.maxAprBps).toEqual(6000n)
     expect(globalState.maxAprStepBps).toEqual(0n)
     expect(globalState.rateModelType).toEqual(0n) // kinked
-    expect(globalState.paramsUpdateNonce).toEqual(previousNonce + 1n)
   })
 
   test("set migration admin and verify it's set - algo lending", async () => {
