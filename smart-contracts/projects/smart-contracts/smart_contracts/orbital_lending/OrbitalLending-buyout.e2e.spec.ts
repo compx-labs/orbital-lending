@@ -89,6 +89,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppId: oracleAppClient.appId,
         buyoutTokenId: xUSDAssetId,
         liqBonusBps: liquidation_bonus_bps,
+        fluxOracleAppId: 0n,
       },
     })
 
@@ -134,6 +135,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppId: oracleAppClient.appId,
         buyoutTokenId: xUSDAssetId,
         liqBonusBps: liquidation_bonus_bps,
+        fluxOracleAppId: 0n,
       },
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -310,7 +312,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
           sender: depositorAccount.addr,
           receiver: xUSDLendingContractClient.appClient.appAddress,
-          amount: microAlgo(1000n),
+          amount: microAlgo(10_000n),
           note: 'Funding deposit',
         })
 
@@ -406,7 +408,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
+      amount: microAlgo(10_000n),
       note: 'Funding algo contract',
     })
     feeTracker += 1000n
@@ -745,17 +747,25 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       note: 'Repaying loan with algo',
     })
 
+    const mbrTxn = await algoLendingContractClient.algorand.createTransaction.payment({
+      sender: buyer.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(10_000n),
+      note: 'Funding buyout',
+    })
+
     await algoLendingContractClient
       .newGroup()
       .gas({ args: [], note: '1' })
       .buyoutSplitAlgo({
-        args: [
-          buyer.addr.publicKey,
-          debtor.addr.publicKey,
-          xUSDPremiumTransferTxn,
+        args: {
+          buyer: buyer.addr.publicKey,
+          debtor: debtor.addr.publicKey,
+          premiumAxferTxn: xUSDPremiumTransferTxn,
           repayPayTxn,
-          xUSDLendingContractClient.appId,
-        ],
+          lstAppId: xUSDLendingContractClient.appId,
+          mbrTxn,
+        },
         assetReferences: [xUSDAssetId, collateralTokenId],
         appReferences: [algoLendingContractClient.appId, xUSDLendingContractClient.appId, oracleAppClient.appId],
       })

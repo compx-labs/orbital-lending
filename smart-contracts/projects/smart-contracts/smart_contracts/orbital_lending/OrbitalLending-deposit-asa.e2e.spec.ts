@@ -82,6 +82,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppClient.appId,
         xUSDAssetId,
         additional_rewards_commission_percentage,
+        0n
       ],
     })
 
@@ -130,6 +131,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppClient.appId,
         collateralAssetId,
         additional_rewards_commission_percentage,
+        0n
       ],
     })
 
@@ -187,7 +189,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   })
 
   test('Add collateral token price to oracle', async () => {
-    const price = 215000n // Example price for collateral ASA
+    const price = 3_500_000n // Example price for collateral ASA
     await oracleAppClient.send.addTokenListing({
       args: [collateralAssetId, price],
       assetReferences: [collateralAssetId],
@@ -259,7 +261,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
           sender: depositorAccount.addr,
           receiver: xUSDLendingContractClient.appClient.appAddress,
-          amount: microAlgo(1000n),
+          amount: microAlgo(10_000n),
           note: 'Funding deposit',
         })
 
@@ -360,7 +362,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const mbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: collateralLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
+      amount: microAlgo(10_000n),
       note: 'Funding collateral deposit',
     })
 
@@ -624,6 +626,167 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       )
       expect(loanRecord).toBeDefined()
       expect(loanRecord.principal).toEqual(disbursementCalc.disbursement)
+    }
+  })
+
+  test('repay part of an outstanding ASA loan', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      xUSDLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+
+      const loanRecordBefore = await getLoanRecordBoxValueASA(
+        borrowerAccount.addr.toString(),
+        xUSDLendingContractClient,
+        xUSDLendingContractClient.appId,
+      )
+      expect(loanRecordBefore).toBeDefined()
+
+      const principalBefore = loanRecordBefore.principal
+      expect(principalBefore).toBeGreaterThan(0n)
+
+      const repayAmount = principalBefore / 4n
+      expect(repayAmount).toBeGreaterThan(0n)
+
+      const borrowerBalanceInfoBefore = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
+        .do()
+      const borrowerXusdBefore = borrowerBalanceInfoBefore.assetHolding?.amount || 0n
+
+      const contractBalanceInfoBefore = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+        .do()
+      const contractXusdBefore = contractBalanceInfoBefore.assetHolding?.amount || 0n
+
+      const globalStateBefore = await xUSDLendingContractClient.state.global.getAll()
+      const totalBorrowsBefore = globalStateBefore.totalBorrows ?? 0n
+
+      const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: borrowerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: repayAmount,
+        note: 'Partial loan repayment',
+      })
+
+      await xUSDLendingContractClient
+        .newGroup()
+        .gas()
+        .repayLoanAsa({
+          args: [repayTxn, repayAmount],
+          assetReferences: [xUSDAssetId],
+          sender: borrowerAccount.addr,
+        })
+        .send()
+
+      const borrowerBalanceInfoAfter = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
+        .do()
+      const borrowerXusdAfter = borrowerBalanceInfoAfter.assetHolding?.amount || 0n
+      expect(borrowerXusdBefore - borrowerXusdAfter).toEqual(repayAmount)
+
+      const contractBalanceInfoAfter = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+        .do()
+      const contractXusdAfter = contractBalanceInfoAfter.assetHolding?.amount || 0n
+      expect(contractXusdAfter - contractXusdBefore).toEqual(repayAmount)
+
+      const loanRecordAfter = await getLoanRecordBoxValueASA(
+        borrowerAccount.addr.toString(),
+        xUSDLendingContractClient,
+        xUSDLendingContractClient.appId,
+      )
+      expect(loanRecordAfter.principal).toEqual(principalBefore - repayAmount)
+
+      const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
+      const totalBorrowsAfter = globalStateAfter.totalBorrows ?? 0n
+      expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(repayAmount)
+    }
+  })
+
+  test('fully repay ASA loan and reclaim collateral', async () => {
+    for (let i = 0; i < NUM_DEPOSITORS; i++) {
+      const borrowerAccount = depositors[i]
+      xUSDLendingContractClient.algorand.setSignerFromAccount(borrowerAccount)
+
+      const loanRecordBefore = await getLoanRecordBoxValueASA(
+        borrowerAccount.addr.toString(),
+        xUSDLendingContractClient,
+        xUSDLendingContractClient.appId,
+      )
+      expect(loanRecordBefore).toBeDefined()
+
+      const remainingDebt = loanRecordBefore.principal
+      expect(remainingDebt).toBeGreaterThan(0n)
+
+      const borrowerXusdBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
+        .do()
+      const borrowerXusdBefore = borrowerXusdBeforeInfo.assetHolding?.amount || 0n
+
+      const contractXusdBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+        .do()
+      const contractXusdBefore = contractXusdBeforeInfo.assetHolding?.amount || 0n
+
+      const collateralState = await collateralLendingContractClient.state.global.getAll()
+      const collateralLstId: bigint = collateralState.lstTokenId as bigint
+      expect(collateralLstId).toBeGreaterThan(0n)
+
+      const borrowerCollateralBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, collateralLstId)
+        .do()
+      const borrowerCollateralBefore = borrowerCollateralBeforeInfo.assetHolding?.amount || 0n
+
+      const globalStateBefore = await xUSDLendingContractClient.state.global.getAll()
+      const totalBorrowsBefore = globalStateBefore.totalBorrows ?? 0n
+      const activeLoansBefore = globalStateBefore.activeLoanRecords ?? 0n
+
+      const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: borrowerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: remainingDebt,
+        note: 'Full loan repayment',
+      })
+
+      await xUSDLendingContractClient
+        .newGroup()
+        .gas()
+        .repayLoanAsa({
+          args: [repayTxn, remainingDebt],
+          assetReferences: [xUSDAssetId],
+          sender: borrowerAccount.addr,
+        })
+        .send()
+
+      const borrowerXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
+        .do()
+      const borrowerXusdAfter = borrowerXusdAfterInfo.assetHolding?.amount || 0n
+      expect(borrowerXusdBefore - borrowerXusdAfter).toEqual(remainingDebt)
+
+      const contractXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
+        .do()
+      const contractXusdAfter = contractXusdAfterInfo.assetHolding?.amount || 0n
+      expect(contractXusdAfter - contractXusdBefore).toEqual(remainingDebt)
+
+      await expect(
+        getLoanRecordBoxValueASA(borrowerAccount.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
+      ).rejects.toThrowError()
+
+      const borrowerCollateralAfterInfo = await xUSDLendingContractClient.algorand.client.algod
+        .accountAssetInformation(borrowerAccount.addr, collateralLstId)
+        .do()
+      const borrowerCollateralAfter = borrowerCollateralAfterInfo.assetHolding?.amount || 0n
+      expect(borrowerCollateralAfter - borrowerCollateralBefore).toEqual(loanRecordBefore.collateralAmount)
+
+      const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
+      const totalBorrowsAfter = globalStateAfter.totalBorrows ?? 0n
+      const activeLoansAfter = globalStateAfter.activeLoanRecords ?? 0n
+
+      expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(remainingDebt)
+      expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
     }
   })
 
