@@ -247,6 +247,7 @@ export class OrbitalLending extends Contract {
 
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
+      receiver: Global.currentApplicationAddress,
       amount: MBR_CREATE_APP,
     })
 
@@ -399,6 +400,7 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
+      receiver: Global.currentApplicationAddress,
       amount: MBR_INIT_APP,
     })
     /// Submit opt-in transaction: 0 asset transfer to self
@@ -431,6 +433,7 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
       sender: this.admin_account.value,
+      receiver: Global.currentApplicationAddress,
       amount: MBR_OPT_IN_LST,
     })
     this.lst_token_id.value = new UintN64(lstAssetId)
@@ -566,6 +569,7 @@ export class OrbitalLending extends Contract {
       mbrTxn,
       {
         sender: this.admin_account.value,
+        receiver: Global.currentApplicationAddress,
         amount: MBR_COLLATERAL,
       },
       'INSUFFICIENT_MBR',
@@ -663,6 +667,8 @@ export class OrbitalLending extends Contract {
       amount: amount,
     })
     assertMatch(mbrTxn, {
+      sender: op.Txn.sender,
+      receiver: Global.currentApplicationAddress,
       amount: DEPOSIT_MBR,
     })
     this.addCash(amount)
@@ -732,6 +738,8 @@ export class OrbitalLending extends Contract {
     })
 
     assertMatch(mbrTxn, {
+      sender: op.Txn.sender,
+      receiver: Global.currentApplicationAddress,
       amount: 3000,
     })
 
@@ -1207,6 +1215,7 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(feeTxn, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: STANDARD_TXN_FEE,
     })
@@ -1253,6 +1262,8 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
 
     assertMatch(mbrTxn, {
+      sender: op.Txn.sender,
+      receiver: Global.currentApplicationAddress,
       amount: BUYOUT_MBR,
     })
 
@@ -1876,7 +1887,11 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
     mbrTxn: gtxn.PaymentTxn,
   ): void {
-    assertMatch(mbrTxn, { amount: VALIDATE_BORROW_FEE })
+    assertMatch(mbrTxn, {
+      sender: op.Txn.sender,
+      receiver: Global.currentApplicationAddress,
+      amount: VALIDATE_BORROW_FEE,
+    })
 
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -2091,7 +2106,11 @@ export class OrbitalLending extends Contract {
   public migrateContract(feeTxn: gtxn.PaymentTxn): MigrationSnapshot {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
-    assertMatch(feeTxn, { amount: MIGRATION_FEE })
+    assertMatch(feeTxn, {
+      sender: this.migration_admin.value,
+      receiver: Global.currentApplicationAddress,
+      amount: MIGRATION_FEE,
+    })
     this.goOffline()
 
     //get lst balance
@@ -2237,6 +2256,7 @@ export class OrbitalLending extends Contract {
 
     const extraFee = this.getGoOnlineFee()
     assertMatch(feePayment, {
+      sender: this.admin_account.value,
       receiver: Global.currentApplicationAddress,
       amount: extraFee,
     })
