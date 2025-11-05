@@ -87,6 +87,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppClient.appId,
         xUSDAssetId,
         additional_rewards_commission_percentage,
+        0n,
       ],
     })
 
@@ -134,6 +135,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppClient.appId,
         xUSDAssetId,
         additional_rewards_commission_percentage,
+        0n,
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -276,7 +278,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
           sender: depositorAccount.addr,
           receiver: xUSDLendingContractClient.appClient.appAddress,
-          amount: microAlgo(1000n),
+          amount: microAlgo(10_000n),
           note: 'Funding deposit',
         })
 
@@ -375,10 +377,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
+      amount: microAlgo(10_000n),
       note: 'Funding algo contract',
     })
-    feeTracker += 1000n
+    feeTracker += 10_000n
 
     const managerBalance = await algod.accountInformation(managerAccount.addr).do()
     console.log('Manager balance before algo deposit:', managerBalance.amount)
@@ -403,7 +405,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const accountInfo = await algod.accountInformation(algoLendingContractClient.appAddress).do()
     expect(accountInfo).toBeDefined()
     //LST will be 1:1 with the deposit at this stage
-    expect(accountInfo?.amount).toEqual(ALGO_DEPOSIT_AMOUNT + contractAlgoBalanceBeforeDeposit)
+    expect(accountInfo?.amount).toEqual(ALGO_DEPOSIT_AMOUNT + contractAlgoBalanceBeforeDeposit + 9000n)
   })
 
   test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
@@ -850,7 +852,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const mbrTxn2 = xUSDLendingContractClient.algorand.createTransaction.payment({
         sender: borrowerAccount.addr,
         receiver: xUSDLendingContractClient.appClient.appAddress,
-        amount: microAlgo(1000n),
+        amount: microAlgo(10_000n),
         note: 'Funding deposit',
       })
 

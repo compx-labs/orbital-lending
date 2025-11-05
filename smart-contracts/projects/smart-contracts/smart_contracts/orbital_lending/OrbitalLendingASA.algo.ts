@@ -392,34 +392,13 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     this.migration_admin.value = migrationAdmin
   }
-  /**
-   * Returns the current amount of LST tokens in circulation
-   * @returns Total LST tokens representing all depositor claims
-   */
-  getCirculatingLST(): uint64 {
-    return this.circulating_lst.value
-  }
 
-  /**
-   * Returns the total amount of base assets deposited in the protocol
-   * @returns Total underlying assets available for lending
-   */
-  getTotalDeposits(): uint64 {
-    return this.total_deposits.value
-  }
-
-  /**
-   * Returns the number of different collateral types accepted by the protocol
-   * @returns Count of registered collateral asset types
-   */
-  getAcceptedCollateralsCount(): uint64 {
-    return this.accepted_collaterals_count.value
-  }
   /**
    * Generates a new LST (Liquidity Staking Token) for the base lending token.
    * @param mbrTxn Payment transaction covering asset-creation minimum balance.
    * @dev Admin-only path that mints a brand-new LST mirroring the base token supply.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -451,6 +430,7 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn Payment covering the opt-in minimum balance requirement.
    * @dev Admin-only. Use when an LST has already been deployed for this market.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -476,6 +456,7 @@ export class OrbitalLending extends Contract {
    * @param circulating_lst Initial circulating amount to record on-chain.
    * @dev Must be called after `generateLSTToken` or `optInToLST` to finalize setup.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
     assert(this.lst_token_id.value.native === axferTxn.xferAsset.id, 'LST token not set')
@@ -493,7 +474,8 @@ export class OrbitalLending extends Contract {
    * @returns Current price of the token from oracle (in USD micro-units)
    * @dev Calls external oracle contract to fetch real-time price data
    */
-  getOraclePrice(tokenId: UintN64): uint64 {
+  @abimethod({ allowActions: 'NoOp' })
+  public getOraclePrice(tokenId: UintN64): uint64 {
     const oracle: Application = this.oracle_app.value
     const address = oracle.address
     const contractAppId = oracle.id
@@ -575,7 +557,7 @@ export class OrbitalLending extends Contract {
    * @dev Collateral cannot be the same as the base lending token
    */
   @abimethod({ allowActions: 'NoOp' })
-  addNewCollateralType(
+  public addNewCollateralType(
     collateralTokenId: UintN64,
     collateralBaseTokenId: UintN64,
     mbrTxn: gtxn.PaymentTxn,
@@ -692,7 +674,7 @@ export class OrbitalLending extends Contract {
    * @dev If this is the first deposit, LST:asset ratio is 1:1
    */
   @abimethod({ allowActions: 'NoOp' })
-  depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  public depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -758,7 +740,7 @@ export class OrbitalLending extends Contract {
    * @dev Exchange rate depends on whether using local or external LST app
    */
   @abimethod({ allowActions: 'NoOp' })
-  withdrawDeposit(
+  public withdrawDeposit(
     assetTransferTxn: gtxn.AssetTransferTxn,
     amount: uint64,
     lstAppId: uint64,
@@ -831,7 +813,7 @@ export class OrbitalLending extends Contract {
    * @dev Collateral value determined via oracle pricing and LST exchange rates
    */
   @abimethod({ allowActions: 'NoOp' })
-  borrow(
+  public borrow(
     assetTransferTxn: gtxn.AssetTransferTxn,
     requestedLoanAmount: uint64,
     collateralAmount: uint64,
@@ -926,7 +908,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
+  public accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
@@ -1013,6 +995,7 @@ export class OrbitalLending extends Contract {
    * Computes the current borrow APR in basis points, applying smoothing and clamps.
    * @returns APR value used for subsequent accrual slices.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public current_apr_bps(): uint64 {
     // Compute normalized utilization (0..10_000)
     const U_raw: uint64 = this.util_norm_bps()
@@ -1166,7 +1149,8 @@ export class OrbitalLending extends Contract {
    * @param borrowerAddress Borrower whose record should be returned.
    * @returns Loan record snapshot stored in the box map.
    */
-  getLoanRecord(borrowerAddress: Account): LoanRecord {
+  @abimethod({ allowActions: 'NoOp' })
+  public getLoanRecord(borrowerAddress: Account): LoanRecord {
     return this.loan_record(borrowerAddress).value
   }
 
@@ -1180,7 +1164,7 @@ export class OrbitalLending extends Contract {
    * @dev Partial repayment updates remaining debt amount
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, repaymentAmount: uint64): void {
+  public repayLoanASA(assetTransferTxn: gtxn.AssetTransferTxn, repaymentAmount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(assetTransferTxn, {
@@ -1891,8 +1875,33 @@ export class OrbitalLending extends Contract {
   }
 
   /**
+   * Returns the current amount of LST tokens in circulation
+   * @returns Total LST tokens representing all depositor claims
+   */
+  getCirculatingLST(): uint64 {
+    return this.circulating_lst.value
+  }
+
+  /**
+   * Returns the total amount of base assets deposited in the protocol
+   * @returns Total underlying assets available for lending
+   */
+  getTotalDeposits(): uint64 {
+    return this.total_deposits.value
+  }
+
+  /**
+   * Returns the number of different collateral types accepted by the protocol
+   * @returns Count of registered collateral asset types
+   */
+  getAcceptedCollateralsCount(): uint64 {
+    return this.accepted_collaterals_count.value
+  }
+
+  /**
    * No-op method kept for compatibility with interfaces that expect a gas entry point.
    */
+  @abimethod({ allowActions: 'NoOp' })
   gas(): void {}
 
   /**

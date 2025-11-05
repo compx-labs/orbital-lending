@@ -709,7 +709,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   })
 
   test('Flux tier discount reduces origination fee for tiered borrower', async () => {
-    const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
+    const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT / 2n
     const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
     const algod = xUSDLendingContractClient.algorand.client.algod
 

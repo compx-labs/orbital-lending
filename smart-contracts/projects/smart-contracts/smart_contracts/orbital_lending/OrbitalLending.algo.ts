@@ -394,6 +394,7 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn Payment transaction covering asset-creation minimum balance.
    * @dev Admin-only path that mints a brand-new LST mirroring the base token supply.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -425,6 +426,7 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn Payment covering the opt-in minimum balance requirement.
    * @dev Admin-only. Use when an LST has already been deployed for this market.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.admin_account.value)
     assertMatch(mbrTxn, {
@@ -450,6 +452,7 @@ export class OrbitalLending extends Contract {
    * @param circulating_lst Initial circulating amount to record on-chain.
    * @dev Must be called after `generateLSTToken` or `optInToLST` to finalize setup.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
     assert(this.lst_token_id.value.native === axferTxn.xferAsset.id, 'LST token not set')
@@ -467,7 +470,7 @@ export class OrbitalLending extends Contract {
    * @returns Current price of the token from oracle (in USD micro-units)
    * @dev Calls external oracle contract to fetch real-time price data
    */
-  getOraclePrice(tokenId: UintN64): uint64 {
+  private getOraclePrice(tokenId: UintN64): uint64 {
     const oracle: Application = this.oracle_app.value
     const address = oracle.address
     const contractAppId = oracle.id
@@ -549,7 +552,7 @@ export class OrbitalLending extends Contract {
    * @dev Collateral cannot be the same as the base lending token
    */
   @abimethod({ allowActions: 'NoOp' })
-  addNewCollateralType(
+  public addNewCollateralType(
     collateralTokenId: UintN64,
     collateralBaseTokenId: UintN64,
     mbrTxn: gtxn.PaymentTxn,
@@ -652,7 +655,7 @@ export class OrbitalLending extends Contract {
    * @dev Mints LST tokens proportional to deposit amount based on current exchange rate
    */
   @abimethod({ allowActions: 'NoOp' })
-  depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  public depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(depositTxn, {
@@ -714,7 +717,7 @@ export class OrbitalLending extends Contract {
    * @dev Exchange rate depends on whether using local or external LST app
    */
   @abimethod({ allowActions: 'NoOp' })
-  withdrawDeposit(
+  public withdrawDeposit(
     assetTransferTxn: gtxn.AssetTransferTxn,
     amount: uint64,
     lstAppId: uint64,
@@ -812,7 +815,7 @@ export class OrbitalLending extends Contract {
    * @dev Collateral value determined via oracle pricing and LST exchange rates
    */
   @abimethod({ allowActions: 'NoOp' })
-  borrow(
+  public borrow(
     assetTransferTxn: gtxn.AssetTransferTxn,
     requestedLoanAmount: uint64,
     collateralAmount: uint64,
@@ -921,7 +924,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
+  public accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
@@ -985,6 +988,7 @@ export class OrbitalLending extends Contract {
    * Computes the current borrow APR in basis points, applying smoothing and clamps.
    * @returns APR value used for subsequent accrual slices.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public current_apr_bps(): uint64 {
     // Compute normalized utilization (0..10_000)
     const U_raw: uint64 = this.util_norm_bps()
@@ -993,16 +997,6 @@ export class OrbitalLending extends Contract {
 
     // Model selection (0=kinked; 255=fixed fallback)
     const apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
-
-    // Optional per-step change limiter
-    /* const stepMax: uint64 = this.max_apr_step_bps.value
-    if (stepMax > 0) {
-      const prevApr: uint64 = this.prev_apr_bps.value === 0 ? this.base_bps.value : this.prev_apr_bps.value
-      const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
-      const hi: uint64 = prevApr + stepMax
-      if (apr < lo) apr = lo
-      if (apr > hi) apr = hi
-    } */
 
     this.prev_apr_bps.value = apr
     return apr
@@ -1138,7 +1132,8 @@ export class OrbitalLending extends Contract {
    * @param borrowerAddress Borrower whose record should be returned.
    * @returns Loan record snapshot stored in the box map.
    */
-  getLoanRecord(borrowerAddress: Account): LoanRecord {
+  @abimethod({ allowActions: 'NoOp' })
+  public getLoanRecord(borrowerAddress: Account): LoanRecord {
     return this.loan_record(borrowerAddress).value
   }
 
@@ -1152,7 +1147,7 @@ export class OrbitalLending extends Contract {
    * @dev Full repayment closes loan and returns all collateral
    */
   @abimethod({ allowActions: 'NoOp' })
-  repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
+  public repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(paymentTxn, {
@@ -1824,7 +1819,7 @@ export class OrbitalLending extends Contract {
    * @dev Includes eligibility flags for liquidation and buyout actions
    */
   @abimethod({ allowActions: 'NoOp' })
-  getLoanStatus(borrower: Account): {
+  public getLoanStatus(borrower: Account): {
     outstandingDebt: uint64
     collateralValueUSD: uint64
     collateralAmount: uint64
@@ -1865,6 +1860,7 @@ export class OrbitalLending extends Contract {
   /**
    * No-op method kept for compatibility with interfaces that expect a gas entry point.
    */
+  @abimethod({ allowActions: 'NoOp' })
   gas(): void {}
 
   /**
@@ -1898,6 +1894,7 @@ export class OrbitalLending extends Contract {
    * @param lstApp LST application ID supplying exchange-rate data.
    * @returns Collateral value denominated in USD micro-units.
    */
+  @abimethod({ allowActions: 'NoOp' })
   public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
     // get collateral and check inputs match
     assert(this.collateralExists(collateralTokenId), 'unknown collateral')
@@ -2042,7 +2039,7 @@ export class OrbitalLending extends Contract {
    * @dev Admin-only; credits rewards to deposits and commissions to fee buckets.
    */
   @abimethod({ allowActions: 'NoOp' })
-  pickupAlgoRewards(): void {
+  public pickupAlgoRewards(): void {
     assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
 
@@ -2070,6 +2067,7 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += netReward
   }
 
+  @abimethod({ allowActions: 'NoOp' })
   public migrateCollateralTokenId(collateralTokenId: uint64, mbrTxn: gtxn.PaymentTxn): void {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate collateral')
     const collateralBalance = Asset(collateralTokenId).balance(Global.currentApplicationAddress)
@@ -2225,7 +2223,8 @@ export class OrbitalLending extends Contract {
    * @param voteLast Last round for which the key is valid.
    * @param voteKeyDilution Dilution factor for the participation key.
    */
-  goOnline(
+  @abimethod({ allowActions: 'NoOp' })
+  public goOnline(
     feePayment: gtxn.PaymentTxn,
     votePK: bytes,
     selectionPK: bytes,
@@ -2257,7 +2256,8 @@ export class OrbitalLending extends Contract {
   /**
    * Unregisters the application account from consensus participation.
    */
-  goOffline(): void {
+  @abimethod({ allowActions: 'NoOp' })
+  public goOffline(): void {
     /*  assert(
       op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value,
       'Only admin can go offline',
