@@ -293,6 +293,7 @@ export function calculateDisbursement({
   baseTokenPrice,
   requestedLoanAmount,
   originationFeeBps,
+  userTier = 0n,
 }: {
   collateralAmount: bigint
   collateralPrice: bigint
@@ -300,6 +301,7 @@ export function calculateDisbursement({
   baseTokenPrice: bigint
   requestedLoanAmount: bigint
   originationFeeBps: bigint
+  userTier?: bigint
 }): {
   allowed: boolean
   disbursement: bigint
@@ -322,10 +324,30 @@ export function calculateDisbursement({
   console.log('allowed:', allowed)
 
   // Step 4: fee and disbursement
-  const fee = (requestedLoanAmount * originationFeeBps) / 10_000n
+  const fee = computeOriginationFee(requestedLoanAmount, originationFeeBps, userTier)
   const disbursement = requestedLoanAmount - fee
 
   return { allowed, disbursement, fee }
+}
+
+export function computeOriginationFee(
+  depositAmount: bigint,
+  initialFeeBps: bigint,
+  userTier: bigint = 0n,
+): bigint {
+  let effectiveFeeBps = initialFeeBps
+
+  if (userTier === 1n) {
+    effectiveFeeBps = (initialFeeBps * 90n) / 100n
+  } else if (userTier === 2n) {
+    effectiveFeeBps = (initialFeeBps * 75n) / 100n
+  } else if (userTier === 3n) {
+    effectiveFeeBps = (initialFeeBps * 50n) / 100n
+  } else if (userTier >= 4n) {
+    effectiveFeeBps = (initialFeeBps * 25n) / 100n
+  }
+
+  return (depositAmount * effectiveFeeBps) / 10_000n
 }
 
 export function utilNormBps(totalDeposits: bigint, totalBorrows: bigint, utilCapBps: bigint) {
