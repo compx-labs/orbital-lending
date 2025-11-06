@@ -15,6 +15,7 @@ export const MINIMUM_ADDITIONAL_REWARD: uint64 = 10_000
 export const MIGRATION_FEE: uint64 = 500_000 // 0.5 Algo
 export const BUYOUT_MBR: uint64 = 10_000
 export const DEPOSIT_MBR: uint64 = 10_000
+export const WITHDRAW_MBR: uint64 = 3_000
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64

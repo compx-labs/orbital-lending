@@ -31,6 +31,7 @@ import {
   MIGRATION_FEE,
   MINIMUM_ADDITIONAL_REWARD,
   MigrationSnapshot,
+  WITHDRAW_MBR,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 import {
@@ -740,7 +741,7 @@ export class OrbitalLending extends Contract {
     assertMatch(mbrTxn, {
       sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
-      amount: 3000,
+      amount: WITHDRAW_MBR,
     })
 
     const _interestSlice = this.accrueMarket()
@@ -1077,11 +1078,6 @@ export class OrbitalLending extends Contract {
     if (now <= last) return 0
 
     const deltaT: uint64 = now - last
-
-    /*    if (deltaT < SECONDS_PER_YEAR) {
-      deltaT = 10000
-    }
-    this.last_apr_bps.value = 5000 */
 
     // 1) Compute simple slice factor in INDEX_SCALE
     const simpleWad: uint64 = this.sliceFactorWad(deltaT)
@@ -2111,7 +2107,7 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: MIGRATION_FEE,
     })
-    this.goOffline()
+    this.goOfflineInternal()
 
     //get lst balance
     const lstAsset = Asset(this.lst_token_id.value.native)
@@ -2278,10 +2274,14 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public goOffline(): void {
-    /*  assert(
-      op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value,
-      'Only admin can go offline',
-    ) */
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can go offline')
+    itxn.keyRegistration({ fee: STANDARD_TXN_FEE }).submit()
+  }
+
+  /**
+   * Unregisters the application account from consensus participation. Used internally by migration method.
+   */
+  private goOfflineInternal(): void {
     itxn.keyRegistration({ fee: STANDARD_TXN_FEE }).submit()
   }
 
