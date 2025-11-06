@@ -693,6 +693,7 @@ export class OrbitalLending extends Contract {
     })
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.addCash(amount)
+    this.harvestASARewards()
 
     const _interestSlice = this.accrueMarket()
 
@@ -766,6 +767,7 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: WITHDRAW_MBR,
     })
+    this.harvestASARewards()
 
     const _interestSlice = this.accrueMarket()
 
@@ -833,6 +835,7 @@ export class OrbitalLending extends Contract {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
+    this.harvestASARewards()
     const _interestSlice = this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
@@ -920,6 +923,7 @@ export class OrbitalLending extends Contract {
   public accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestASARewards()
     this.accrueMarket()
     // Just roll the borrower snapshot forward
     this.syncBorrowerSnapshot(debtor)
@@ -1181,6 +1185,8 @@ export class OrbitalLending extends Contract {
       xferAsset: baseToken,
       assetAmount: repaymentAmount,
     })
+    this.addCash(repaymentAmount)
+    this.harvestASARewards()
     const _interestSlice = this.accrueMarket()
     const loanRecord = this.getLoanRecord(op.Txn.sender)
 
@@ -1193,7 +1199,6 @@ export class OrbitalLending extends Contract {
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
     this.total_borrows.value -= repaymentAmount
-    this.addCash(repaymentAmount)
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1239,6 +1244,7 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: STANDARD_TXN_FEE,
     })
+    this.harvestASARewards()
     const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
     if (payout > 0) {
       itxn
@@ -1283,19 +1289,26 @@ export class OrbitalLending extends Contract {
       amount: BUYOUT_MBR,
     })
 
-    // 1) Make time current
-    this.accrueMarket()
+    const baseAssetId = this.base_token_id.value.native
+    assertMatch(repayAxferTxn, {
+      sender: buyer,
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(baseAssetId),
+    })
+    const repayTransferAmount: uint64 = repayAxferTxn.assetAmount
+    this.addCash(repayTransferAmount)
+    this.harvestASARewards()
 
-    // 2) Load state
+    const _interestSlice = this.accrueMarket()
+
     const rec = this.loan_record(debtor).value.copy()
     const collateralAmount: uint64 = rec.collateralAmount.native
     const collateralTokenId: UintN64 = rec.collateralTokenId
 
-    // Live debt (base token units)
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     assert(debtBase > 0, 'NO_DEBT')
+    assert(repayTransferAmount === debtBase, 'BAD_REPAY')
 
-    // 3) USD legs
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
@@ -1332,14 +1345,6 @@ export class OrbitalLending extends Contract {
     const refund: uint64 = paidAmount - premiumTokens
 
     // 5) Debt repayment in market base token (ASA)
-    const baseAssetId = this.base_token_id.value.native
-    assertMatch(repayAxferTxn, {
-      sender: buyer,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(baseAssetId),
-      assetAmount: debtBase, // full live debt
-    })
-
     // 6) Close loan & transfer collateral
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
@@ -1367,7 +1372,6 @@ export class OrbitalLending extends Contract {
 
     // Market aggregates
     this.total_borrows.value = this.total_borrows.value - debtBase
-    this.addCash(debtBase)
 
     // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
@@ -1436,6 +1440,7 @@ export class OrbitalLending extends Contract {
   public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
     assert(this.loan_record(op.Txn.sender).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestASARewards()
     this.accrueMarket()
 
     const rec = this.loan_record(op.Txn.sender).value.copy()
@@ -1499,6 +1504,7 @@ export class OrbitalLending extends Contract {
   private maxWithdrawableCollateralLSTLocal(borrower: Account, lstAppId: uint64): uint64 {
     assert(this.loan_record(borrower).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestASARewards()
     this.accrueMarket()
 
     const rec = this.loan_record(borrower).value.copy()
@@ -1702,6 +1708,15 @@ export class OrbitalLending extends Contract {
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    const baseAssetId = this.base_token_id.value.native
+    assertMatch(repayAxfer, {
+      sender: op.Txn.sender,
+      assetReceiver: Global.currentApplicationAddress,
+      xferAsset: Asset(baseAssetId),
+      assetAmount: repayBaseAmount,
+    })
+    this.addCash(repayBaseAmount)
+    this.harvestASARewards()
     this.accrueMarket()
 
     const rec = this.loan_record(debtor).value.copy()
@@ -1723,14 +1738,6 @@ export class OrbitalLending extends Contract {
     assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
     // Validate repayment transfer (ASA base token)
-    const baseAssetId = this.base_token_id.value.native
-    assertMatch(repayAxfer, {
-      sender: op.Txn.sender,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(baseAssetId),
-      assetAmount: repayBaseAmount,
-    })
-
     // Seize value with bonus: seizeUSD = repayUSD * (1 + bonus)
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
     const closeFactorHalf: uint64 = liveDebt / 2
@@ -1790,7 +1797,6 @@ export class OrbitalLending extends Contract {
     // Update aggregates
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
 
     if (refundAmount > 0) {
       itxn
@@ -2095,10 +2101,10 @@ export class OrbitalLending extends Contract {
    * Harvests newly accrued rewards for ASA-based markets.
    * @dev Admin-only; mirrors logic of `pickupAlgoRewards` for ASA base tokens.
    */
-  @abimethod({ allowActions: 'NoOp' })
-  pickupASARewards(): void {
-    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
-    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+  private harvestASARewards(): void {
+    if (this.contract_state.value.native !== 1) {
+      return
+    }
 
     const baseAsset = Asset(this.base_token_id.value.native)
     const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
@@ -2123,6 +2129,14 @@ export class OrbitalLending extends Contract {
     const netReward: uint64 = rawReward - commission
     this.total_additional_rewards.value += netReward
     this.total_deposits.value += netReward
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  pickupASARewards(): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
+    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+
+    this.harvestASARewards()
   }
 
   public migrateCollateralTokenId(collateralTokenId: uint64, mbrTxn: gtxn.PaymentTxn): void {

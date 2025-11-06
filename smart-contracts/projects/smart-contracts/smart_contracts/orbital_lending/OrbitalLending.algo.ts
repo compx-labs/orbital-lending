@@ -673,6 +673,7 @@ export class OrbitalLending extends Contract {
       amount: DEPOSIT_MBR,
     })
     this.addCash(amount)
+    this.harvestAlgoRewards()
 
     const _interestSlice = this.accrueMarket()
 
@@ -743,6 +744,7 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: WITHDRAW_MBR,
     })
+    this.harvestAlgoRewards()
 
     const _interestSlice = this.accrueMarket()
 
@@ -835,6 +837,7 @@ export class OrbitalLending extends Contract {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
+    this.harvestAlgoRewards()
     const _interestSlice = this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
@@ -936,6 +939,7 @@ export class OrbitalLending extends Contract {
   public accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestAlgoRewards()
     this.accrueMarket()
     // Just roll the borrower snapshot forward
     this.syncBorrowerSnapshot(debtor)
@@ -1158,6 +1162,8 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: repaymentAmount,
     })
+    this.addCash(repaymentAmount)
+    this.harvestAlgoRewards()
     const _interestSlice = this.accrueMarket()
     const loanRecord = this.getLoanRecord(op.Txn.sender)
     const rec = this.getLoanRecord(op.Txn.sender)
@@ -1169,7 +1175,6 @@ export class OrbitalLending extends Contract {
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
     this.total_borrows.value -= repaymentAmount
-    this.addCash(repaymentAmount)
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1215,6 +1220,7 @@ export class OrbitalLending extends Contract {
       receiver: Global.currentApplicationAddress,
       amount: STANDARD_TXN_FEE,
     })
+    this.harvestAlgoRewards()
     const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
     if (payout > 0) {
       itxn
@@ -1254,14 +1260,21 @@ export class OrbitalLending extends Contract {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
 
-    // 1) Make time current
-    this.accrueMarket()
-
     assertMatch(mbrTxn, {
       sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: BUYOUT_MBR,
     })
+
+    assertMatch(repayPayTxn, {
+      sender: buyer,
+      receiver: Global.currentApplicationAddress,
+    })
+    const repayTransferAmount: uint64 = repayPayTxn.amount
+    this.addCash(repayTransferAmount)
+    this.harvestAlgoRewards()
+
+    const _interestSlice = this.accrueMarket()
 
     const rec = this.loan_record(debtor).value.copy()
     const collateralAmount: uint64 = rec.collateralAmount.native
@@ -1269,6 +1282,7 @@ export class OrbitalLending extends Contract {
 
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     assert(debtBase > 0, 'NO_DEBT')
+    assert(repayTransferAmount === debtBase, 'BAD_REPAY')
 
     // 2) USD legs
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
@@ -1303,12 +1317,6 @@ export class OrbitalLending extends Contract {
     const refund: uint64 = paidAmount - premiumTokens
 
     // 4) Debt repayment in ALGO
-    assertMatch(repayPayTxn, {
-      sender: buyer,
-      receiver: Global.currentApplicationAddress,
-      amount: debtBase,
-    })
-
     // 5) Close loan, transfer collateral, update aggregates
     this.loan_record(debtor).delete()
     this.active_loan_records.value = this.active_loan_records.value - 1
@@ -1334,7 +1342,6 @@ export class OrbitalLending extends Contract {
     }).copy()
 
     this.total_borrows.value = this.total_borrows.value - debtBase
-    this.addCash(debtBase)
 
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
 
@@ -1401,6 +1408,7 @@ export class OrbitalLending extends Contract {
   public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
     assert(this.loan_record(op.Txn.sender).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestAlgoRewards()
     this.accrueMarket()
 
     const rec = this.loan_record(op.Txn.sender).value.copy()
@@ -1464,6 +1472,7 @@ export class OrbitalLending extends Contract {
   private maxWithdrawableCollateralLSTLocal(borrower: Account, lstAppId: uint64): uint64 {
     assert(this.loan_record(borrower).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    this.harvestAlgoRewards()
     this.accrueMarket()
 
     const rec = this.loan_record(borrower).value.copy()
@@ -1692,6 +1701,13 @@ export class OrbitalLending extends Contract {
     assert(this.base_token_id.value.native === 0, 'BASE_NOT_ALGO')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assert(this.loan_record(debtor).exists, 'NO_LOAN')
+    assertMatch(repayPay, {
+      sender: op.Txn.sender,
+      receiver: Global.currentApplicationAddress,
+      amount: repayBaseAmount,
+    })
+    this.addCash(repayBaseAmount)
+    this.harvestAlgoRewards()
     this.accrueMarket()
 
     const rec = this.loan_record(debtor).value.copy()
@@ -1709,13 +1725,6 @@ export class OrbitalLending extends Contract {
     const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
     const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
     assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
-
-    // Validate repayment transfer (ALGO)
-    assertMatch(repayPay, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: repayBaseAmount,
-    })
 
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
     const closeFactorHalf: uint64 = liveDebt / 2
@@ -1782,7 +1791,6 @@ export class OrbitalLending extends Contract {
 
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
 
     if (newDebtBase === 0) {
       if (remainingLST > 0) {
@@ -2046,13 +2054,13 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Harvests newly accrued consensus rewards for ALGO-based markets.
-   * @dev Admin-only; credits rewards to deposits and commissions to fee buckets.
+   * Internal helper to sweep newly arrived consensus rewards into protocol accounting.
+   * Safe to call from any path; no-op unless the contract is active and rewards are present.
    */
-  @abimethod({ allowActions: 'NoOp' })
-  public pickupAlgoRewards(): void {
-    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
-    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+  private harvestAlgoRewards(): void {
+    if (this.contract_state.value.native !== 1) {
+      return
+    }
 
     const spendable: uint64 = Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance
 
@@ -2076,6 +2084,18 @@ export class OrbitalLending extends Contract {
     const netReward: uint64 = rawReward - commission
     this.total_additional_rewards.value += netReward
     this.total_deposits.value += netReward
+  }
+
+  /**
+   * Harvests newly accrued consensus rewards for ALGO-based markets.
+   * @dev Admin-only; credits rewards to deposits and commissions to fee buckets.
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  public pickupAlgoRewards(): void {
+    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
+    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+
+    this.harvestAlgoRewards()
   }
 
   @abimethod({ allowActions: 'NoOp' })
