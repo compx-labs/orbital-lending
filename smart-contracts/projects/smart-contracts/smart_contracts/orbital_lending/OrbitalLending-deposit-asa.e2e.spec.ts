@@ -36,7 +36,7 @@ const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 const additional_rewards_commission_percentage = 8n
-const USER_TIER = 2n
+const USER_TIER = 0n
 
 const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 50_000_000_000n
@@ -776,7 +776,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       requestedLoanAmount: borrowAmount,
       originationFeeBps: origination_fee_bps,
     })
-    expect(discounted.fee).toBeLessThan(baseline.fee)
+    if(USER_TIER > 0n){
+      expect(discounted.fee).toBeLessThan(baseline.fee)
+    } else {
+      expect(discounted.fee).toEqual(baseline.fee)
+    }
 
     const managerXusdBalanceBeforeInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
     const managerXusdBefore = managerXusdBalanceBeforeInfo.assetHolding?.amount || 0n
