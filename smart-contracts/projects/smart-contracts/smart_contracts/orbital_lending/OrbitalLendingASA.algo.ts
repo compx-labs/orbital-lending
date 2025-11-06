@@ -31,6 +31,7 @@ import {
   MIGRATION_FEE,
   MINIMUM_ADDITIONAL_REWARD,
   MigrationSnapshot,
+  WITHDRAW_MBR,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
 import {
@@ -763,7 +764,7 @@ export class OrbitalLending extends Contract {
     assertMatch(mbrTxn, {
       sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
-      amount: 3000,
+      amount: WITHDRAW_MBR,
     })
 
     const _interestSlice = this.accrueMarket()
