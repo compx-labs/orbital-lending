@@ -46,7 +46,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2000
+const CONTRACT_VERSION: uint64 = 2002
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -239,7 +239,6 @@ export class OrbitalLending extends Contract {
     mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
-    liq_bonus_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
     oracle_app_id: Application,
@@ -285,7 +284,6 @@ export class OrbitalLending extends Contract {
     this.last_accrual_ts.value = Global.latestTimestamp
     this.last_apr_bps.value = this.base_bps.value
     this.buyout_token_id.value = new UintN64(buyout_token_id)
-    this.liq_bonus_bps.value = liq_bonus_bps
     this.total_commission_earned.value = 0
     this.current_accumulated_commission.value = 0
     this.commission_percentage.value = additional_rewards_commission_percentage
@@ -381,7 +379,6 @@ export class OrbitalLending extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   public setContractState(state: uint64): void {
     assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
-    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating
     this.contract_state.value = new UintN64(state)
   }
 
@@ -618,6 +615,19 @@ export class OrbitalLending extends Contract {
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
+  @abimethod({ allowActions: 'NoOp' })
+  public addDepositRecordExternal(userAddress: Account, assetId: uint64, depositAmount: uint64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    const depositKey = new DepositRecordKey({
+      assetId: new UintN64(assetId),
+      userAddress: new Address(userAddress),
+    }).copy()
+    this.deposit_record(depositKey).value = new DepositRecord({
+      assetId: new UintN64(assetId),
+      depositAmount: new UintN64(depositAmount),
+    }).copy()
+  }
+
   /**
    * Computes the LST amount owed for a deposit based on local exchange rate.
    * @param amount Base token amount being deposited.
@@ -694,7 +704,7 @@ export class OrbitalLending extends Contract {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.addCash(amount)
 
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
 
     let lstDue: uint64 = 0
     const depositBalance = op.AssetHolding.assetBalance(
@@ -767,7 +777,7 @@ export class OrbitalLending extends Contract {
       amount: WITHDRAW_MBR,
     })
 
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
 
     //Calculate the return amount of ASA
     let asaDue: uint64 = 0
@@ -833,7 +843,7 @@ export class OrbitalLending extends Contract {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
       const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
@@ -900,7 +910,7 @@ export class OrbitalLending extends Contract {
     const debtChangeArray = new DynamicArray<DebtChange>()
 
     this.loan_record(borrowerAddress).value = new LoanRecord({
-      borrowerAddress: new Address(borrowerAddress.bytes),
+      borrowerAddress: new Address(borrowerAddress),
       collateralTokenId,
       collateralAmount: new UintN64(collateralAmount),
       borrowedTokenId: this.base_token_id.value,
@@ -1038,14 +1048,13 @@ export class OrbitalLending extends Contract {
   private sliceFactorWad(deltaT: uint64): uint64 {
     if (deltaT === 0) return 0
 
-    // tmp = last_apr_bps * deltaT
-    const [h1, l1] = mulw(this.last_apr_bps.value, deltaT)
-    // tmp2 = tmp / SECONDS_PER_YEAR  (still in "bps")
-    const tmp2: uint64 = divw(h1, l1, SECONDS_PER_YEAR)
+    // ratePerYearWad = INDEX_SCALE * last_apr_bps / BASIS_POINTS
+    const [hRate, lRate] = mulw(INDEX_SCALE, this.last_apr_bps.value)
+    const ratePerYearWad: uint64 = divw(hRate, lRate, BASIS_POINTS)
 
-    // simpleWad = (INDEX_SCALE * tmp2) / BASIS_POINTS
-    const [h2, l2] = mulw(INDEX_SCALE, tmp2)
-    const simpleWad: uint64 = divw(h2, l2, BASIS_POINTS)
+    // simpleWad = ratePerYearWad * deltaT / SECONDS_PER_YEAR
+    const [hSlice, lSlice] = mulw(ratePerYearWad, deltaT)
+    const simpleWad: uint64 = divw(hSlice, lSlice, SECONDS_PER_YEAR)
     return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
   }
 
@@ -1181,8 +1190,7 @@ export class OrbitalLending extends Contract {
       xferAsset: baseToken,
       assetAmount: repaymentAmount,
     })
-    const _interestSlice = this.accrueMarket()
-    const loanRecord = this.getLoanRecord(op.Txn.sender)
+    this.accrueMarket()
 
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)

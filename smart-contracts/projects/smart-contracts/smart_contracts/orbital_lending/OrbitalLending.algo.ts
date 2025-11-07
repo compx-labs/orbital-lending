@@ -1021,14 +1021,13 @@ export class OrbitalLending extends Contract {
   private sliceFactorWad(deltaT: uint64): uint64 {
     if (deltaT === 0) return 0
 
-    // tmp = last_apr_bps * deltaT
-    const [h1, l1] = mulw(this.last_apr_bps.value, deltaT)
-    // tmp2 = tmp / SECONDS_PER_YEAR  (still in "bps")
-    const tmp2: uint64 = divw(h1, l1, SECONDS_PER_YEAR)
+    // ratePerYearWad = INDEX_SCALE * last_apr_bps / BASIS_POINTS
+    const [hRate, lRate] = mulw(INDEX_SCALE, this.last_apr_bps.value)
+    const ratePerYearWad: uint64 = divw(hRate, lRate, BASIS_POINTS)
 
-    // simpleWad = (INDEX_SCALE * tmp2) / BASIS_POINTS
-    const [h2, l2] = mulw(INDEX_SCALE, tmp2)
-    const simpleWad: uint64 = divw(h2, l2, BASIS_POINTS)
+    // simpleWad = ratePerYearWad * deltaT / SECONDS_PER_YEAR
+    const [hSlice, lSlice] = mulw(ratePerYearWad, deltaT)
+    const simpleWad: uint64 = divw(hSlice, lSlice, SECONDS_PER_YEAR)
     return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
   }
 
