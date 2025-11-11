@@ -943,6 +943,7 @@ export class OrbitalLending extends Contract {
    * @returns Utilization between 0 and 10_000 after capping at the configured limit.
    */
   private util_norm_bps(): uint64 {
+    // TODO: delegate to NebulaCalculus.utilNormBps once helper contract is wired
     const D: uint64 = this.total_deposits.value
     const B: uint64 = this.total_borrows.value
     const cap_bps: uint64 = this.util_cap_bps.value
@@ -965,6 +966,7 @@ export class OrbitalLending extends Contract {
    * @returns APR in basis points produced by the model.
    */
   private apr_bps_kinked(U_norm_bps: uint64): uint64 {
+    // TODO: delegate to NebulaCalculus.aprBpsKinked once helper contract is wired
     const base_bps: uint64 = this.base_bps.value
     const kink_norm_bps: uint64 = this.kink_norm_bps.value
     const slope1_bps: uint64 = this.slope1_bps.value
@@ -1046,6 +1048,7 @@ export class OrbitalLending extends Contract {
    * @returns Slice factor in wad precision used to advance indices.
    */
   private sliceFactorWad(deltaT: uint64): uint64 {
+    // TODO: delegate to NebulaCalculus.sliceFactorWad once helper contract is wired
     if (deltaT === 0) return 0
 
     // ratePerYearWad = INDEX_SCALE * last_apr_bps / BASIS_POINTS
@@ -1064,6 +1067,7 @@ export class OrbitalLending extends Contract {
    * @returns Debt amount in base units respecting the latest index.
    */
   private currentDebtFromSnapshot(rec: LoanRecord): uint64 {
+    // TODO: delegate to NebulaCalculus.currentDebtFromSnapshot once helper contract is wired
     const p: uint64 = rec.principal.native
     if (p === 0) return 0
     const [hi, lo] = mulw(p, this.borrow_index_wad.value)
