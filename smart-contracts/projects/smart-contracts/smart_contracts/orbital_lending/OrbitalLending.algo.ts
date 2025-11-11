@@ -2168,6 +2168,7 @@ export class OrbitalLending extends Contract {
       commission_percentage: new UintN64(this.commission_percentage.value),
       liq_bonus_bps: new UintN64(this.liq_bonus_bps.value),
       active_loan_records: new UintN64(this.active_loan_records.value),
+      math_helper_app_id: new UintN64(0n),
     })
   }
 

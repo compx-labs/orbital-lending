@@ -86,6 +86,9 @@ export class OrbitalLending extends Contract {
   /** External oracle application for user flux tier feeds */
   flux_oracle_app = GlobalState<Application>()
 
+  /** Shared NebulaCalculus helper (0 = disabled until configured) */
+  math_helper_app_id = GlobalState<uint64>()
+
   // ═══════════════════════════════════════════════════════════════════════
   // LENDING PARAMETERS (ALL IN BASIS POINTS)
   // ═══════════════════════════════════════════════════════════════════════
@@ -291,6 +294,7 @@ export class OrbitalLending extends Contract {
     this.cash_on_hand.value = 0
     this.total_additional_rewards.value = 0
     this.flux_oracle_app.value = flux_oracle_app_id
+    this.math_helper_app_id.value = 0
 
     if (this.base_token_id.value.native !== 0) {
       itxn
@@ -374,6 +378,17 @@ export class OrbitalLending extends Contract {
     if (this.max_apr_bps.value > 0 && this.prev_apr_bps.value > this.max_apr_bps.value) {
       this.prev_apr_bps.value = this.max_apr_bps.value
     }
+  }
+
+  /**
+   * Points the lending market at the shared NebulaCalculus helper contract.
+   * @param mathHelperAppId Application ID of the deployed NebulaCalculus contract.
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  public setMathHelperApp(mathHelperAppId: uint64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(mathHelperAppId > 0, 'BAD_HELPER_APP')
+    this.math_helper_app_id.value = mathHelperAppId
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -671,13 +686,12 @@ export class OrbitalLending extends Contract {
    * @returns Base asset amount that matches the burn.
    */
   private calculateLSTDueLocal(amount: uint64): uint64 {
-    // Calculate the LST due based on the local state of this contract
-    const circulatingExternalLST = this.circulating_lst.value
-    const totalDepositsExternal = this.total_deposits.value
-
-    // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
-    const [hi, lo] = mulw(totalDepositsExternal, amount)
-    return divw(hi, lo, circulatingExternalLST)
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    return abiCall(NebulaCalculusStub.prototype.lstDue, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(amount), new UintN64(this.circulating_lst.value), new UintN64(this.total_deposits.value)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -937,26 +951,27 @@ export class OrbitalLending extends Contract {
     this.last_apr_bps.value = this.current_apr_bps()
   }
 
+  private mathHelperConfigured(): boolean {
+    return this.math_helper_app_id.value !== 0
+  }
+
   // 0..10_000 over the allowed band [0 .. util_cap_bps * deposits]
   /**
    * Calculates utilization normalized to basis points relative to the cap.
    * @returns Utilization between 0 and 10_000 after capping at the configured limit.
    */
   private util_norm_bps(): uint64 {
-    // TODO: delegate to NebulaCalculus.utilNormBps once helper contract is wired
-    const D: uint64 = this.total_deposits.value
-    const B: uint64 = this.total_borrows.value
-    const cap_bps: uint64 = this.util_cap_bps.value
-    if (D === 0) return 0
-
-    // capBorrow = floor(D * util_cap_bps / 10_000)
-    const [hiCap, loCap] = mulw(D, cap_bps)
-    const capBorrow = divw(hiCap, loCap, BASIS_POINTS)
-    if (capBorrow === 0) return 0
-
-    const cappedB = B <= capBorrow ? B : capBorrow
-    const [hiN, loN] = mulw(cappedB, BASIS_POINTS)
-    return divw(hiN, loN, capBorrow)
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    const result = abiCall(NebulaCalculusStub.prototype.utilNormBps, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(this.total_deposits.value),
+        new UintN64(this.total_borrows.value),
+        new UintN64(this.util_cap_bps.value),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    return result.native
   }
 
   // Kinked APR from normalized utilization
@@ -966,26 +981,19 @@ export class OrbitalLending extends Contract {
    * @returns APR in basis points produced by the model.
    */
   private apr_bps_kinked(U_norm_bps: uint64): uint64 {
-    // TODO: delegate to NebulaCalculus.aprBpsKinked once helper contract is wired
-    const base_bps: uint64 = this.base_bps.value
-    const kink_norm_bps: uint64 = this.kink_norm_bps.value
-    const slope1_bps: uint64 = this.slope1_bps.value
-    const slope2_bps: uint64 = this.slope2_bps.value
-    let apr: uint64
-
-    if (U_norm_bps <= kink_norm_bps) {
-      const [hi1, lo1] = mulw(slope1_bps, U_norm_bps)
-      apr = base_bps + divw(hi1, lo1, kink_norm_bps)
-    } else {
-      const over: uint64 = U_norm_bps - kink_norm_bps
-      const denom: uint64 = BASIS_POINTS - kink_norm_bps
-      const [hi2, lo2] = mulw(slope2_bps, over)
-      apr = base_bps + slope1_bps + divw(hi2, lo2, denom)
-    }
-
-    const maxCap: uint64 = this.max_apr_bps.value
-    if (maxCap > 0 && apr > maxCap) apr = maxCap
-    return apr
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    return abiCall(NebulaCalculusStub.prototype.aprBpsKinked, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(U_norm_bps),
+        new UintN64(this.base_bps.value),
+        new UintN64(this.kink_norm_bps.value),
+        new UintN64(this.slope1_bps.value),
+        new UintN64(this.slope2_bps.value),
+        new UintN64(this.max_apr_bps.value),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   private computeFees(depositAmount: uint64, userTier: uint64): uint64 {
@@ -1048,17 +1056,12 @@ export class OrbitalLending extends Contract {
    * @returns Slice factor in wad precision used to advance indices.
    */
   private sliceFactorWad(deltaT: uint64): uint64 {
-    // TODO: delegate to NebulaCalculus.sliceFactorWad once helper contract is wired
-    if (deltaT === 0) return 0
-
-    // ratePerYearWad = INDEX_SCALE * last_apr_bps / BASIS_POINTS
-    const [hRate, lRate] = mulw(INDEX_SCALE, this.last_apr_bps.value)
-    const ratePerYearWad: uint64 = divw(hRate, lRate, BASIS_POINTS)
-
-    // simpleWad = ratePerYearWad * deltaT / SECONDS_PER_YEAR
-    const [hSlice, lSlice] = mulw(ratePerYearWad, deltaT)
-    const simpleWad: uint64 = divw(hSlice, lSlice, SECONDS_PER_YEAR)
-    return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    return abiCall(NebulaCalculusStub.prototype.sliceFactorWad, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(deltaT), new UintN64(this.last_apr_bps.value)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -1067,11 +1070,16 @@ export class OrbitalLending extends Contract {
    * @returns Debt amount in base units respecting the latest index.
    */
   private currentDebtFromSnapshot(rec: LoanRecord): uint64 {
-    // TODO: delegate to NebulaCalculus.currentDebtFromSnapshot once helper contract is wired
-    const p: uint64 = rec.principal.native
-    if (p === 0) return 0
-    const [hi, lo] = mulw(p, this.borrow_index_wad.value)
-    return divw(hi, lo, rec.userIndexWad.native)
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    return abiCall(NebulaCalculusStub.prototype.currentDebtFromSnapshot, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        rec.principal,
+        new UintN64(this.borrow_index_wad.value),
+        rec.userIndexWad,
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   // Roll borrower snapshot forward to "now" without changing what they owe
@@ -1141,12 +1149,14 @@ export class OrbitalLending extends Contract {
 
     // 4) Split interest into depositor yield & protocol fee
     const protoBps: uint64 = this.protocol_share_bps.value
-    const deposBps: uint64 = BASIS_POINTS - protoBps
-
-    // depositorInterest = interest * deposBps / 10_000
-    const [hiD, loD] = mulw(interest, deposBps)
-    const depositorInterest: uint64 = divw(hiD, loD, BASIS_POINTS)
-    const protocolInterest: uint64 = interest - depositorInterest
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+    const split = abiCall(NebulaCalculusStub.prototype.aprSplit, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(interest), new UintN64(protoBps)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const depositorInterest: uint64 = split.depositorInterest.native
+    const protocolInterest: uint64 = split.protocolInterest.native
 
     // 5) Apply state updates
     // Borrowers' aggregate debt grows by *full* interest:
@@ -1313,28 +1323,25 @@ export class OrbitalLending extends Contract {
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
     assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    // LTV in bps
-    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
-    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
-
-    // Premium rate (bps), clamped at 0 when at/above threshold
-    assert(ltvBps < this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
-
-    const [hR, lR] = mulw(this.liq_threshold_bps.value, BASIS_POINTS)
-    const ratio_bps: uint64 = divw(hR, lR, ltvBps) // > 10_000 if ltvBps < thresh
-    const premiumRateBps: uint64 = ratio_bps - BASIS_POINTS
-
-    // Premium (USD)
-    const [hP, lP] = mulw(collateralUSD, premiumRateBps)
-    const premiumUSD: uint64 = divw(hP, lP, BASIS_POINTS)
-
-    // 4) Convert premium USD → buyout token amount
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
     const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
 
-    // premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
-    const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
-    const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
+    const premiumData = abiCall(NebulaCalculusStub.prototype.buyoutPremium, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(collateralUSD),
+        new UintN64(debtUSDv),
+        new UintN64(this.liq_threshold_bps.value),
+        new UintN64(buyoutTokenPrice),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+
+    const ltvBps: uint64 = premiumData.ltvBps.native
+    assert(ltvBps < this.liq_threshold_bps.value, 'NOT_BUYOUT_ELIGIBLE')
+
+    const premiumUSD: uint64 = premiumData.premiumUsd.native
+    const premiumTokens: uint64 = premiumData.premiumTokens.native
 
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
@@ -1434,9 +1441,13 @@ export class OrbitalLending extends Contract {
    * @returns Equivalent value denominated in USD micro-units.
    */
   private debtUSD(debtBaseUnits: uint64): uint64 {
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
     const baseTokenPrice: uint64 = this.getOraclePrice(this.base_token_id.value) // price of market base token
-    const [h, l] = mulw(debtBaseUnits, baseTokenPrice)
-    return divw(h, l, USD_MICRO_UNITS) // micro-USD
+    return abiCall(NebulaCalculusStub.prototype.baseValueUSD, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(debtBaseUnits), new UintN64(baseTokenPrice)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -1467,8 +1478,11 @@ export class OrbitalLending extends Contract {
     // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     // requiredCollateralUSD = ceil(debtUSD * 10_000 / ltv_bps)
-    const [hReq, lReq] = mulw(debtUSDv, BASIS_POINTS)
-    const requiredCollateralUSD: uint64 = divw(hReq, lReq, this.ltv_bps.value)
+    const requiredCollateralUSD: uint64 = abiCall(NebulaCalculusStub.prototype.requiredCollateralUsd, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(debtUSDv), new UintN64(this.ltv_bps.value)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
 
     // If we’re already below requirement (shouldn’t happen), nothing is withdrawable
     if (currCollatUSD <= requiredCollateralUSD) return 0
@@ -1476,8 +1490,7 @@ export class OrbitalLending extends Contract {
     // Max removable USD
     const removableUSD: uint64 = currCollatUSD - requiredCollateralUSD
 
-    // Convert removable USD → underlying base units → LST amount
-    // Pull LST exchange data
+    // Convert removable USD → LST amount via helper
     const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstAppId,
       fee: STANDARD_TXN_FEE,
@@ -1487,19 +1500,18 @@ export class OrbitalLending extends Contract {
       fee: STANDARD_TXN_FEE,
     }).returnValue
 
-    // Base token price for this LST’s underlying
-    const ac = this.getCollateral(rec.collateralTokenId)
-    const basePrice = this.getOraclePrice(ac.baseAssetId)
+    const basePrice = this.getOraclePrice(this.getCollateral(rec.collateralTokenId).baseAssetId)
 
-    // underlying = removableUSD * 1e6 / basePrice
-    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
-    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
-
-    // LST = underlying * circulating / totalDeposits
-    const [hL, lL] = mulw(removableUnderlying, circulatingLST)
-    const removableLST: uint64 = divw(hL, lL, totalDeposits)
-
-    return removableLST
+    return abiCall(NebulaCalculusStub.prototype.lstFromUsd, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(removableUSD),
+        new UintN64(circulatingLST),
+        new UintN64(totalDeposits),
+        new UintN64(basePrice),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -1526,11 +1538,12 @@ export class OrbitalLending extends Contract {
       lstAppId,
     )
 
-    // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
     const debtUSDv: uint64 = this.debtUSD(debtBase)
-    // requiredCollateralUSD = ceil(debtUSD * 10_000 / ltv_bps)
-    const [hReq, lReq] = mulw(debtUSDv, BASIS_POINTS)
-    const requiredCollateralUSD: uint64 = divw(hReq, lReq, this.ltv_bps.value)
+    const requiredCollateralUSD: uint64 = abiCall(NebulaCalculusStub.prototype.requiredCollateralUsd, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(debtUSDv), new UintN64(this.ltv_bps.value)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
 
     // If we’re already below requirement (shouldn’t happen), nothing is withdrawable
     if (currCollatUSD <= requiredCollateralUSD) return 0
@@ -1539,7 +1552,6 @@ export class OrbitalLending extends Contract {
     const removableUSD: uint64 = currCollatUSD - requiredCollateralUSD
 
     // Convert removable USD → underlying base units → LST amount
-    // Pull LST exchange data
     const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstAppId,
       fee: STANDARD_TXN_FEE,
@@ -1549,19 +1561,18 @@ export class OrbitalLending extends Contract {
       fee: STANDARD_TXN_FEE,
     }).returnValue
 
-    // Base token price for this LST’s underlying
-    const ac = this.getCollateral(rec.collateralTokenId)
-    const basePrice = this.getOraclePrice(ac.baseAssetId)
+    const basePrice = this.getOraclePrice(this.getCollateral(rec.collateralTokenId).baseAssetId)
 
-    // underlying = removableUSD * 1e6 / basePrice
-    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
-    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
-
-    // LST = underlying * circulating / totalDeposits
-    const [hL, lL] = mulw(removableUnderlying, circulatingLST)
-    const removableLST: uint64 = divw(hL, lL, totalDeposits)
-
-    return removableLST
+    return abiCall(NebulaCalculusStub.prototype.lstFromUsd, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(removableUSD),
+        new UintN64(circulatingLST),
+        new UintN64(totalDeposits),
+        new UintN64(basePrice),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -1624,80 +1635,6 @@ export class OrbitalLending extends Contract {
     this.last_apr_bps.value = this.current_apr_bps()
   }
   /**
-   * Converts a USD seize value into an LST amount while capping to available collateral.
-   * @param seizeUSD USD value of collateral that should be seized (with bonus).
-   * @param collateralTokenId LST asset representing the collateral.
-   * @param lstAppId External LST app used for exchange-rate lookups.
-   * @param availableLST Total LST currently pledged for the borrower.
-   * @returns LST amount that can be safely seized.
-   */
-  private seizeLSTFromUSD(
-    seizeUSD: uint64,
-    collateralTokenId: UintN64,
-    lstAppId: uint64,
-    availableLST: uint64,
-  ): uint64 {
-    // USD -> underlying base units
-    const underlyingPrice = this.getOraclePrice(this.getCollateral(collateralTokenId).baseAssetId) // µUSD
-    const [hUnd, lUnd] = mulw(seizeUSD, USD_MICRO_UNITS)
-    const seizeUnderlying: uint64 = divw(hUnd, lUnd, underlyingPrice)
-
-    const collateral = this.getCollateral(collateralTokenId)
-    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
-
-    // underlying -> LST via (underlying * circulating / totalDeposits)
-    const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-    const total = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-    const [hL, lL] = mulw(seizeUnderlying, circ)
-    let seizeLST: uint64 = divw(hL, lL, total)
-
-    if (seizeLST > availableLST) seizeLST = availableLST
-    return seizeLST
-  }
-
-  private repayBaseFromSeizedLST(
-    seizeLST: uint64,
-    collateralTokenId: UintN64,
-    lstAppId: uint64,
-    bonusBps: uint64,
-    basePrice: uint64,
-  ): uint64 {
-    if (seizeLST === 0) return 0
-
-    const collateral = this.getCollateral(collateralTokenId)
-    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
-
-    const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-    const total = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-    const [hUnderlying, lUnderlying] = mulw(seizeLST, total)
-    const seizedUnderlying: uint64 = divw(hUnderlying, lUnderlying, circ)
-
-    const underlyingPrice = this.getOraclePrice(collateral.baseAssetId) // µUSD
-    const [hSeizeUSD, lSeizeUSD] = mulw(seizedUnderlying, underlyingPrice)
-    const seizeUSDActual: uint64 = divw(hSeizeUSD, lSeizeUSD, USD_MICRO_UNITS)
-
-    const [hRepayUSD, lRepayUSD] = mulw(seizeUSDActual, BASIS_POINTS)
-    const repayUSD: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps)
-
-    const [hRepayBase, lRepayBase] = mulw(repayUSD, USD_MICRO_UNITS)
-    const repayBase: uint64 = divw(hRepayBase, lRepayBase, basePrice)
-
-    return repayBase
-  }
-
-  /**
    * Liquidates an undercollateralized loan by repaying debt and claiming collateral
    * @param debtor - Account whose loan is being liquidated
    * @param axferTxn - Asset transfer transaction with full debt repayment
@@ -1724,14 +1661,17 @@ export class OrbitalLending extends Contract {
     assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
 
     // USD legs (for liquidatability & seize math)
+    const collateralInfo = this.getCollateral(collTok)
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
     assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
 
-    // LTV_bps = debtUSD * 10_000 / collateralUSD
-    const [hLTV, lLTV] = mulw(debtUSDv, BASIS_POINTS)
-    const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
+    const ltvBps: uint64 = abiCall(NebulaCalculusStub.prototype.ltvBps, {
+      appId: this.math_helper_app_id.value,
+      args: [new UintN64(debtUSDv), new UintN64(collateralUSD)],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
     assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
     // Validate repayment transfer (ASA base token)
@@ -1756,17 +1696,48 @@ export class OrbitalLending extends Contract {
       repayCandidate = maxRepayAllowed
     }
 
-    const [hRU, lRU] = mulw(repayCandidate, basePrice)
-    const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
+    const repayUSD: uint64 = this.debtUSD(repayCandidate)
 
     const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
     const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
 
+    const circ = abiCall(TargetContract.prototype.getCirculatingLST, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+    const total = abiCall(TargetContract.prototype.getTotalDeposits, {
+      appId: lstAppId,
+      fee: STANDARD_TXN_FEE,
+    }).returnValue
+
+    const underlyingPrice = this.getOraclePrice(collateralInfo.baseAssetId)
+
     // USD -> LST (cap to available)
-    const seizeLST: uint64 = this.seizeLSTFromUSD(seizeUSD, collTok, lstAppId, collLSTBal)
+    const seizeLST: uint64 = abiCall(NebulaCalculusStub.prototype.seizeLSTFromUSD, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(seizeUSD),
+        new UintN64(underlyingPrice),
+        new UintN64(circ),
+        new UintN64(total),
+        new UintN64(collLSTBal),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
     assert(seizeLST > 0, 'NOTHING_TO_SEIZE')
 
-    let repaySupported: uint64 = this.repayBaseFromSeizedLST(seizeLST, collTok, lstAppId, bonusBps, basePrice)
+    let repaySupported: uint64 = abiCall(NebulaCalculusStub.prototype.repayBaseFromSeizedLST, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(seizeLST),
+        new UintN64(total),
+        new UintN64(circ),
+        new UintN64(underlyingPrice),
+        new UintN64(bonusBps),
+        new UintN64(basePrice),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
     if (repaySupported > liveDebt) {
       repaySupported = liveDebt
     }
@@ -1968,7 +1939,8 @@ export class OrbitalLending extends Contract {
     assert(this.collateralExists(collateralTokenId), 'unknown collateral')
     const collateralInfo = this.getCollateral(collateralTokenId)
     assert(collateralInfo.originatingAppId.native === lstApp, 'mismatched LST app')
-    // 1) Get LST exchange rate: (totalDeposits / circulatingLST)
+    assert(this.mathHelperConfigured(), 'MATH_HELPER_NOT_SET')
+
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
       fee: STANDARD_TXN_FEE,
@@ -1979,21 +1951,18 @@ export class OrbitalLending extends Contract {
       fee: STANDARD_TXN_FEE,
     }).returnValue
 
-    // underlyingCollateral = (collateralAmount * totalDeposits) / circulatingLST
-    const [hC, lC] = mulw(totalDepositsExternal, collateralAmount)
-    const underlyingCollateral = divw(hC, lC, circulatingExternalLST)
+    const baseTokenPrice = this.getOraclePrice(collateralInfo.baseAssetId)
 
-    // 2) Get oracle price of the *base token*, not the LST itself
-    const lstCollateral = this.getCollateral(collateralTokenId)
-    const baseTokenId = lstCollateral.baseAssetId
-
-    const baseTokenPrice = this.getOraclePrice(baseTokenId)
-
-    // 3) Convert underlying collateral → USD
-    const [hU, lU] = mulw(underlyingCollateral, baseTokenPrice)
-    const collateralUSD = divw(hU, lU, USD_MICRO_UNITS)
-
-    return collateralUSD
+    return abiCall(NebulaCalculusStub.prototype.collateralValueUSD, {
+      appId: this.math_helper_app_id.value,
+      args: [
+        new UintN64(collateralAmount),
+        new UintN64(totalDepositsExternal),
+        new UintN64(circulatingExternalLST),
+        new UintN64(baseTokenPrice),
+      ],
+      fee: STANDARD_TXN_FEE,
+    }).returnValue.native
   }
 
   /**
@@ -2214,6 +2183,7 @@ export class OrbitalLending extends Contract {
       commission_percentage: new UintN64(this.commission_percentage.value),
       liq_bonus_bps: new UintN64(this.liq_bonus_bps.value),
       active_loan_records: new UintN64(this.active_loan_records.value),
+      math_helper_app_id: new UintN64(this.math_helper_app_id.value),
     })
   }
 
@@ -2266,6 +2236,7 @@ export class OrbitalLending extends Contract {
     this.commission_percentage.value = snapshot.commission_percentage.native
     this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
     this.active_loan_records.value = snapshot.active_loan_records.native
+    this.math_helper_app_id.value = snapshot.math_helper_app_id.native
 
     this.contract_state.value = new UintN64(1) // active
   }
@@ -2312,6 +2283,108 @@ export abstract class PriceOracleStub extends Contract {
 export abstract class FluxGateStub extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   getUserTier(user: Address): UintN64 {
+    err('stub only')
+  }
+}
+
+export abstract class NebulaCalculusStub extends Contract {
+  @abimethod({ allowActions: 'NoOp' })
+  utilNormBps(totalDeposits: UintN64, totalBorrows: UintN64, utilCapBps: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  aprBpsKinked(
+    uNormBps: UintN64,
+    baseBps: UintN64,
+    kinkNormBps: UintN64,
+    slope1Bps: UintN64,
+    slope2Bps: UintN64,
+    maxAprBps: UintN64,
+  ): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  sliceFactorWad(deltaT: UintN64, lastAprBps: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  currentDebtFromSnapshot(principal: UintN64, borrowIndexWad: UintN64, userIndexWad: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  lstDue(amount: UintN64, circulatingLst: UintN64, totalDeposits: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  aprSplit(interest: UintN64, protocolShareBps: UintN64): { depositorInterest: UintN64; protocolInterest: UintN64 } {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  collateralValueUSD(
+    collateralAmount: UintN64,
+    totalDeposits: UintN64,
+    circulatingLst: UintN64,
+    baseTokenPrice: UintN64,
+  ): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  baseValueUSD(baseAmount: UintN64, baseTokenPrice: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  ltvBps(debtUsd: UintN64, collateralUsd: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  buyoutPremium(
+    collateralUsd: UintN64,
+    debtUsd: UintN64,
+    liqThresholdBps: UintN64,
+    buyoutTokenPrice: UintN64,
+  ): { ltvBps: UintN64; premiumUsd: UintN64; premiumTokens: UintN64 } {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  seizeLSTFromUSD(
+    seizeUsd: UintN64,
+    underlyingPrice: UintN64,
+    circulatingLst: UintN64,
+    totalDeposits: UintN64,
+    availableLst: UintN64,
+  ): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  repayBaseFromSeizedLST(
+    seizeLst: UintN64,
+    totalDeposits: UintN64,
+    circulatingLst: UintN64,
+    underlyingPrice: UintN64,
+    bonusBps: UintN64,
+    basePrice: UintN64,
+  ): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  lstFromUsd(usdAmount: UintN64, circulatingLst: UintN64, totalDeposits: UintN64, baseTokenPrice: UintN64): UintN64 {
+    err('stub only')
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  requiredCollateralUsd(debtUsd: UintN64, ltvBps: UintN64): UintN64 {
     err('stub only')
   }
 }

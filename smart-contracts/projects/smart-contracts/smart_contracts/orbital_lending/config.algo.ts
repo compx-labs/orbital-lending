@@ -67,6 +67,7 @@ export class MigrationSnapshot extends arc4.Struct<{
   total_commission_earned: arc4.UintN64
   total_additional_rewards: arc4.UintN64
   active_loan_records: arc4.UintN64
+  math_helper_app_id: arc4.UintN64
 }> {}
 
 export class DepositRecord extends arc4.Struct<{

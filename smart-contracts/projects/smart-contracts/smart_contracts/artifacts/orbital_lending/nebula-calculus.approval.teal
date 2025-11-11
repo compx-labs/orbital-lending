@@ -1,0 +1,1283 @@
+#pragma version 11
+#pragma typetrack false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 1 10000 1000000 0
+    bytecblock 0x151f7c75 0x0000000000000000 ""
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txn NumAppArgs
+    bz main_after_if_else@21
+    pushbytess 0xb8447b36 0xc9c4f2f4 0xd75d3591 0x0bf83943 0x7b7ee824 0x505ebdd2 0xee2418e8 0x8b7872cd 0x40b4008c 0xbacd5578 0x621e37d3 0xa579b03b 0x0f91a0b6 0xfa5994d4 0x705e070c // method "createApplication()void", method "utilNormBps(uint64,uint64,uint64)uint64", method "aprBpsKinked(uint64,uint64,uint64,uint64,uint64,uint64)uint64", method "sliceFactorWad(uint64,uint64)uint64", method "currentDebtFromSnapshot(uint64,uint64,uint64)uint64", method "lstDue(uint64,uint64,uint64)uint64", method "aprSplit(uint64,uint64)(uint64,uint64)", method "collateralValueUSD(uint64,uint64,uint64,uint64)uint64", method "baseValueUSD(uint64,uint64)uint64", method "ltvBps(uint64,uint64)uint64", method "buyoutPremium(uint64,uint64,uint64,uint64)(uint64,uint64,uint64)", method "seizeLSTFromUSD(uint64,uint64,uint64,uint64,uint64)uint64", method "repayBaseFromSeizedLST(uint64,uint64,uint64,uint64,uint64,uint64)uint64", method "lstFromUsd(uint64,uint64,uint64,uint64)uint64", method "requiredCollateralUsd(uint64,uint64)uint64"
+    txna ApplicationArgs 0
+    match main_createApplication_route@3 main_utilNormBps_route@4 main_aprBpsKinked_route@5 main_sliceFactorWad_route@6 main_currentDebtFromSnapshot_route@7 main_lstDue_route@8 main_aprSplit_route@9 main_collateralValueUSD_route@10 main_baseValueUSD_route@11 main_ltvBps_route@12 main_buyoutPremium_route@13 main_seizeLSTFromUSD_route@14 main_repayBaseFromSeizedLST_route@15 main_lstFromUsd_route@16 main_requiredCollateralUsd_route@17
+
+main_after_if_else@21:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    intc_3 // 0
+    return
+
+main_requiredCollateralUsd_route@17:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:230
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:230
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub requiredCollateralUsd
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_lstFromUsd_route@16:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:216
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:216
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub lstFromUsd
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_repayBaseFromSeizedLST_route@15:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:195
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    txna ApplicationArgs 5
+    txna ApplicationArgs 6
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:195
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub repayBaseFromSeizedLST
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_seizeLSTFromUSD_route@14:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:177
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    txna ApplicationArgs 5
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:177
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub seizeLSTFromUSD
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_buyoutPremium_route@13:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:143
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:143
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub buyoutPremium
+    cover 2
+    concat
+    swap
+    concat
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_ltvBps_route@12:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:135
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:135
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub ltvBps
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_baseValueUSD_route@11:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:129
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:129
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub baseValueUSD
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_collateralValueUSD_route@10:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:114
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:114
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub collateralValueUSD
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_aprSplit_route@9:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:95
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:95
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub aprSplit
+    concat
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_lstDue_route@8:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:86
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:86
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub lstDue
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_currentDebtFromSnapshot_route@7:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:78
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:78
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub currentDebtFromSnapshot
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_sliceFactorWad_route@6:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:67
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:67
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub sliceFactorWad
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_aprBpsKinked_route@5:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:36
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    txna ApplicationArgs 4
+    txna ApplicationArgs 5
+    txna ApplicationArgs 6
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:36
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub aprBpsKinked
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_utilNormBps_route@4:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:20
+    // @abimethod({ allowActions: 'NoOp' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:13-14
+    // @contract({ name: 'nebula-calculus', avmVersion: 11 })
+    // export class NebulaCalculus extends Contract {
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:20
+    // @abimethod({ allowActions: 'NoOp' })
+    callsub utilNormBps
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_createApplication_route@3:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:15
+    // @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    !
+    assert // can only call when creating
+    intc_0 // 1
+    return
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.utilNormBps(totalDeposits: bytes, totalBorrows: bytes, utilCapBps: bytes) -> bytes:
+utilNormBps:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:20-21
+    // @abimethod({ allowActions: 'NoOp' })
+    // public utilNormBps(totalDeposits: UintN64, totalBorrows: UintN64, utilCapBps: UintN64): UintN64 {
+    proto 3 1
+    bytec_2 // ""
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:22
+    // const D: uint64 = totalDeposits.native
+    frame_dig -3
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:23
+    // const B: uint64 = totalBorrows.native
+    frame_dig -2
+    btoi
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:24
+    // const cap_bps: uint64 = utilCapBps.native
+    frame_dig -1
+    btoi
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:25
+    // if (D === 0) return new UintN64(0)
+    bnz utilNormBps_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    frame_bury 0
+    retsub
+
+utilNormBps_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:27
+    // const [hiCap, loCap] = mulw(D, cap_bps)
+    frame_dig 1
+    frame_dig 3
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:28
+    // const capBorrow = divw(hiCap, loCap, BASIS_POINTS)
+    divw
+    dup
+    frame_bury 0
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:29
+    // if (capBorrow === 0) return new UintN64(0)
+    bnz utilNormBps_after_if_else@4
+    bytec_1 // 0x0000000000000000
+    frame_bury 0
+    retsub
+
+utilNormBps_after_if_else@4:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:31
+    // const cappedB = B <= capBorrow ? B : capBorrow
+    frame_dig 2
+    dup
+    frame_dig 0
+    dup
+    cover 2
+    <=
+    dig 1
+    uncover 3
+    uncover 2
+    select
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:32
+    // const [hiN, loN] = mulw(cappedB, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:33
+    // return new UintN64(divw(hiN, loN, capBorrow))
+    uncover 2
+    divw
+    itob
+    frame_bury 0
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.aprBpsKinked(uNormBps: bytes, baseBps: bytes, kinkNormBps: bytes, slope1Bps: bytes, slope2Bps: bytes, maxAprBps: bytes) -> bytes:
+aprBpsKinked:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:36-44
+    // @abimethod({ allowActions: 'NoOp' })
+    // public aprBpsKinked(
+    //   uNormBps: UintN64,
+    //   baseBps: UintN64,
+    //   kinkNormBps: UintN64,
+    //   slope1Bps: UintN64,
+    //   slope2Bps: UintN64,
+    //   maxAprBps: UintN64,
+    // ): UintN64 {
+    proto 6 1
+    bytec_2 // ""
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:45
+    // const U: uint64 = uNormBps.native
+    frame_dig -6
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:46
+    // const base: uint64 = baseBps.native
+    frame_dig -5
+    btoi
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:47
+    // const kink: uint64 = kinkNormBps.native
+    frame_dig -4
+    btoi
+    dup
+    cover 3
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:48
+    // const slope1: uint64 = slope1Bps.native
+    frame_dig -3
+    btoi
+    cover 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:49
+    // const slope2: uint64 = slope2Bps.native
+    frame_dig -2
+    btoi
+    cover 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:50
+    // const maxApr: uint64 = maxAprBps.native
+    frame_dig -1
+    btoi
+    cover 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:53
+    // if (U <= kink) {
+    <=
+    bz aprBpsKinked_else_body@2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:54
+    // const [hi1, lo1] = mulw(slope1, U)
+    frame_dig 3
+    frame_dig 2
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:55
+    // apr = base + divw(hi1, lo1, kink)
+    uncover 3
+    divw
+    +
+    frame_bury 0
+
+aprBpsKinked_after_if_else@3:
+    frame_dig 0
+    frame_bury 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:63
+    // if (maxApr > 0 && apr > maxApr) apr = maxApr
+    frame_dig 5
+    bz aprBpsKinked_after_if_else@6
+    frame_dig 0
+    dup
+    frame_dig 5
+    >
+    swap
+    frame_bury 1
+    bz aprBpsKinked_after_if_else@6
+    frame_dig 5
+    frame_bury 1
+
+aprBpsKinked_after_if_else@6:
+    frame_dig 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:64
+    // return new UintN64(apr)
+    itob
+    frame_bury 0
+    retsub
+
+aprBpsKinked_else_body@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:57
+    // const over: uint64 = U - kink
+    frame_dig 2
+    uncover 2
+    dup
+    cover 2
+    -
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:58
+    // const denom: uint64 = BASIS_POINTS - kink
+    uncover 2
+    -
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:59
+    // const [hi2, lo2] = mulw(slope2, over)
+    frame_dig 4
+    uncover 2
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:60
+    // apr = base + slope1 + divw(hi2, lo2, denom)
+    uncover 3
+    frame_dig 3
+    +
+    cover 2
+    uncover 3
+    divw
+    +
+    frame_bury 0
+    b aprBpsKinked_after_if_else@3
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.sliceFactorWad(deltaT: bytes, lastAprBps: bytes) -> bytes:
+sliceFactorWad:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:67-68
+    // @abimethod({ allowActions: 'NoOp' })
+    // public sliceFactorWad(deltaT: UintN64, lastAprBps: UintN64): UintN64 {
+    proto 2 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:69
+    // const dt: uint64 = deltaT.native
+    frame_dig -2
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:70
+    // if (dt === 0) return new UintN64(0)
+    bnz sliceFactorWad_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+sliceFactorWad_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:72
+    // const [hRate, lRate] = mulw(INDEX_SCALE, lastAprBps.native)
+    frame_dig -1
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:11
+    // export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
+    pushint 1000000000000 // 1000000000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:72
+    // const [hRate, lRate] = mulw(INDEX_SCALE, lastAprBps.native)
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:73
+    // const ratePerYearWad: uint64 = divw(hRate, lRate, BASIS_POINTS)
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:74
+    // const [hSlice, lSlice] = mulw(ratePerYearWad, dt)
+    frame_dig 0
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:13
+    // export const SECONDS_PER_YEAR: uint64 = 365 * 24 * 60 * 60
+    pushint 31536000 // 31536000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:75
+    // return new UintN64(divw(hSlice, lSlice, SECONDS_PER_YEAR))
+    divw
+    itob
+    swap
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.currentDebtFromSnapshot(principal: bytes, borrowIndexWad: bytes, userIndexWad: bytes) -> bytes:
+currentDebtFromSnapshot:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:78-79
+    // @abimethod({ allowActions: 'NoOp' })
+    // public currentDebtFromSnapshot(principal: UintN64, borrowIndexWad: UintN64, userIndexWad: UintN64): UintN64 {
+    proto 3 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:80
+    // const p: uint64 = principal.native
+    frame_dig -3
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:81
+    // if (p === 0) return new UintN64(0)
+    bnz currentDebtFromSnapshot_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+currentDebtFromSnapshot_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:82
+    // const [hi, lo] = mulw(p, borrowIndexWad.native)
+    frame_dig -2
+    btoi
+    frame_dig 0
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:83
+    // return new UintN64(divw(hi, lo, userIndexWad.native))
+    frame_dig -1
+    btoi
+    divw
+    itob
+    swap
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.lstDue(amount: bytes, circulatingLst: bytes, totalDeposits: bytes) -> bytes:
+lstDue:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:86-87
+    // @abimethod({ allowActions: 'NoOp' })
+    // public lstDue(amount: UintN64, circulatingLst: UintN64, totalDeposits: UintN64): UintN64 {
+    proto 3 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:88
+    // const circ: uint64 = circulatingLst.native
+    frame_dig -2
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:89
+    // const total: uint64 = totalDeposits.native
+    frame_dig -1
+    btoi
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:90
+    // if (circ === 0) return new UintN64(0)
+    bnz lstDue_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    frame_bury 0
+    retsub
+
+lstDue_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:91
+    // const [hi, lo] = mulw(total, amount.native)
+    frame_dig -3
+    btoi
+    frame_dig 1
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:92
+    // return new UintN64(divw(hi, lo, circ))
+    frame_dig 0
+    divw
+    itob
+    frame_bury 0
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.aprSplit(interest: bytes, protocolShareBps: bytes) -> bytes, bytes:
+aprSplit:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:95-99
+    // @abimethod({ allowActions: 'NoOp' })
+    // public aprSplit(
+    //   interest: UintN64,
+    //   protocolShareBps: UintN64,
+    // ): { depositorInterest: UintN64; protocolInterest: UintN64 } {
+    proto 2 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:100
+    // const interestValue: uint64 = interest.native
+    frame_dig -2
+    btoi
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:101
+    // const protoBps: uint64 = protocolShareBps.native
+    frame_dig -1
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:102
+    // const deposBps: uint64 = BASIS_POINTS - protoBps
+    swap
+    -
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:104
+    // const [hiD, loD] = mulw(interestValue, deposBps)
+    dig 1
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:105
+    // const depositorInterest: uint64 = divw(hiD, loD, BASIS_POINTS)
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:106
+    // const protocolInterest: uint64 = interestValue - depositorInterest
+    swap
+    dig 1
+    -
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:109
+    // depositorInterest: new UintN64(depositorInterest),
+    swap
+    itob
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:110
+    // protocolInterest: new UintN64(protocolInterest),
+    swap
+    itob
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:108-111
+    // return {
+    //   depositorInterest: new UintN64(depositorInterest),
+    //   protocolInterest: new UintN64(protocolInterest),
+    // }
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.collateralValueUSD(collateralAmount: bytes, totalDeposits: bytes, circulatingLst: bytes, baseTokenPrice: bytes) -> bytes:
+collateralValueUSD:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:114-120
+    // @abimethod({ allowActions: 'NoOp' })
+    // public collateralValueUSD(
+    //   collateralAmount: UintN64,
+    //   totalDeposits: UintN64,
+    //   circulatingLst: UintN64,
+    //   baseTokenPrice: UintN64,
+    // ): UintN64 {
+    proto 4 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:121
+    // const circ: uint64 = circulatingLst.native
+    frame_dig -2
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:122
+    // if (circ === 0) return new UintN64(0)
+    bnz collateralValueUSD_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+collateralValueUSD_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:123
+    // const [hC, lC] = mulw(totalDeposits.native, collateralAmount.native)
+    frame_dig -3
+    btoi
+    frame_dig -4
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:124
+    // const underlying: uint64 = divw(hC, lC, circ)
+    frame_dig 0
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:125
+    // const [hU, lU] = mulw(underlying, baseTokenPrice.native)
+    frame_dig -1
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:126
+    // return new UintN64(divw(hU, lU, USD_MICRO_UNITS))
+    divw
+    itob
+    swap
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.baseValueUSD(baseAmount: bytes, baseTokenPrice: bytes) -> bytes:
+baseValueUSD:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:129-130
+    // @abimethod({ allowActions: 'NoOp' })
+    // public baseValueUSD(baseAmount: UintN64, baseTokenPrice: UintN64): UintN64 {
+    proto 2 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:131
+    // const [h, l] = mulw(baseAmount.native, baseTokenPrice.native)
+    frame_dig -2
+    btoi
+    frame_dig -1
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:132
+    // return new UintN64(divw(h, l, USD_MICRO_UNITS))
+    divw
+    itob
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.ltvBps(debtUsd: bytes, collateralUsd: bytes) -> bytes:
+ltvBps:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:135-136
+    // @abimethod({ allowActions: 'NoOp' })
+    // public ltvBps(debtUsd: UintN64, collateralUsd: UintN64): UintN64 {
+    proto 2 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:137
+    // const coll: uint64 = collateralUsd.native
+    frame_dig -1
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:138
+    // if (coll === 0) return new UintN64(0)
+    bnz ltvBps_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+ltvBps_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:139
+    // const [h, l] = mulw(debtUsd.native, BASIS_POINTS)
+    frame_dig -2
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:139
+    // const [h, l] = mulw(debtUsd.native, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:140
+    // return new UintN64(divw(h, l, coll))
+    frame_dig 0
+    divw
+    itob
+    swap
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.buyoutPremium(collateralUsd: bytes, debtUsd: bytes, liqThresholdBps: bytes, buyoutTokenPrice: bytes) -> bytes, bytes, bytes:
+buyoutPremium:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:143-149
+    // @abimethod({ allowActions: 'NoOp' })
+    // public buyoutPremium(
+    //   collateralUsd: UintN64,
+    //   debtUsd: UintN64,
+    //   liqThresholdBps: UintN64,
+    //   buyoutTokenPrice: UintN64,
+    // ): { ltvBps: UintN64; premiumUsd: UintN64; premiumTokens: UintN64 } {
+    proto 4 3
+    bytec_2 // ""
+    dupn 4
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:150
+    // const collUSD: uint64 = collateralUsd.native
+    frame_dig -4
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:151
+    // const debtUSD: uint64 = debtUsd.native
+    frame_dig -3
+    btoi
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:152
+    // let ltv: uint64 = 0
+    intc_3 // 0
+    swap
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:153
+    // if (collUSD > 0) {
+    bz buyoutPremium_after_if_else@2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:154
+    // const [hLTV, lLTV] = mulw(debtUSD, BASIS_POINTS)
+    frame_dig 6
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:154
+    // const [hLTV, lLTV] = mulw(debtUSD, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:155
+    // ltv = divw(hLTV, lLTV, collUSD)
+    frame_dig 5
+    divw
+    frame_bury 7
+
+buyoutPremium_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:157
+    // let premiumUsd: uint64 = 0
+    intc_3 // 0
+    frame_bury 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:158
+    // let premiumTokens: uint64 = 0
+    intc_3 // 0
+    dup
+    frame_bury 0
+    frame_bury 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:159
+    // if (ltv > 0) {
+    frame_dig 7
+    bz buyoutPremium_after_if_else@9
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:160
+    // const [hR, lR] = mulw(liqThresholdBps.native, BASIS_POINTS)
+    frame_dig -2
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:160
+    // const [hR, lR] = mulw(liqThresholdBps.native, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:161
+    // const ratio = divw(hR, lR, ltv)
+    frame_dig 7
+    divw
+    dup
+    frame_bury 3
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:162
+    // const premiumRateBps: uint64 = ratio > BASIS_POINTS ? ratio - BASIS_POINTS : 0
+    >
+    bz buyoutPremium_ternary_false@5
+    frame_dig 3
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:162
+    // const premiumRateBps: uint64 = ratio > BASIS_POINTS ? ratio - BASIS_POINTS : 0
+    -
+
+buyoutPremium_ternary_merge@6:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:163
+    // const [hP, lP] = mulw(collUSD, premiumRateBps)
+    frame_dig 5
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:164
+    // premiumUsd = divw(hP, lP, BASIS_POINTS)
+    divw
+    frame_bury 2
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:165
+    // if (buyoutTokenPrice.native > 0) {
+    frame_dig -1
+    btoi
+    dup
+    frame_bury 4
+    bz buyoutPremium_after_if_else@8
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:166
+    // const [hPT, lPT] = mulw(premiumUsd, USD_MICRO_UNITS)
+    frame_dig 2
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:166
+    // const [hPT, lPT] = mulw(premiumUsd, USD_MICRO_UNITS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:167
+    // premiumTokens = divw(hPT, lPT, buyoutTokenPrice.native)
+    frame_dig 4
+    divw
+    frame_bury 0
+
+buyoutPremium_after_if_else@8:
+    frame_dig 0
+    frame_bury 1
+
+buyoutPremium_after_if_else@9:
+    frame_dig 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:171
+    // ltvBps: new UintN64(ltv),
+    frame_dig 7
+    itob
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:172
+    // premiumUsd: new UintN64(premiumUsd),
+    frame_dig 2
+    itob
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:173
+    // premiumTokens: new UintN64(premiumTokens),
+    uncover 2
+    itob
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:170-174
+    // return {
+    //   ltvBps: new UintN64(ltv),
+    //   premiumUsd: new UintN64(premiumUsd),
+    //   premiumTokens: new UintN64(premiumTokens),
+    // }
+    frame_bury 2
+    frame_bury 1
+    frame_bury 0
+    retsub
+
+buyoutPremium_ternary_false@5:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:162
+    // const premiumRateBps: uint64 = ratio > BASIS_POINTS ? ratio - BASIS_POINTS : 0
+    intc_3 // 0
+    b buyoutPremium_ternary_merge@6
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.seizeLSTFromUSD(seizeUsd: bytes, underlyingPrice: bytes, circulatingLst: bytes, totalDeposits: bytes, availableLst: bytes) -> bytes:
+seizeLSTFromUSD:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:177-184
+    // @abimethod({ allowActions: 'NoOp' })
+    // public seizeLSTFromUSD(
+    //   seizeUsd: UintN64,
+    //   underlyingPrice: UintN64,
+    //   circulatingLst: UintN64,
+    //   totalDeposits: UintN64,
+    //   availableLst: UintN64,
+    // ): UintN64 {
+    proto 5 1
+    bytec_2 // ""
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:185
+    // const price: uint64 = underlyingPrice.native
+    frame_dig -4
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:186
+    // if (price === 0) return new UintN64(0)
+    bnz seizeLSTFromUSD_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    frame_bury 0
+    retsub
+
+seizeLSTFromUSD_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:187
+    // const [hUnd, lUnd] = mulw(seizeUsd.native, USD_MICRO_UNITS)
+    frame_dig -5
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:187
+    // const [hUnd, lUnd] = mulw(seizeUsd.native, USD_MICRO_UNITS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:188
+    // const seizeUnderlying: uint64 = divw(hUnd, lUnd, price)
+    frame_dig 2
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:189
+    // const [hL, lL] = mulw(seizeUnderlying, circulatingLst.native)
+    frame_dig -3
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:190
+    // let seizeLst: uint64 = divw(hL, lL, totalDeposits.native)
+    frame_dig -2
+    btoi
+    divw
+    dup
+    frame_bury 0
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:191
+    // if (seizeLst > availableLst.native) seizeLst = availableLst.native
+    frame_dig -1
+    btoi
+    dup
+    frame_bury 1
+    >
+    bz seizeLSTFromUSD_after_if_else@4
+    frame_dig 1
+    frame_bury 0
+
+seizeLSTFromUSD_after_if_else@4:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:192
+    // return new UintN64(seizeLst)
+    frame_dig 0
+    itob
+    frame_bury 0
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.repayBaseFromSeizedLST(seizeLst: bytes, totalDeposits: bytes, circulatingLst: bytes, underlyingPrice: bytes, bonusBps: bytes, basePrice: bytes) -> bytes:
+repayBaseFromSeizedLST:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:195-203
+    // @abimethod({ allowActions: 'NoOp' })
+    // public repayBaseFromSeizedLST(
+    //   seizeLst: UintN64,
+    //   totalDeposits: UintN64,
+    //   circulatingLst: UintN64,
+    //   underlyingPrice: UintN64,
+    //   bonusBps: UintN64,
+    //   basePrice: UintN64,
+    // ): UintN64 {
+    proto 6 1
+    bytec_2 // ""
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:204
+    // if (seizeLst.native === 0 || basePrice.native === 0) return new UintN64(0)
+    frame_dig -6
+    btoi
+    dup
+    bz repayBaseFromSeizedLST_if_body@2
+    frame_dig -1
+    btoi
+    dup
+    frame_bury 0
+    bnz repayBaseFromSeizedLST_after_if_else@3
+
+repayBaseFromSeizedLST_if_body@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:204
+    // if (seizeLst.native === 0 || basePrice.native === 0) return new UintN64(0)
+    bytec_1 // 0x0000000000000000
+    frame_bury 0
+    retsub
+
+repayBaseFromSeizedLST_after_if_else@3:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:205
+    // const [hUnderlying, lUnderlying] = mulw(seizeLst.native, totalDeposits.native)
+    frame_dig -5
+    btoi
+    frame_dig 1
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:206
+    // const seizedUnderlying: uint64 = divw(hUnderlying, lUnderlying, circulatingLst.native)
+    frame_dig -4
+    btoi
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:207
+    // const [hSeizeUSD, lSeizeUSD] = mulw(seizedUnderlying, underlyingPrice.native)
+    frame_dig -3
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:208
+    // const seizeUsdActual: uint64 = divw(hSeizeUSD, lSeizeUSD, USD_MICRO_UNITS)
+    divw
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:209
+    // const [hRepayUSD, lRepayUSD] = mulw(seizeUsdActual, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:210
+    // const repayUsd: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps.native)
+    frame_dig -2
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:210
+    // const repayUsd: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps.native)
+    +
+    divw
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:211
+    // const [hRepayBase, lRepayBase] = mulw(repayUsd, USD_MICRO_UNITS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:212
+    // const repayBase: uint64 = divw(hRepayBase, lRepayBase, basePrice.native)
+    frame_dig 0
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:213
+    // return new UintN64(repayBase)
+    itob
+    frame_bury 0
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.lstFromUsd(usdAmount: bytes, circulatingLst: bytes, totalDeposits: bytes, baseTokenPrice: bytes) -> bytes:
+lstFromUsd:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:216-222
+    // @abimethod({ allowActions: 'NoOp' })
+    // public lstFromUsd(
+    //   usdAmount: UintN64,
+    //   circulatingLst: UintN64,
+    //   totalDeposits: UintN64,
+    //   baseTokenPrice: UintN64,
+    // ): UintN64 {
+    proto 4 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:223
+    // if (baseTokenPrice.native === 0) return new UintN64(0)
+    frame_dig -1
+    btoi
+    dup
+    bnz lstFromUsd_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+lstFromUsd_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:224
+    // const [hUnderlying, lUnderlying] = mulw(usdAmount.native, USD_MICRO_UNITS)
+    frame_dig -4
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:10
+    // export const USD_MICRO_UNITS: uint64 = 1_000_000
+    intc_2 // 1000000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:224
+    // const [hUnderlying, lUnderlying] = mulw(usdAmount.native, USD_MICRO_UNITS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:225
+    // const removableUnderlying: uint64 = divw(hUnderlying, lUnderlying, baseTokenPrice.native)
+    frame_dig 0
+    divw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:226
+    // const [hL, lL] = mulw(removableUnderlying, circulatingLst.native)
+    frame_dig -3
+    btoi
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:227
+    // return new UintN64(divw(hL, lL, totalDeposits.native))
+    frame_dig -2
+    btoi
+    divw
+    itob
+    swap
+    retsub
+
+
+// smart_contracts/orbital_lending/NebulaCalculus.algo.ts::NebulaCalculus.requiredCollateralUsd(debtUsd: bytes, ltvBps: bytes) -> bytes:
+requiredCollateralUsd:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:230-231
+    // @abimethod({ allowActions: 'NoOp' })
+    // public requiredCollateralUsd(debtUsd: UintN64, ltvBps: UintN64): UintN64 {
+    proto 2 1
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:232
+    // const target: uint64 = ltvBps.native
+    frame_dig -1
+    btoi
+    dup
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:233
+    // if (target === 0) return new UintN64(0)
+    bnz requiredCollateralUsd_after_if_else@2
+    bytec_1 // 0x0000000000000000
+    swap
+    retsub
+
+requiredCollateralUsd_after_if_else@2:
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:234
+    // const [hReq, lReq] = mulw(debtUsd.native, BASIS_POINTS)
+    frame_dig -2
+    btoi
+    // smart_contracts/orbital_lending/config.algo.ts:9
+    // export const BASIS_POINTS: uint64 = 10_000
+    intc_1 // 10000
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:234
+    // const [hReq, lReq] = mulw(debtUsd.native, BASIS_POINTS)
+    mulw
+    // smart_contracts/orbital_lending/NebulaCalculus.algo.ts:235
+    // return new UintN64(divw(hReq, lReq, target))
+    frame_dig 0
+    divw
+    itob
+    swap
+    retsub
