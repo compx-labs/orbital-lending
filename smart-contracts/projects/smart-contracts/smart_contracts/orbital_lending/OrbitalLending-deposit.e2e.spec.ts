@@ -1423,13 +1423,16 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .do()
       const lstBalanceBefore = lstBalanceBeforeRequest.assetHolding?.amount || BigInt(0)
 
+      const overpayBuffer = 1_000n
+      const requestedRepayAmount = currentDebt + overpayBuffer
+      expect(requestedRepayAmount).toBeGreaterThan(currentDebt)
       const payTxn = algoLendingContractClient.algorand.createTransaction.payment({
         receiver: algoLendingContractClient.appAddress,
-        amount: AlgoAmount.MicroAlgos(currentDebt),
+        amount: AlgoAmount.MicroAlgos(requestedRepayAmount),
         sender: borrowerAccount.addr,
       })
       const result = await algoLendingContractClient.send.repayLoanAlgo({
-        args: [payTxn, currentDebt],
+        args: [payTxn, requestedRepayAmount],
         sender: borrowerAccount.addr,
       })
 

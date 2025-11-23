@@ -1115,6 +1115,7 @@ export class OrbitalLending extends Contract {
    * @dev Similar to repayLoanASA but specifically for ALGO repayments
    * @dev Accrues interest before processing repayment
    * @dev Full repayment closes loan and returns all collateral
+   * @dev Overpayments are automatically refunded to the sender
    */
   @abimethod({ allowActions: 'NoOp' })
   public repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
@@ -1127,14 +1128,24 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
-
-    assert(repaymentAmount <= liveDebt)
-
-    const remainingDebt: uint64 = liveDebt - repaymentAmount
+    const repayUsed: uint64 = repaymentAmount <= liveDebt ? repaymentAmount : liveDebt
+    const refundAmount: uint64 = repaymentAmount - repayUsed
+    const remainingDebt: uint64 = liveDebt - repayUsed
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
-    this.total_borrows.value -= repaymentAmount
+    this.total_borrows.value -= repayUsed
     this.addCash(repaymentAmount)
+
+    if (refundAmount > 0) {
+      itxn
+        .payment({
+          receiver: op.Txn.sender,
+          amount: refundAmount,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+      this.removeCash(refundAmount)
+    }
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1156,7 +1167,7 @@ export class OrbitalLending extends Contract {
         collateralAmount: rec.collateralAmount,
         borrowedTokenId: this.base_token_id.value,
         lastDebtChange: new DebtChange({
-          amount: new UintN64(repaymentAmount),
+          amount: new UintN64(repayUsed),
           timestamp: new UintN64(Global.latestTimestamp),
           changeType: new UintN8(2), // repay
         }),
@@ -2167,6 +2178,30 @@ export class OrbitalLending extends Contract {
   private getGoOnlineFee(): uint64 {
     // this will be needed to determine if our pool is currently NOT eligible and we thus need to pay the fee.
     return Global.payoutsGoOnlineFee
+  }
+
+  /**
+   * Returns the current amount of LST tokens in circulation
+   * @returns Total LST tokens representing all depositor claims
+   */
+  getCirculatingLST(): uint64 {
+    return this.circulating_lst.value
+  }
+
+  /**
+   * Returns the total amount of base assets deposited in the protocol
+   * @returns Total underlying assets available for lending
+   */
+  getTotalDeposits(): uint64 {
+    return this.total_deposits.value
+  }
+
+  /**
+   * Returns the number of different collateral types accepted by the protocol
+   * @returns Count of registered collateral asset types
+   */
+  getAcceptedCollateralsCount(): uint64 {
+    return this.accepted_collaterals_count.value
   }
 
   /**

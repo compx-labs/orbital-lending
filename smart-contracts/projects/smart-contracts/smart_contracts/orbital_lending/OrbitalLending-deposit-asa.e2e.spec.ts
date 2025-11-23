@@ -980,11 +980,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const totalBorrowsBefore = globalStateBefore.totalBorrows ?? 0n
       const activeLoansBefore = globalStateBefore.activeLoanRecords ?? 0n
 
+      const overpayBuffer = 1_000n
+      const requestedRepayAmount = remainingDebt + overpayBuffer
+      expect(requestedRepayAmount).toBeGreaterThan(remainingDebt)
       const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
         sender: borrowerAccount.addr,
         receiver: xUSDLendingContractClient.appClient.appAddress,
         assetId: xUSDAssetId,
-        amount: remainingDebt,
+        amount: requestedRepayAmount,
         note: 'Full loan repayment',
       })
 
@@ -992,7 +995,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .newGroup()
         .gas()
         .repayLoanAsa({
-          args: [repayTxn, remainingDebt],
+          args: [repayTxn, requestedRepayAmount],
           assetReferences: [xUSDAssetId],
           sender: borrowerAccount.addr,
         })
