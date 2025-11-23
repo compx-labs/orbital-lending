@@ -152,18 +152,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-        additional_rewards_commission_percentage,
-        fluxOracleAppClient.appId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      }
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -201,18 +200,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await collateralLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        collateralAssetId,
-        additional_rewards_commission_percentage,
-        fluxOracleAppClient.appId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      }
     })
 
     const mbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({

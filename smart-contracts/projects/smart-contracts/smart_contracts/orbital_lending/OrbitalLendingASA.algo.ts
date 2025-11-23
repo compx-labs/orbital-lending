@@ -41,6 +41,7 @@ import {
   MBR_OPT_IN_LST,
   STANDARD_TXN_FEE,
   BASIS_POINTS,
+  EXCHANGE_PRECISION,
   VALIDATE_BORROW_FEE,
   USD_MICRO_UNITS,
   SECONDS_PER_YEAR,
@@ -119,26 +120,9 @@ export class OrbitalLending extends Contract {
 
   /** (Optional) Absolute APR ceiling in bps (0 = no cap). */
   max_apr_bps = GlobalState<uint64>()
-  /** (Optional) Utilization EMA weight in bps (0..10_000; 0 disables smoothing). */
-  ema_alpha_bps = GlobalState<uint64>()
-
-  /** (Optional) Max APR change per accrual step in bps (0 = no limit). */
-  max_apr_step_bps = GlobalState<uint64>()
 
   /** (Optional, mutable) Last applied APR in bps (for step limiting). */
   prev_apr_bps = GlobalState<uint64>()
-
-  /** (Optional, mutable) Stored EMA of normalized utilization in bps. */
-  util_ema_bps = GlobalState<uint64>()
-
-  /** (Optional) Rate model selector (e.g., 0=kinked, 1=linear, 2=power, 3=asymptote). */
-  rate_model_type = GlobalState<uint64>()
-
-  /** (Optional) Power-curve exponent γ in Q16.16 fixed-point. */
-  power_gamma_q16 = GlobalState<uint64>()
-
-  /** (Optional) Strength parameter for asymptotic/scarcity escalator (bps-scaled). */
-  scarcity_K_bps = GlobalState<uint64>()
 
   /** Total outstanding borrower principal + accrued interest (debt) */
   total_borrows = GlobalState<uint64>()
@@ -270,16 +254,11 @@ export class OrbitalLending extends Contract {
     this.base_bps.value = 50
     this.util_cap_bps.value = 8000 // 80% utilization cap
     this.total_borrows.value = 0
-    this.rate_model_type.value = 0 // Default to kinked model
     this.kink_norm_bps.value = 5000 // 50% kink point
     this.slope1_bps.value = 1000 // 10% slope to kink
     this.slope2_bps.value = 2000 // 20% slope after kink
-    this.max_apr_bps.value = 6000 // 60% APR Cap by Default
-    this.ema_alpha_bps.value = 0 // No EMA smoothing by default
+    this.max_apr_bps.value = 8000 // 80% APR Cap by Default
     this.prev_apr_bps.value = 50 // Same as base_bps by default
-    this.util_ema_bps.value = 0 // No utilization EMA by default
-    this.power_gamma_q16.value = 0 // No power curve by default
-    this.scarcity_K_bps.value = 0 // No scarcity parameter by default
     this.borrow_index_wad.value = INDEX_SCALE
     this.last_accrual_ts.value = Global.latestTimestamp
     this.last_apr_bps.value = this.base_bps.value
@@ -338,10 +317,7 @@ export class OrbitalLending extends Contract {
     slope1_bps: uint64,
     slope2_bps: uint64,
     max_apr_bps: uint64,
-    max_apr_step_bps: uint64,
     ema_alpha_bps: uint64,
-    power_gamma_q16: uint64,
-    scarcity_K_bps: uint64,
     rate_model_type: uint64, // or uint8
     liq_bonus_bps: uint64,
   ) {
@@ -364,12 +340,7 @@ export class OrbitalLending extends Contract {
     this.slope1_bps.value = slope1_bps
     this.slope2_bps.value = slope2_bps
     this.max_apr_bps.value = max_apr_bps
-    this.max_apr_step_bps.value = max_apr_step_bps
-    this.rate_model_type.value = rate_model_type
     this.liq_bonus_bps.value = liq_bonus_bps
-    this.ema_alpha_bps.value = ema_alpha_bps
-    this.power_gamma_q16.value = power_gamma_q16
-    this.scarcity_K_bps.value = scarcity_K_bps
     // Optional: clamp prev_apr if a new max is lower
     if (this.max_apr_bps.value > 0 && this.prev_apr_bps.value > this.max_apr_bps.value) {
       this.prev_apr_bps.value = this.max_apr_bps.value
@@ -634,12 +605,12 @@ export class OrbitalLending extends Contract {
    * @returns LST units to mint to the depositor.
    */
   private calculateLSTDue(amount: uint64): uint64 {
-    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, BASIS_POINTS)
+    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, EXCHANGE_PRECISION)
 
     const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
 
     const [highBits2, lowBits2] = mulw(lstRatio, amount)
-    return divw(highBits2, lowBits2, BASIS_POINTS)
+    return divw(highBits2, lowBits2, EXCHANGE_PRECISION)
   }
 
   // Calculate how much underlying ASA to return for a given LST amount,
@@ -661,8 +632,8 @@ export class OrbitalLending extends Contract {
     }).returnValue
 
     // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
-    const [hi, lo] = mulw(totalDepositsExternal, amount)
-    return divw(hi, lo, circulatingExternalLST)
+    const [hiScaled, loScaled] = mulw(totalDepositsExternal, amount)
+    return divw(hiScaled, loScaled, circulatingExternalLST)
   }
 
   /**
@@ -676,8 +647,8 @@ export class OrbitalLending extends Contract {
     const totalDepositsExternal = this.total_deposits.value
 
     // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
-    const [hi, lo] = mulw(totalDepositsExternal, amount)
-    return divw(hi, lo, circulatingExternalLST)
+    const [hiScaled, loScaled] = mulw(totalDepositsExternal, amount)
+    return divw(hiScaled, loScaled, circulatingExternalLST)
   }
 
   /**
@@ -1022,17 +993,7 @@ export class OrbitalLending extends Contract {
     const U_used: uint64 = U_raw // No EMA smoothing for now
 
     // Model selection (0=kinked; 255=fixed fallback)
-    const apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
-
-    // Optional per-step change limiter
-    /* const stepMax: uint64 = this.max_apr_step_bps.value
-    if (stepMax > 0) {
-      const prevApr: uint64 = this.prev_apr_bps.value === 0 ? this.base_bps.value : this.prev_apr_bps.value
-      const lo: uint64 = prevApr > stepMax ? prevApr - stepMax : 0
-      const hi: uint64 = prevApr + stepMax
-      if (apr < lo) apr = lo
-      if (apr > hi) apr = hi
-    } */
+    const apr = this.apr_bps_kinked(U_used)
 
     this.prev_apr_bps.value = apr
     return apr
@@ -1893,33 +1854,8 @@ export class OrbitalLending extends Contract {
       eligibleForBuyout,
     }
   }
-
   /**
-   * Returns the current amount of LST tokens in circulation
-   * @returns Total LST tokens representing all depositor claims
-   */
-  getCirculatingLST(): uint64 {
-    return this.circulating_lst.value
-  }
-
-  /**
-   * Returns the total amount of base assets deposited in the protocol
-   * @returns Total underlying assets available for lending
-   */
-  getTotalDeposits(): uint64 {
-    return this.total_deposits.value
-  }
-
-  /**
-   * Returns the number of different collateral types accepted by the protocol
-   * @returns Count of registered collateral asset types
-   */
-  getAcceptedCollateralsCount(): uint64 {
-    return this.accepted_collaterals_count.value
-  }
-
-  /**
-   * No-op method kept for compatibility with interfaces that expect a gas entry point.
+   * Used for ref up.
    */
   @abimethod({ allowActions: 'NoOp' })
   gas(): void {}

@@ -8,7 +8,13 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
 import algosdk, { Account, Address, generateAccount } from 'algosdk'
 import { exp, len } from '@algorandfoundation/algorand-typescript/op'
-import { calculateDisbursement, currentAprBps, getCollateralBoxValue, getLoanRecordBoxValue } from './testing-utils'
+import {
+  calculateDisbursement,
+  computeBuyoutTerms,
+  currentAprBps,
+  getCollateralBoxValue,
+  getLoanRecordBoxValue,
+} from './testing-utils'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -17,9 +23,12 @@ import { BoxRef } from '@algorandfoundation/algorand-typescript'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
 import { deploy as deployAsa } from './orbital-deploy-asa'
+import { FluxGateClient } from '../fluxOracle/flux-gateClient'
+import { deploy as deployFluxOracle } from '../fluxOracle/deploy'
 let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
 let oracleAppClient: OracleClient
+let fluxOracleAppClient: FluxGateClient
 let managerAccount: Account
 
 let xUSDAssetId = 0n
@@ -32,6 +41,7 @@ const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
 const borrow_gate_enabled = 1n // 0 = false, 1 = true
 const additional_rewards_commission_percentage = 8n
+const USER_TIER = 1n
 
 const NUM_DEPOSITORS = 1
 const DEPOSITOR_XUSD_INITIAL_BALANCE = 50_000_000_000n
@@ -42,6 +52,8 @@ const DEPOSITOR_INITIAL_COLLATERAL_AMOUNT = 19_000_000_000n
 const DEPOSITOR_SECONDARY_BORROW_AMOUNT = 5_000_000_000n
 
 const ALGO_DEPOSIT_AMOUNT = 50_000_000_000n
+const COLLATERAL_TOP_UP_AMOUNT = 50_000_000_000n
+const XUSD_LIQUIDATION_PRICE = 1_000n
 
 const depositors: Account[] = []
 
@@ -64,6 +76,72 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     algoLendingContractClient = await deploy(0n, managerAccount)
     oracleAppClient = await deployOracle(managerAccount)
+    fluxOracleAppClient = await deployFluxOracle({ deployer: managerAccount })
+
+    const fluxMbrTxn = await localnet.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: fluxOracleAppClient.appAddress,
+      amount: microAlgo(400_000),
+    })
+
+    fluxOracleAppClient.algorand.setSignerFromAccount(managerAccount)
+
+    await fluxOracleAppClient.send.initApplication({
+      sender: managerAccount.addr,
+      args: {
+        mbrTxn: fluxMbrTxn,
+      },
+      populateAppCallResources: true,
+    })
+
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 0n,
+        tierNumber: 0,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 1000n,
+        tierNumber: 1,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 10000n,
+        tierNumber: 2,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 100000n,
+        tierNumber: 3,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 1000000n,
+        tierNumber: 4,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.setUserTier({
+      sender: managerAccount.addr,
+      args: {
+        user: managerAccount.addr.toString(),
+        tier: USER_TIER,
+      },
+      populateAppCallResources: true,
+    })
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
@@ -77,18 +155,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-        additional_rewards_commission_percentage,
-        0n,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      },
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -135,7 +212,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         oracleAppClient.appId,
         xUSDAssetId,
         additional_rewards_commission_percentage,
-        0n,
+        fluxOracleAppClient.appId,
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -524,7 +601,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
             mbrTxn,
           ],
           assetReferences: [cxusdId],
-          appReferences: [xUSDLendingContractClient.appId, oracleAppClient.appId],
+          appReferences: [
+            xUSDLendingContractClient.appId,
+            oracleAppClient.appId,
+            fluxOracleAppClient.appId,
+          ],
           boxReferences: [
             {
               appId: boxValue.boxRef.appIndex as bigint,
@@ -650,7 +731,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           .borrow({
             args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
             assetReferences: [cxusd],
-            appReferences: [lstAppId, oracleAppClient.appId],
+            appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
             boxReferences: [
               {
                 appId: boxValue.boxRef.appIndex as bigint,
@@ -755,6 +836,141 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         expect(feePoolPostAccrual).toBeGreaterThan(feePoolAfter) */
       }
     }
+  })
+
+  test('Flux tier discount reduces origination fee for tiered borrower - algo Lending Contract', async () => {
+    const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT / 2n
+    const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
+    const algod = algoLendingContractClient.algorand.client.algod
+
+    const globalStateXUSDContract = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd: bigint = globalStateXUSDContract.lstTokenId as bigint
+    const lstAppId = xUSDLendingContractClient.appId
+    expect(cxusd).toBeGreaterThan(0n)
+
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+
+    let managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+    let managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    if (managerLstBalance < DEPOSITOR_INITIAL_COLLATERAL_AMOUNT) {
+      const topUpDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: COLLATERAL_TOP_UP_AMOUNT,
+        note: 'Top up xUSD supply for flux test',
+      })
+      const topUpMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        amount: microAlgo(10_000n),
+        note: 'MBR for flux collateral top up',
+      })
+
+      await xUSDLendingContractClient.send.depositAsa({
+        args: [topUpDepositTxn, COLLATERAL_TOP_UP_AMOUNT, topUpMbrTxn],
+        assetReferences: [xUSDAssetId],
+        sender: managerAccount.addr,
+      })
+
+      managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+      managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    }
+    expect(managerLstBalance).toBeGreaterThanOrEqual(collateralAmount)
+
+    const algoPrice = await oracleAppClient.send.getTokenPrice({ args: [0n], assetReferences: [0n] })
+    const xUSDPrice = await oracleAppClient.send.getTokenPrice({
+      args: [xUSDAssetId],
+      assetReferences: [xUSDAssetId],
+    })
+
+    const discounted = calculateDisbursement({
+      collateralAmount,
+      collateralPrice: xUSDPrice.return?.price || 0n,
+      ltvBps: ltv_bps,
+      baseTokenPrice: algoPrice.return?.price || 0n,
+      requestedLoanAmount: borrowAmount,
+      originationFeeBps: origination_fee_bps,
+      userTier: USER_TIER,
+    })
+    const baseline = calculateDisbursement({
+      collateralAmount,
+      collateralPrice: xUSDPrice.return?.price || 0n,
+      ltvBps: ltv_bps,
+      baseTokenPrice: algoPrice.return?.price || 0n,
+      requestedLoanAmount: borrowAmount,
+      originationFeeBps: origination_fee_bps,
+    })
+    if (USER_TIER > 0n) {
+      expect(discounted.fee).toBeLessThan(baseline.fee)
+    } else {
+      expect(discounted.fee).toEqual(baseline.fee)
+    }
+
+    const boxValue = await getCollateralBoxValue(cxusd, algoLendingContractClient, algoLendingContractClient.appId)
+
+    const collateralTransfer = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: cxusd,
+      amount: collateralAmount,
+      note: 'Depositing cxUSD collateral for flux discount',
+    })
+    const borrowMbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(4000n),
+      note: 'Funding borrow with flux discount',
+    })
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .borrow({
+        args: [collateralTransfer, borrowAmount, collateralAmount, lstAppId, cxusd, borrowMbrTxn],
+        assetReferences: [cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: boxValue.boxRef.appIndex as bigint,
+            name: boxValue.boxRef.name,
+          },
+        ],
+        sender: managerAccount.addr,
+      })
+      .send()
+
+    const loanRecord = await getLoanRecordBoxValue(
+      managerAccount.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    expect(loanRecord.principal).toEqual(discounted.disbursement)
+    if (USER_TIER > 0n) {
+      expect(loanRecord.principal).not.toEqual(baseline.disbursement)
+    }
+
+    const repayPayTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: AlgoAmount.MicroAlgo(loanRecord.principal),
+      note: 'Repaying discounted ALGO loan',
+    })
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .repayLoanAlgo({
+        args: [repayPayTxn, loanRecord.principal],
+        sender: managerAccount.addr,
+      })
+      .send()
+
+    await expect(
+      getLoanRecordBoxValue(managerAccount.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
+    ).rejects.toThrowError()
   })
 
   test('withdraw platform fees - algo Lending Contract', async () => {
@@ -885,7 +1101,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .borrow({
           args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
           assetReferences: [cxusd],
-          appReferences: [lstAppId, oracleAppClient.appId],
+          appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
           boxReferences: [
             {
               appId: boxValue.boxRef.appIndex as bigint,
@@ -1013,7 +1229,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .borrow({
           args: [axferTxn, borrowAmount, 0n, lstAppId, cxusd, mbrTxn],
           assetReferences: [cxusd],
-          appReferences: [lstAppId, oracleAppClient.appId],
+          appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
           boxReferences: [
             {
               appId: boxValue.boxRef.appIndex as bigint,
@@ -1231,5 +1447,508 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       expect(lstBalanceAfter).toBeGreaterThan(lstBalanceBefore) // collateral returned on loan closure
       expect(lstBalanceAfter).toBe(lstBalanceBefore + loanRecord.collateralAmount)
     }
+  })
+
+  test('buy out ALGO loan using premium split', async () => {
+    const { generateAccount } = localnet.context
+    const borrowAmount = DEPOSITOR_INITIAL_BORROW_AMOUNT
+    const collateralAmount = DEPOSITOR_INITIAL_COLLATERAL_AMOUNT
+
+    const globalStateXUSD = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd: bigint = globalStateXUSD.lstTokenId as bigint
+    const lstAppId = xUSDLendingContractClient.appId
+    expect(cxusd).toBeGreaterThan(0n)
+
+    const borrower = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(borrower)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting borrower into xUSD for buyout split',
+    })
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: cxusd,
+      note: 'Opting borrower into cxUSD collateral',
+    })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+    const algod = algoLendingContractClient.algorand.client.algod
+    let managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+    let managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    if (managerLstBalance < collateralAmount) {
+      const topUpDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: COLLATERAL_TOP_UP_AMOUNT,
+        note: 'Top up xUSD supply for buyout scenario',
+      })
+      const topUpMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        amount: microAlgo(10_000n),
+        note: 'MBR for buyout collateral top up',
+      })
+
+      await xUSDLendingContractClient.send.depositAsa({
+        args: [topUpDepositTxn, COLLATERAL_TOP_UP_AMOUNT, topUpMbrTxn],
+        assetReferences: [xUSDAssetId],
+        sender: managerAccount.addr,
+      })
+
+      managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+      managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    }
+    expect(managerLstBalance).toBeGreaterThanOrEqual(collateralAmount)
+
+    await algoLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrower.addr,
+      assetId: cxusd,
+      amount: collateralAmount,
+      note: 'Funding borrower with cxUSD for buyout scenario',
+    })
+
+    const collateralBoxBaseline = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+
+    algoLendingContractClient.algorand.setSignerFromAccount(borrower)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    const collateralTransfer = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: cxusd,
+      amount: collateralAmount,
+      note: 'Depositing cxUSD collateral for buyout scenario',
+    })
+    const borrowMbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(4000n),
+      note: 'Funding borrow MBR for buyout scenario',
+    })
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .borrow({
+        args: [collateralTransfer, borrowAmount, collateralAmount, lstAppId, cxusd, borrowMbrTxn],
+        assetReferences: [cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: collateralBoxBaseline.boxRef.appIndex as bigint,
+            name: collateralBoxBaseline.boxRef.name,
+          },
+        ],
+        sender: borrower.addr,
+      })
+      .send()
+
+    const loanRecord = await getLoanRecordBoxValue(
+      borrower.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const algoStateBeforeBuyout = await algoLendingContractClient.state.global.getAll()
+    const xusdStateAfterBorrow = await xUSDLendingContractClient.state.global.getAll()
+
+    const algoPrice = await oracleAppClient.send.getTokenPrice({ args: [0n], assetReferences: [0n] })
+    const xUSDPrice = await oracleAppClient.send.getTokenPrice({
+      args: [xUSDAssetId],
+      assetReferences: [xUSDAssetId],
+    })
+
+    const buyoutTerms = computeBuyoutTerms({
+      collateralLSTAmount: loanRecord.collateralAmount,
+      totalDepositsLST: xusdStateAfterBorrow.totalDeposits ?? 0n,
+      circulatingLST: xusdStateAfterBorrow.circulatingLst ?? 0n,
+      underlyingBasePrice: xUSDPrice.return?.price || 0n,
+      baseTokenPrice: algoPrice.return?.price || 0n,
+      buyoutTokenPrice: xUSDPrice.return?.price || 0n,
+      principal: loanRecord.principal,
+      userIndexWad: loanRecord.userIndexWad,
+      borrowIndexWad: algoStateBeforeBuyout.borrowIndexWad ?? 0n,
+      liq_threshold_bps: algoStateBeforeBuyout.liqThresholdBps ?? 0n,
+    })
+
+    expect(buyoutTerms.debtRepayAmountBase).toBeGreaterThan(0n)
+    expect(buyoutTerms.premiumTokens).toBeGreaterThan(0n)
+
+    const buyer = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(buyer)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
+    localnet.algorand.setSignerFromAccount(buyer)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: buyer.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting buyer into xUSD premium token',
+    })
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: buyer.addr,
+      assetId: cxusd,
+      note: 'Opting buyer into cxUSD collateral',
+    })
+
+    const premiumPaymentAmount = buyoutTerms.premiumTokens + 10n
+    const totalPremiumFunding = premiumPaymentAmount + 1_000_000n
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: buyer.addr,
+      assetId: xUSDAssetId,
+      amount: totalPremiumFunding,
+      note: 'Funding buyer with xUSD for buyout premium',
+    })
+
+    await localnet.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: buyer.addr,
+      amount: microAlgo(buyoutTerms.debtRepayAmountBase + 2_000_000n),
+      note: 'Funding buyer with ALGO for buyout',
+    })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(buyer)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
+    localnet.algorand.setSignerFromAccount(buyer)
+
+    const managerXusdBeforeInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
+    const managerXusdBefore = managerXusdBeforeInfo.assetHolding?.amount || 0n
+    const borrowerXusdBeforeInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
+    const borrowerXusdBefore = borrowerXusdBeforeInfo.assetHolding?.amount || 0n
+    const buyerXusdBeforeInfo = await algod.accountAssetInformation(buyer.addr, xUSDAssetId).do()
+    const buyerXusdBefore = buyerXusdBeforeInfo.assetHolding?.amount || 0n
+    const buyerCollateralBeforeInfo = await algod.accountAssetInformation(buyer.addr, cxusd).do()
+    const buyerCollateralBefore = buyerCollateralBeforeInfo.assetHolding?.amount || 0n
+
+    const activeLoansBefore = algoStateBeforeBuyout.activeLoanRecords ?? 0n
+    const totalBorrowsBefore = algoStateBeforeBuyout.totalBorrows ?? 0n
+
+    const premiumAxferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: buyer.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: premiumPaymentAmount,
+      note: 'Paying buyout premium in xUSD',
+    })
+
+    const repayPayTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: buyer.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(buyoutTerms.debtRepayAmountBase),
+      note: 'Repaying ALGO debt for buyout',
+    })
+
+    const buyoutMbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: buyer.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'Funding buyout MBR',
+    })
+
+    const collateralBoxForBuyout = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .buyoutSplitAlgo({
+        args: {
+          buyer: buyer.addr.publicKey,
+          debtor: borrower.addr.publicKey,
+          premiumAxferTxn,
+          repayPayTxn,
+          lstAppId,
+          mbrTxn: buyoutMbrTxn,
+        },
+        assetReferences: [xUSDAssetId, cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: collateralBoxForBuyout.boxRef.appIndex as bigint,
+            name: collateralBoxForBuyout.boxRef.name,
+          },
+        ],
+        sender: buyer.addr,
+      })
+      .send()
+
+    await expect(
+      getLoanRecordBoxValue(borrower.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
+    ).rejects.toThrowError()
+
+    const managerXusdAfterInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
+    const managerXusdAfter = managerXusdAfterInfo.assetHolding?.amount || 0n
+    const borrowerXusdAfterInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
+    const borrowerXusdAfter = borrowerXusdAfterInfo.assetHolding?.amount || 0n
+    const buyerXusdAfterInfo = await algod.accountAssetInformation(buyer.addr, xUSDAssetId).do()
+    const buyerXusdAfter = buyerXusdAfterInfo.assetHolding?.amount || 0n
+    const buyerCollateralAfterInfo = await algod.accountAssetInformation(buyer.addr, cxusd).do()
+    const buyerCollateralAfter = buyerCollateralAfterInfo.assetHolding?.amount || 0n
+
+    const algoStateAfterBuyout = await algoLendingContractClient.state.global.getAll()
+    const activeLoansAfter = algoStateAfterBuyout.activeLoanRecords ?? 0n
+    const totalBorrowsAfter = algoStateAfterBuyout.totalBorrows ?? 0n
+    const collateralBoxAfterBuyout = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+
+    const protocolShare = buyoutTerms.premiumTokens / 2n
+    const borrowerShare = buyoutTerms.premiumTokens - protocolShare
+    const expectedRefund = premiumPaymentAmount - buyoutTerms.premiumTokens
+    const actualPremiumPaid = buyerXusdBefore - buyerXusdAfter
+    const actualRefund = premiumPaymentAmount - actualPremiumPaid
+
+    expect(managerXusdAfter - managerXusdBefore).toEqual(protocolShare)
+    expect(borrowerXusdAfter - borrowerXusdBefore).toEqual(borrowerShare)
+    expect(actualPremiumPaid).toEqual(buyoutTerms.premiumTokens)
+    expect(actualRefund).toEqual(expectedRefund)
+    expect(buyerCollateralAfter - buyerCollateralBefore).toEqual(loanRecord.collateralAmount)
+    expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
+    expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(buyoutTerms.debtRepayAmountBase)
+    expect(collateralBoxAfterBuyout.totalCollateral).toEqual(collateralBoxBaseline.totalCollateral)
+
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('liquidate undercollateralized ALGO loan', async () => {
+    const { generateAccount } = localnet.context
+    const algod = algoLendingContractClient.algorand.client.algod
+
+    const globalStateXUSD = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd: bigint = globalStateXUSD.lstTokenId as bigint
+    const lstAppId = xUSDLendingContractClient.appId
+    expect(cxusd).toBeGreaterThan(0n)
+
+    const borrower = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(borrower)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting borrower into xUSD for liquidation scenario',
+    })
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: cxusd,
+      note: 'Opting borrower into cxUSD for liquidation scenario',
+    })
+
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+    let managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+    let managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    if (managerLstBalance < DEPOSITOR_INITIAL_COLLATERAL_AMOUNT) {
+      const topUpDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        assetId: xUSDAssetId,
+        amount: COLLATERAL_TOP_UP_AMOUNT,
+        note: 'Top up xUSD supply for liquidation scenario',
+      })
+      const topUpMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+        sender: managerAccount.addr,
+        receiver: xUSDLendingContractClient.appClient.appAddress,
+        amount: microAlgo(10_000n),
+        note: 'MBR for liquidation collateral top up',
+      })
+
+      await xUSDLendingContractClient.send.depositAsa({
+        args: [topUpDepositTxn, COLLATERAL_TOP_UP_AMOUNT, topUpMbrTxn],
+        assetReferences: [xUSDAssetId],
+        sender: managerAccount.addr,
+      })
+
+      managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, cxusd).do()
+      managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    }
+
+    await algoLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrower.addr,
+      assetId: cxusd,
+      amount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
+      note: 'Funding borrower collateral for liquidation scenario',
+    })
+
+    const collateralBoxBaseline = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+
+    algoLendingContractClient.algorand.setSignerFromAccount(borrower)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    const collateralTransfer = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: cxusd,
+      amount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
+      note: 'Depositing cxUSD collateral for liquidation scenario',
+    })
+    const borrowMbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(4000n),
+      note: 'Funding borrow MBR for liquidation scenario',
+    })
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .borrow({
+        args: [
+          collateralTransfer,
+          DEPOSITOR_INITIAL_BORROW_AMOUNT,
+          DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
+          lstAppId,
+          cxusd,
+          borrowMbrTxn,
+        ],
+        assetReferences: [cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: collateralBoxBaseline.boxRef.appIndex as bigint,
+            name: collateralBoxBaseline.boxRef.name,
+          },
+        ],
+        sender: borrower.addr,
+      })
+      .send()
+
+    const loanRecord = await getLoanRecordBoxValue(
+      borrower.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    expect(loanRecord.principal).toBeGreaterThan(0n)
+
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.addTokenListing({
+      args: [xUSDAssetId, XUSD_LIQUIDATION_PRICE],
+      assetReferences: [xUSDAssetId],
+    })
+
+    const statusResult = await algoLendingContractClient.send.getLoanStatus({
+      args: [borrower.addr.publicKey],
+      appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+      sender: borrower.addr,
+    })
+    expect(statusResult.return?.eligibleForLiquidation).toBe(true)
+
+    const liquidator = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+    algoLendingContractClient.algorand.setSignerFromAccount(liquidator)
+    localnet.algorand.setSignerFromAccount(liquidator)
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: liquidator.addr,
+      assetId: cxusd,
+      note: 'Opting liquidator into cxUSD',
+    })
+
+    await localnet.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: liquidator.addr,
+      amount: microAlgo(loanRecord.principal + 2_000_000n),
+      note: 'Funding liquidator with ALGO for repayment',
+    })
+
+    const borrowerCollateralBeforeInfo = await algod.accountAssetInformation(borrower.addr, cxusd).do()
+    const borrowerCollateralBefore = borrowerCollateralBeforeInfo.assetHolding?.amount || 0n
+    expect(borrowerCollateralBefore).toEqual(0n)
+    const liquidatorCollateralBeforeInfo = await algod.accountAssetInformation(liquidator.addr, cxusd).do()
+    const liquidatorCollateralBefore = liquidatorCollateralBeforeInfo.assetHolding?.amount || 0n
+
+    const repayAmount = loanRecord.principal
+    const repayPayTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: liquidator.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(repayAmount),
+      note: 'Repaying ALGO debt for liquidation',
+    })
+
+    const collateralBoxForLiquidation = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const globalBefore = await algoLendingContractClient.state.global.getAll()
+
+    await algoLendingContractClient
+      .newGroup()
+      .gas()
+      .liquidatePartialAlgo({
+        args: {
+          debtor: borrower.addr.publicKey,
+          repayPay: repayPayTxn,
+          repayBaseAmount: repayAmount,
+          lstAppId,
+        },
+        assetReferences: [cxusd],
+        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
+        boxReferences: [
+          {
+            appId: collateralBoxForLiquidation.boxRef.appIndex as bigint,
+            name: collateralBoxForLiquidation.boxRef.name,
+          },
+        ],
+        sender: liquidator.addr,
+      })
+      .send()
+
+    await expect(
+      getLoanRecordBoxValue(borrower.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
+    ).rejects.toThrowError()
+
+    const borrowerCollateralAfterInfo = await algod.accountAssetInformation(borrower.addr, cxusd).do()
+    const borrowerCollateralAfter = borrowerCollateralAfterInfo.assetHolding?.amount || 0n
+    expect(borrowerCollateralAfter).toEqual(0n)
+    const liquidatorCollateralAfterInfo = await algod.accountAssetInformation(liquidator.addr, cxusd).do()
+    const liquidatorCollateralAfter = liquidatorCollateralAfterInfo.assetHolding?.amount || 0n
+    expect(liquidatorCollateralAfter - liquidatorCollateralBefore).toEqual(DEPOSITOR_INITIAL_COLLATERAL_AMOUNT)
+
+    const globalAfter = await algoLendingContractClient.state.global.getAll()
+    expect((globalBefore.totalBorrows ?? 0n) - (globalAfter.totalBorrows ?? 0n)).toEqual(repayAmount)
+    expect((globalBefore.activeLoanRecords ?? 0n) - (globalAfter.activeLoanRecords ?? 0n)).toEqual(1n)
+
+    const collateralBoxAfter = await getCollateralBoxValue(
+      cxusd,
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    expect(collateralBoxAfter.totalCollateral).toEqual(collateralBoxBaseline.totalCollateral)
+
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.addTokenListing({
+      args: [xUSDAssetId, 1_000_000n],
+      assetReferences: [xUSDAssetId],
+    })
   })
 })
