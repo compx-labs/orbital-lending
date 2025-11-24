@@ -690,6 +690,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: baseToken,
       assetAmount: amount,
+      sender: op.Txn.sender,
     })
     assertMatch(mbrTxn, {
       sender: op.Txn.sender,
@@ -764,6 +765,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: lstAsset,
       assetAmount: amount,
+      sender: op.Txn.sender,
     })
 
     assertMatch(mbrTxn, {
@@ -1175,6 +1177,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: baseToken,
       assetAmount: repaymentAmount,
+      sender: op.Txn.sender,
     })
     this.accrueMarket()
 
@@ -1934,6 +1937,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       assetAmount: collateralAmount,
       xferAsset: Asset(collateralTokenId.native),
+      sender: op.Txn.sender,
     })
 
     assert(this.collateralExists(collateralTokenId), 'unsupported collateral')
