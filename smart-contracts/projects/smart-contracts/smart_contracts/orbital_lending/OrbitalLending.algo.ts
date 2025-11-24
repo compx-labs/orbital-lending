@@ -1128,12 +1128,14 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+    // Borrower-level repayment is capped to their live debt; global subtraction is saturation-protected.
     const repayUsed: uint64 = repaymentAmount <= liveDebt ? repaymentAmount : liveDebt
     const refundAmount: uint64 = repaymentAmount - repayUsed
     const remainingDebt: uint64 = liveDebt - repayUsed
+    const totalBorrowDelta: uint64 = repayUsed <= this.total_borrows.value ? repayUsed : this.total_borrows.value
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
-    this.total_borrows.value -= repayUsed
+    this.total_borrows.value -= totalBorrowDelta
     this.addCash(repaymentAmount)
 
     if (refundAmount > 0) {
@@ -1279,11 +1281,10 @@ export class OrbitalLending extends Contract {
     const refund: uint64 = paidAmount - premiumTokens
 
     // 4) Debt repayment in ALGO
-    assertMatch(repayPayTxn, {
-      sender: buyer,
-      receiver: Global.currentApplicationAddress,
-      amount: debtBase,
-    })
+    assert(repayPayTxn.sender === buyer, 'BAD_REPAY_SENDER')
+    assert(repayPayTxn.receiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayPayTxn.amount >= debtBase, 'INSUFFICIENT_REPAY')
+    const repayRefund: uint64 = repayPayTxn.amount - debtBase
 
     // 5) Close loan, transfer collateral, update aggregates
     this.loan_record(debtor).delete()
@@ -1309,8 +1310,9 @@ export class OrbitalLending extends Contract {
       originatingAppId: acVal.originatingAppId,
     }).copy()
 
-    this.total_borrows.value = this.total_borrows.value - debtBase
-    this.addCash(debtBase)
+    const borrowDelta: uint64 = debtBase <= this.total_borrows.value ? debtBase : this.total_borrows.value
+    this.total_borrows.value = this.total_borrows.value - borrowDelta
+    this.addCash(repayPayTxn.amount)
 
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
 
@@ -1323,6 +1325,18 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+      this.removeCash(refund)
+    }
+
+    if (repayRefund > 0) {
+      itxn
+        .payment({
+          receiver: buyer,
+          amount: repayRefund,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+      this.removeCash(repayRefund)
     }
 
     this.last_apr_bps.value = this.current_apr_bps()
@@ -1638,7 +1652,7 @@ export class OrbitalLending extends Contract {
   public liquidatePartialAlgo(
     debtor: Account,
     repayPay: gtxn.PaymentTxn, // liquidator pays ALGO
-    repayBaseAmount: uint64, // amount to repay in microALGO (≤ live debt)
+    repayBaseAmount: uint64, // requested repay in microALGO (can be >= live debt; excess refunded)
     lstAppId: uint64,
   ): void {
     assert(this.base_token_id.value.native === 0, 'BASE_NOT_ALGO')
@@ -1651,7 +1665,7 @@ export class OrbitalLending extends Contract {
     const collLSTBal: uint64 = rec.collateralAmount.native
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
     assert(liveDebt > 0, 'NO_DEBT')
-    assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
+    assert(repayBaseAmount > 0, 'BAD_REPAY')
 
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
@@ -1662,21 +1676,20 @@ export class OrbitalLending extends Contract {
     const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
     assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
-    // Validate repayment transfer (ALGO)
-    assertMatch(repayPay, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: repayBaseAmount,
-    })
+    // Validate repayment transfer (ALGO) and allow overpay (refunded)
+    assert(repayPay.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
+    assert(repayPay.receiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayPay.amount >= repayBaseAmount, 'INSUFFICIENT_REPAY')
+    const repayRequested: uint64 = repayPay.amount
 
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
     const closeFactorHalf: uint64 = liveDebt / 2
     const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
 
     const bonusBps: uint64 = this.liq_bonus_bps.value
-    const isFullRepayRequest = repayBaseAmount === liveDebt
+    const isFullRepayRequest = repayRequested >= liveDebt
 
-    let repayCandidate: uint64 = repayBaseAmount
+    let repayCandidate: uint64 = repayRequested
     if (!isFullRepayRequest && repayCandidate > maxRepayAllowed) {
       repayCandidate = maxRepayAllowed
     }
@@ -1705,9 +1718,9 @@ export class OrbitalLending extends Contract {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
 
-    const repayUsed: uint64 = isFullRepayRequest ? repayBaseAmount : proposedRepayUsed
+    const repayUsed: uint64 = isFullRepayRequest ? (repayRequested <= liveDebt ? repayRequested : liveDebt) : proposedRepayUsed
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
-    const refundAmount: uint64 = isFullRepayRequest ? 0 : repayBaseAmount - repayUsed
+    const refundAmount: uint64 = repayRequested - repayUsed
 
     itxn
       .assetTransfer({
@@ -1734,7 +1747,7 @@ export class OrbitalLending extends Contract {
 
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
+    this.addCash(repayRequested)
 
     if (newDebtBase === 0) {
       if (remainingLST > 0) {

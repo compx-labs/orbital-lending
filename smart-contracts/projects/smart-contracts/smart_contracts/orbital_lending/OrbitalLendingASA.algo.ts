@@ -1180,12 +1180,14 @@ export class OrbitalLending extends Contract {
 
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
+    // Borrower-level repayment is capped to their live debt; global subtraction is saturation-protected.
     const repayUsed: uint64 = repaymentAmount <= liveDebt ? repaymentAmount : liveDebt
     const refundAmount: uint64 = repaymentAmount - repayUsed
     const remainingDebt: uint64 = liveDebt - repayUsed
+    const totalBorrowDelta: uint64 = repayUsed <= this.total_borrows.value ? repayUsed : this.total_borrows.value
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
-    this.total_borrows.value -= repayUsed
+    this.total_borrows.value -= totalBorrowDelta
     this.addCash(repaymentAmount)
 
     if (refundAmount > 0) {
@@ -1338,12 +1340,11 @@ export class OrbitalLending extends Contract {
 
     // 5) Debt repayment in market base token (ASA)
     const baseAssetId = this.base_token_id.value.native
-    assertMatch(repayAxferTxn, {
-      sender: buyer,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(baseAssetId),
-      assetAmount: debtBase, // full live debt
-    })
+    assert(repayAxferTxn.sender === buyer, 'BAD_REPAY_SENDER')
+    assert(repayAxferTxn.assetReceiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayAxferTxn.xferAsset === Asset(baseAssetId), 'BAD_REPAY_ASSET')
+    assert(repayAxferTxn.assetAmount >= debtBase, 'INSUFFICIENT_REPAY')
+    const repayRefund: uint64 = repayAxferTxn.assetAmount - debtBase
 
     // 6) Close loan & transfer collateral
     this.loan_record(debtor).delete()
@@ -1371,8 +1372,9 @@ export class OrbitalLending extends Contract {
     }).copy()
 
     // Market aggregates
-    this.total_borrows.value = this.total_borrows.value - debtBase
-    this.addCash(debtBase)
+    const borrowDelta: uint64 = debtBase <= this.total_borrows.value ? debtBase : this.total_borrows.value
+    this.total_borrows.value = this.total_borrows.value - borrowDelta
+    this.addCash(repayAxferTxn.assetAmount)
 
     // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
@@ -1386,6 +1388,19 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+      this.removeCash(refund)
+    }
+
+    if (repayRefund > 0) {
+      itxn
+        .assetTransfer({
+          assetReceiver: buyer,
+          xferAsset: baseAssetId,
+          assetAmount: repayRefund,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+      this.removeCash(repayRefund)
     }
 
     // 8) Set next-slice APR
