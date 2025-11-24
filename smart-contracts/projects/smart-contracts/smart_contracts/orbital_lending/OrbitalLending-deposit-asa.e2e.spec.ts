@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Config, microAlgo } from '@algorandfoundation/algokit-utils'
 import { registerDebugEventHandlers } from '@algorandfoundation/algokit-utils-debug'

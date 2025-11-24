@@ -204,7 +204,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         payTxn,
         ltv_bps,
         liq_threshold_bps,
-        liq_bonus_bps,
         origination_fee_bps,
         protocol_interest_fee_bps,
         oracleAppClient.appId,

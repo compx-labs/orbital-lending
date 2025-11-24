@@ -633,6 +633,7 @@ export class OrbitalLending extends Contract {
     assert(amount <= remainingCapacity, 'DEPOSIT_LIMIT_EXCEEDED')
 
     assertMatch(depositTxn, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: amount,
     })
@@ -702,6 +703,7 @@ export class OrbitalLending extends Contract {
     const lstAsset = Asset(this.lst_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(assetTransferTxn, {
+      sender: op.Txn.sender,
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: lstAsset,
       assetAmount: amount,
@@ -1124,6 +1126,7 @@ export class OrbitalLending extends Contract {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(paymentTxn, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: repaymentAmount,
     })
@@ -1275,6 +1278,7 @@ export class OrbitalLending extends Contract {
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
+    assert(premiumAxferTxn.sender === buyer, 'INVALID_SENDER');
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
     assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
