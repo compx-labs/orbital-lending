@@ -1278,7 +1278,7 @@ export class OrbitalLending extends Contract {
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
-    assert(premiumAxferTxn.sender === buyer, 'INVALID_SENDER');
+    assert(premiumAxferTxn.sender === op.Txn.sender, 'INVALID_SENDER');
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
     assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
@@ -1287,7 +1287,7 @@ export class OrbitalLending extends Contract {
     const refund: uint64 = paidAmount - premiumTokens
 
     // 4) Debt repayment in ALGO
-    assert(repayPayTxn.sender === buyer, 'BAD_REPAY_SENDER')
+    assert(repayPayTxn.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
     assert(repayPayTxn.receiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
     assert(repayPayTxn.amount >= debtBase, 'INSUFFICIENT_REPAY')
     const repayRefund: uint64 = repayPayTxn.amount - debtBase

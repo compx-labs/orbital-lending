@@ -1343,7 +1343,7 @@ export class OrbitalLending extends Contract {
 
     // 5) Debt repayment in market base token (ASA)
     const baseAssetId = this.base_token_id.value.native
-    assert(repayAxferTxn.sender === buyer, 'BAD_REPAY_SENDER')
+    assert(repayAxferTxn.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
     assert(repayAxferTxn.assetReceiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
     assert(repayAxferTxn.xferAsset === Asset(baseAssetId), 'BAD_REPAY_ASSET')
     assert(repayAxferTxn.assetAmount >= debtBase, 'INSUFFICIENT_REPAY')
@@ -1792,7 +1792,11 @@ export class OrbitalLending extends Contract {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
 
-    const repayUsed: uint64 = isFullRepayRequest ? (repayRequested <= liveDebt ? repayRequested : liveDebt) : proposedRepayUsed
+    const repayUsed: uint64 = isFullRepayRequest
+      ? repayRequested <= liveDebt
+        ? repayRequested
+        : liveDebt
+      : proposedRepayUsed
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
     const refundAmount: uint64 = repayRequested - repayUsed
 

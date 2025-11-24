@@ -5742,10 +5742,10 @@ buyoutSplitAlgo_bool_merge@5:
 
 buyoutSplitAlgo_ternary_merge@8:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1281
-    // assert(premiumAxferTxn.sender === buyer, 'INVALID_SENDER');
+    // assert(premiumAxferTxn.sender === op.Txn.sender, 'INVALID_SENDER');
     frame_dig -4
     gtxns Sender
-    frame_dig -6
+    txn Sender
     ==
     assert // INVALID_SENDER
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1282
@@ -5778,10 +5778,10 @@ buyoutSplitAlgo_ternary_merge@8:
     -
     frame_bury 9
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1290
-    // assert(repayPayTxn.sender === buyer, 'BAD_REPAY_SENDER')
+    // assert(repayPayTxn.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
     frame_dig -3
     gtxns Sender
-    frame_dig -6
+    txn Sender
     ==
     assert // BAD_REPAY_SENDER
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1291
