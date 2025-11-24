@@ -1065,17 +1065,24 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
     console.log('Algo price:', algoPrice.return?.price)
     // Get buyout amount and total debt to repay
+    await algoLendingContractClient.send.accrueLoanInterest({
+      args: [debtor.addr.toString(), managerAccount.addr.toString()],
+      sender: managerAccount.addr,
+    })
+    const refreshedRecord = await algoLendingContractClient.send.getLoanRecord({ args: [debtor.addr.publicKey] })
+    const refreshedGlobals = await algoLendingContractClient.state.global.getAll()
+
     const params = {
-      collateralLSTAmount: record.collateralAmount as bigint, // borrower’s LST balance locked
+      collateralLSTAmount: refreshedRecord.return?.collateralAmount as bigint, // borrower’s LST balance locked
       totalDepositsLST: xusdGlobalState.totalDeposits as bigint,
       circulatingLST: xusdGlobalState.circulatingLst as bigint,
       underlyingBasePrice: xUSDPrice.return?.price || 0n,
       baseTokenPrice: algoPrice.return?.price || 0n,
       buyoutTokenPrice: xUSDPrice.return?.price || 0n,
-      principal: record.principal as bigint,
-      userIndexWad: record.userIndexWad as bigint,
-      borrowIndexWad: algoGlobalState.borrowIndexWad as bigint,
-      liq_threshold_bps: algoGlobalState.liqThresholdBps as bigint,
+      principal: refreshedRecord.return?.principal as bigint,
+      userIndexWad: refreshedRecord.return?.userIndexWad as bigint,
+      borrowIndexWad: refreshedGlobals.borrowIndexWad as bigint,
+      liq_threshold_bps: refreshedGlobals.liqThresholdBps as bigint,
     }
 
     const r = computeBuyoutTerms(params)
@@ -1097,7 +1104,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: buyer.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
       assetId: xUSDAssetId,
-      amount: r.premiumTokens,
+      amount: r.premiumTokens + 10n,
       note: 'Paying buyout premium in xUSD',
     })
 
@@ -1105,7 +1112,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const repayPayTxn = await algoLendingContractClient.algorand.createTransaction.payment({
       sender: buyer.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
-      amount: microAlgos(r.debtRepayAmountBase),
+      amount: microAlgos(r.debtRepayAmountBase + 10_000n), // buffer for >= debt check, refund overage
       note: 'Repaying loan with algo',
     })
     const mbrTxn = await algoLendingContractClient.algorand.createTransaction.payment({
@@ -1142,9 +1149,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const buyerCollateralBalanceAfterRequest = await algod.accountAssetInformation(buyer.addr, collateralTokenId).do()
     const buyerCollateralBalanceAfter = buyerCollateralBalanceAfterRequest.assetHolding?.amount || 0n
 
+    const actualPremiumPaid = buyerxUSDBalanceBefore - buyerxUSDBalanceAfter
+    const expectedRefund = (r.premiumTokens + 10n) - r.premiumTokens
+    const actualRefund = (r.premiumTokens + 10n) - actualPremiumPaid
+
     expect(managerxUSDBalanceAfter).toEqual(managerxUSDBalanceBefore + r.premiumTokens / 2n)
     expect(debtorxUSDBalanceAfter).toEqual(debtorxUSDBalanceBefore + r.premiumTokens / 2n)
-    expect(buyerxUSDBalanceAfter).toEqual(buyerxUSDBalanceBefore - r.premiumTokens)
-    expect(buyerCollateralBalanceAfter).toEqual(buyerCollateralBalanceBefore + record.collateralAmount)
+    expect(actualPremiumPaid).toEqual(r.premiumTokens)
+    expect(actualRefund).toEqual(expectedRefund)
+    expect(buyerCollateralBalanceAfter).toEqual(buyerCollateralBalanceBefore + refreshedRecord.return!.collateralAmount)
   })
 })

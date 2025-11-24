@@ -212,7 +212,6 @@ export class OrbitalLending extends Contract {
    * @param mbrTxn - Payment transaction covering minimum balance requirements
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
    * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
-   * @param liq_bonus_bps - Liquidation bonus in basis points (e.g., 500 = 5% bonus to liquidators)
    * @param origination_fee_bps - One-time loan origination fee in basis points
    * @param protocol_share_bps - Protocol's share of interest income in basis points
    * @param oracle_app_id - Application ID of the price oracle contract
@@ -241,6 +240,7 @@ export class OrbitalLending extends Contract {
     assert(additional_rewards_commission_percentage <= 100, 'COMMISSION_TOO_HIGH')
 
     this.ltv_bps.value = ltv_bps
+    this.liq_bonus_bps.value = 800
     this.liq_threshold_bps.value = liq_threshold_bps
     this.origination_fee_bps.value = origination_fee_bps
     this.accepted_collaterals_count.value = 0
@@ -1717,7 +1717,7 @@ export class OrbitalLending extends Contract {
   public liquidatePartialASA(
     debtor: Account,
     repayAxfer: gtxn.AssetTransferTxn, // liquidator pays base token (ASA)
-    repayBaseAmount: uint64, // amount to repay in base units (≤ live debt)
+    repayBaseAmount: uint64, // requested repay in base units (can be >= live debt; excess refunded)
     lstAppId: uint64, // LST app backing the collateral
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN')
@@ -1729,7 +1729,7 @@ export class OrbitalLending extends Contract {
     const collLSTBal: uint64 = rec.collateralAmount.native
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
     assert(liveDebt > 0, 'NO_DEBT')
-    assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
+    assert(repayBaseAmount > 0, 'BAD_REPAY')
 
     // USD legs (for liquidatability & seize math)
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
@@ -1744,12 +1744,11 @@ export class OrbitalLending extends Contract {
 
     // Validate repayment transfer (ASA base token)
     const baseAssetId = this.base_token_id.value.native
-    assertMatch(repayAxfer, {
-      sender: op.Txn.sender,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(baseAssetId),
-      assetAmount: repayBaseAmount,
-    })
+    assert(repayAxfer.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
+    assert(repayAxfer.assetReceiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayAxfer.xferAsset === Asset(baseAssetId), 'BAD_REPAY_ASSET')
+    assert(repayAxfer.assetAmount >= repayBaseAmount, 'INSUFFICIENT_REPAY')
+    const repayRequested: uint64 = repayAxfer.assetAmount
 
     // Seize value with bonus: seizeUSD = repayUSD * (1 + bonus)
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
@@ -1757,9 +1756,9 @@ export class OrbitalLending extends Contract {
     const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
 
     const bonusBps: uint64 = this.liq_bonus_bps.value // add this global param
-    const isFullRepayRequest = repayBaseAmount === liveDebt
+    const isFullRepayRequest = repayRequested >= liveDebt
 
-    let repayCandidate: uint64 = repayBaseAmount
+    let repayCandidate: uint64 = repayRequested
     if (!isFullRepayRequest && repayCandidate > maxRepayAllowed) {
       repayCandidate = maxRepayAllowed
     }
@@ -1781,7 +1780,7 @@ export class OrbitalLending extends Contract {
 
     if (seizeLST === collLSTBal) {
       // Lift close factor cap when wiping the position.
-      repayCandidate = repayBaseAmount
+      repayCandidate = repayRequested
     }
 
     const proposedRepayUsed: uint64 = repayCandidate <= repaySupported ? repayCandidate : repaySupported
@@ -1790,9 +1789,9 @@ export class OrbitalLending extends Contract {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
 
-    const repayUsed: uint64 = isFullRepayRequest ? repayBaseAmount : proposedRepayUsed
+    const repayUsed: uint64 = isFullRepayRequest ? (repayRequested <= liveDebt ? repayRequested : liveDebt) : proposedRepayUsed
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
-    const refundAmount: uint64 = isFullRepayRequest ? 0 : repayBaseAmount - repayUsed
+    const refundAmount: uint64 = repayRequested - repayUsed
 
     // Transfer seized collateral to liquidator
     itxn
@@ -1809,8 +1808,9 @@ export class OrbitalLending extends Contract {
 
     // Update aggregates
     this.reduceCollateralTotal(collTok, seizeLST)
-    this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
+    const borrowDelta: uint64 = repayUsed <= this.total_borrows.value ? repayUsed : this.total_borrows.value
+    this.total_borrows.value = this.total_borrows.value - borrowDelta
+    this.addCash(repayRequested)
 
     if (refundAmount > 0) {
       itxn

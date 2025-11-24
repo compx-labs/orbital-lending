@@ -219,7 +219,6 @@ export class OrbitalLending extends Contract {
     mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
-    liq_bonus_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
     oracle_app_id: Application,
@@ -260,7 +259,7 @@ export class OrbitalLending extends Contract {
     this.last_accrual_ts.value = Global.latestTimestamp
     this.last_apr_bps.value = this.base_bps.value
     this.buyout_token_id.value = new UintN64(buyout_token_id)
-    this.liq_bonus_bps.value = liq_bonus_bps
+    this.liq_bonus_bps.value = 800
     this.total_commission_earned.value = 0
     this.current_accumulated_commission.value = 0
     this.commission_percentage.value = additional_rewards_commission_percentage
@@ -628,7 +627,10 @@ export class OrbitalLending extends Contract {
   public depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    assert(this.total_deposits.value + amount <= MAXIMUM_ALGO_DEPOSITS, 'DEPOSIT_LIMIT_EXCEEDED')
+    // Prevent u64 wrap on addition: cap check using subtraction.
+    assert(this.total_deposits.value <= MAXIMUM_ALGO_DEPOSITS, 'DEPOSIT_CAP_INVALID')
+    const remainingCapacity: uint64 = MAXIMUM_ALGO_DEPOSITS - this.total_deposits.value
+    assert(amount <= remainingCapacity, 'DEPOSIT_LIMIT_EXCEEDED')
 
     assertMatch(depositTxn, {
       receiver: Global.currentApplicationAddress,
