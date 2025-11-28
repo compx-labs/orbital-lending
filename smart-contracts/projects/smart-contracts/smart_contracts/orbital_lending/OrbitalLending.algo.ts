@@ -746,7 +746,7 @@ export class OrbitalLending extends Contract {
     })
     if (this.deposit_record(depositKey).exists) {
       const existingRecord = this.deposit_record(depositKey).value.copy()
-      const newAmount: uint64 = amount > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - amount
+      const newAmount: uint64 = asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
 
       if (newAmount === 0) {
         this.deposit_record(depositKey).delete()
