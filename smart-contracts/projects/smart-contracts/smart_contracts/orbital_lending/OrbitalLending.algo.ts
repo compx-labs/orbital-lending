@@ -48,7 +48,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2102
+const CONTRACT_VERSION: uint64 = 2103
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -746,7 +746,8 @@ export class OrbitalLending extends Contract {
     })
     if (this.deposit_record(depositKey).exists) {
       const existingRecord = this.deposit_record(depositKey).value.copy()
-      const newAmount: uint64 = asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
+      const newAmount: uint64 =
+        asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
 
       if (newAmount === 0) {
         this.deposit_record(depositKey).delete()
@@ -901,6 +902,19 @@ export class OrbitalLending extends Contract {
     this.updateCollateralTotal(collateralTokenId, collateralAmount)
     this.total_borrows.value = this.total_borrows.value + disbursement
     this.last_apr_bps.value = this.current_apr_bps()
+  }
+
+  @abimethod({ allowActions: 'NoOp' })
+  public addDepositRecordExternal(userAddress: Account, assetId: uint64, depositAmount: uint64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    const depositKey = new DepositRecordKey({
+      assetId: new UintN64(assetId),
+      userAddress: new Address(userAddress),
+    }).copy()
+    this.deposit_record(depositKey).value = new DepositRecord({
+      assetId: new UintN64(assetId),
+      depositAmount: new UintN64(depositAmount),
+    }).copy()
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -1278,7 +1292,7 @@ export class OrbitalLending extends Contract {
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
-    assert(premiumAxferTxn.sender === op.Txn.sender, 'INVALID_SENDER');
+    assert(premiumAxferTxn.sender === op.Txn.sender, 'INVALID_SENDER')
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
     assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
@@ -1389,75 +1403,13 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Computes how much LST collateral the caller can withdraw using live market data.
-   * @param lstAppId External LST app backing the collateral.
-   * @returns Maximum withdrawable LST balance for the borrower.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
-    assert(this.loan_record(op.Txn.sender).exists, 'NO_LOAN')
-    assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    this.accrueMarket()
-
-    const rec = this.loan_record(op.Txn.sender).value.copy()
-    const collateral = this.getCollateral(rec.collateralTokenId)
-    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
-
-    const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
-    if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
-
-    // Current collateral USD (before any withdrawal)
-    const currCollatUSD: uint64 = this.calculateCollateralValueUSD(
-      rec.collateralTokenId,
-      rec.collateralAmount.native,
-      lstAppId,
-    )
-
-    // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
-    const debtUSDv: uint64 = this.debtUSD(debtBase)
-    // requiredCollateralUSD = ceil(debtUSD * 10_000 / ltv_bps)
-    const [hReq, lReq] = mulw(debtUSDv, BASIS_POINTS)
-    const requiredCollateralUSD: uint64 = divw(hReq, lReq, this.ltv_bps.value)
-
-    // If we’re already below requirement (shouldn’t happen), nothing is withdrawable
-    if (currCollatUSD <= requiredCollateralUSD) return 0
-
-    // Max removable USD
-    const removableUSD: uint64 = currCollatUSD - requiredCollateralUSD
-
-    // Convert removable USD → underlying base units → LST amount
-    // Pull LST exchange data
-    const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-    const totalDeposits = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
-    }).returnValue
-
-    // Base token price for this LST’s underlying
-    const ac = this.getCollateral(rec.collateralTokenId)
-    const basePrice = this.getOraclePrice(ac.baseAssetId)
-
-    // underlying = removableUSD * 1e6 / basePrice
-    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
-    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
-
-    // LST = underlying * circulating / totalDeposits
-    const [hL, lL] = mulw(removableUnderlying, circulatingLST)
-    const removableLST: uint64 = divw(hL, lL, totalDeposits)
-
-    return removableLST
-  }
-
-  /**
-   * Local helper mirroring `maxWithdrawableCollateralLST` without ABI overhead.
+   * Computes how much LST collateral a borrower can withdraw using live market data.
+   * Shared by both the public ABI and internal calls to avoid duplication.
    * @param borrower Account whose collateral capacity is being evaluated.
-   * @param lstAppId External LST app that priced the collateral.
-   * @returns Maximum withdrawable LST amount using cached state.
+   * @param lstAppId External LST app backing the collateral.
+   * @returns Maximum withdrawable LST amount.
    */
-  private maxWithdrawableCollateralLSTLocal(borrower: Account, lstAppId: uint64): uint64 {
+  private computeMaxWithdrawableCollateralLST(borrower: Account, lstAppId: uint64): uint64 {
     assert(this.loan_record(borrower).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
@@ -1514,6 +1466,16 @@ export class OrbitalLending extends Contract {
   }
 
   /**
+   * Computes how much LST collateral the caller can withdraw using live market data.
+   * @param lstAppId External LST app backing the collateral.
+   * @returns Maximum withdrawable LST balance for the borrower.
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
+    return this.computeMaxWithdrawableCollateralLST(op.Txn.sender, lstAppId)
+  }
+
+  /**
    * Allows borrowers to withdraw a portion of their collateral within safety limits.
    * @param amountLST Amount of LST being withdrawn.
    * @param collateralTokenId Asset ID of the collateral LST.
@@ -1535,7 +1497,7 @@ export class OrbitalLending extends Contract {
     const acVal = this.accepted_collaterals(acKey).value.copy()
     assert(acVal.originatingAppId.native === lstAppId, 'mismatched LST app')
 
-    const maxSafe = this.maxWithdrawableCollateralLSTLocal(borrower, lstAppId)
+    const maxSafe = this.maxWithdrawableCollateralLST(lstAppId)
     assert(amountLST <= maxSafe, 'EXCEEDS_MAX_SAFE')
     assert(amountLST < loan.collateralAmount.native, 'INSUFFICIENT_COLLATERAL')
     const remainLST: uint64 = loan.collateralAmount.native - amountLST
@@ -1724,7 +1686,11 @@ export class OrbitalLending extends Contract {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
 
-    const repayUsed: uint64 = isFullRepayRequest ? (repayRequested <= liveDebt ? repayRequested : liveDebt) : proposedRepayUsed
+    const repayUsed: uint64 = isFullRepayRequest
+      ? repayRequested <= liveDebt
+        ? repayRequested
+        : liveDebt
+      : proposedRepayUsed
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
     const refundAmount: uint64 = repayRequested - repayUsed
 

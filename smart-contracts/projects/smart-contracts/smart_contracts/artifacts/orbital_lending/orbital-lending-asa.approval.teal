@@ -1004,7 +1004,7 @@ createApplication:
     app_global_put
     // smart_contracts/orbital_lending/OrbitalLendingASA.algo.ts:193
     // contract_version = GlobalState<UintN64>() // contract version number
-    pushbytess "contract_version" 0x0000000000000834 // "contract_version", 0x0000000000000834
+    pushbytess "contract_version" 0x0000000000000836 // "contract_version", 0x0000000000000836
     // smart_contracts/orbital_lending/OrbitalLendingASA.algo.ts:207
     // this.contract_version.value = new UintN64(CONTRACT_VERSION)
     app_global_put

@@ -7218,14 +7218,14 @@
       "stack_out": []
     },
     "1919": {
-      "op": "pushbytess \"contract_version\" 0x0000000000000834 // \"contract_version\", 0x0000000000000834",
+      "op": "pushbytess \"contract_version\" 0x0000000000000836 // \"contract_version\", 0x0000000000000836",
       "defined_out": [
         "\"contract_version\"",
-        "0x0000000000000834"
+        "0x0000000000000836"
       ],
       "stack_out": [
         "\"contract_version\"",
-        "0x0000000000000834"
+        "0x0000000000000836"
       ]
     },
     "1947": {
