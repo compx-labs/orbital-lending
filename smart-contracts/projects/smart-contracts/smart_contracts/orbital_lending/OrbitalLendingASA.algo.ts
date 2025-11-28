@@ -47,7 +47,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2100
+const CONTRACT_VERSION: uint64 = 2102
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
