@@ -512,6 +512,20 @@ export class OrbitalLending extends Contract {
     }).copy()
   }
 
+
+  @abimethod({ allowActions: 'NoOp' })
+  public removeCollateralType(collateralTokenId: UintN64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(this.collateralExists(collateralTokenId), 'COLLATERAL_NOT_FOUND')
+
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId }).copy()
+    const collateral = this.accepted_collaterals(key).value.copy()
+    assert(collateral.totalCollateral.native === 0, 'COLLATERAL_IN_USE')
+
+    this.accepted_collaterals(key).delete()
+    this.accepted_collaterals_count.value = this.accepted_collaterals_count.value - 1
+  }
+
   /**
    * Adds a new asset type as accepted collateral for borrowing
    * @param collateralTokenId - Asset ID of the new collateral type to accept

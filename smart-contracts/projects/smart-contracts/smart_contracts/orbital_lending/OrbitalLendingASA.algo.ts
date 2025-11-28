@@ -47,7 +47,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2102
+const CONTRACT_VERSION: uint64 = 2103
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -545,6 +545,19 @@ export class OrbitalLending extends Contract {
     }).copy()
   }
 
+  @abimethod({ allowActions: 'NoOp' })
+  public removeCollateralType(collateralTokenId: UintN64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(this.collateralExists(collateralTokenId), 'COLLATERAL_NOT_FOUND')
+
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId }).copy()
+    const collateral = this.accepted_collaterals(key).value.copy()
+    assert(collateral.totalCollateral.native === 0, 'COLLATERAL_IN_USE')
+
+    this.accepted_collaterals(key).delete()
+    this.accepted_collaterals_count.value = this.accepted_collaterals_count.value - 1
+  }
+
   /**
    * Adds a new asset type as accepted collateral for borrowing
    * @param collateralTokenId - Asset ID of the new collateral type to accept
@@ -805,7 +818,8 @@ export class OrbitalLending extends Contract {
     if (this.deposit_record(depositKey).exists) {
       const existingRecord = this.deposit_record(depositKey).value.copy()
 
-      const newAmount: uint64 = asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
+      const newAmount: uint64 =
+        asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
       if (newAmount === 0) {
         this.deposit_record(depositKey).delete()
       } else {
