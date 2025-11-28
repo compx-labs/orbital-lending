@@ -7,6 +7,7 @@ export const MBR_COLLATERAL: uint64 = 101_000
 export const STANDARD_TXN_FEE: uint64 = 1_000
 export const VALIDATE_BORROW_FEE: uint64 = 4_000
 export const BASIS_POINTS: uint64 = 10_000
+export const EXCHANGE_PRECISION: uint64 = 1_000_000_000_000_000
 export const USD_MICRO_UNITS: uint64 = 1_000_000
 export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
 export const DEBUG_TIMESTAMP_OFFSET: uint64 = 1_728_000
@@ -16,6 +17,7 @@ export const MIGRATION_FEE: uint64 = 500_000 // 0.5 Algo
 export const BUYOUT_MBR: uint64 = 10_000
 export const DEPOSIT_MBR: uint64 = 10_000
 export const WITHDRAW_MBR: uint64 = 3_000
+export const MAXIMUM_ALGO_DEPOSITS: uint64 = 69_000_000_000_000 // 69,000,000 ALGO
 
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64

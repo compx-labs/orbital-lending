@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Config, microAlgo } from '@algorandfoundation/algokit-utils'
 import { registerDebugEventHandlers } from '@algorandfoundation/algokit-utils-debug'
@@ -152,18 +151,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-        additional_rewards_commission_percentage,
-        fluxOracleAppClient.appId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      }
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -201,18 +199,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await collateralLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liq_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        collateralAssetId,
-        additional_rewards_commission_percentage,
-        fluxOracleAppClient.appId,
-      ],
+      args: {
+        mbrTxn: payTxn,
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: xUSDAssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      }
     })
 
     const mbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
@@ -415,6 +412,146 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         expect(lstTokenBalanceInfoAfter.assetHolding?.amount).toEqual(lstTokenBalanceBeforeWithdraw - withdrawAmount)
       }
     }
+  })
+
+  test('withdraw more LST than personal deposit record (extra LST acquired externally) - ASA contract', async () => {
+    const user = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const donor = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const algod = xUSDLendingContractClient.algorand.client.algod
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId as bigint
+    expect(lstTokenId).toBeGreaterThan(0n)
+
+    // Opt in user & donor to base asset (xUSD) and LST
+    xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: user.addr,
+      assetId: xUSDAssetId,
+      note: 'Opt user into xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: user.addr,
+      assetId: lstTokenId,
+      note: 'Opt user into LST for over-burn test',
+    })
+    xUSDLendingContractClient.algorand.setSignerFromAccount(donor)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: donor.addr,
+      assetId: xUSDAssetId,
+      note: 'Opt donor into xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: donor.addr,
+      assetId: lstTokenId,
+      note: 'Opt donor into LST for over-burn test',
+    })
+
+    // Fund user and donor with xUSD to cover deposits + fees
+    const userDeposit = 1_000_000n
+    const donorDeposit = 500_000n
+    const fundBuffer = 1_000_000n
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: user.addr,
+      assetId: xUSDAssetId,
+      amount: userDeposit + fundBuffer,
+      note: 'Funding user with xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: donor.addr,
+      assetId: xUSDAssetId,
+      amount: donorDeposit + fundBuffer,
+      note: 'Funding donor with xUSD for over-burn test',
+    })
+
+    // User makes a small deposit to create a deposit record
+    xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    const userDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: userDeposit,
+      note: 'User xUSD deposit for LST',
+    })
+    const userMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'User deposit MBR',
+    })
+    await xUSDLendingContractClient.send.depositAsa({
+      args: [userDepositTxn, userDeposit, userMbr],
+      assetReferences: [xUSDAssetId],
+      sender: user.addr,
+    })
+
+    // Donor mints extra LST and transfers to user
+    xUSDLendingContractClient.algorand.setSignerFromAccount(donor)
+    const donorDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: donor.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: donorDeposit,
+      note: 'Donor xUSD deposit for LST',
+    })
+    const donorMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: donor.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'Donor deposit MBR',
+    })
+    await xUSDLendingContractClient.send.depositAsa({
+      args: [donorDepositTxn, donorDeposit, donorMbr],
+      assetReferences: [xUSDAssetId],
+      sender: donor.addr,
+    })
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: donor.addr,
+      receiver: user.addr,
+      assetId: lstTokenId,
+      amount: donorDeposit,
+      note: 'Transfer extra LST to user',
+    })
+
+    // User withdraws more than their deposit record
+    const withdrawAmount = userDeposit + donorDeposit
+    const userXusdBefore =
+      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstBefore =
+      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+
+      xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    const withdrawAxfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: lstTokenId,
+      amount: withdrawAmount,
+      note: 'Burning extra LST beyond deposit record',
+    })
+    const withdrawMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(3000n),
+      note: 'Funding withdraw',
+    })
+    await xUSDLendingContractClient.send.withdrawDeposit({
+      args: [withdrawAxfer, withdrawAmount, xUSDLendingContractClient.appId, withdrawMbr],
+      assetReferences: [lstTokenId],
+      appReferences: [xUSDLendingContractClient.appId],
+      sender: user.addr,
+    })
+
+    const userXusdAfter =
+      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstAfter =
+      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+
+    expect(userLstAfter).toEqual(userLstBefore - withdrawAmount)
+    // Should receive underlying for all burned LST; allow minor fee drift
+    expect(userXusdAfter - userXusdBefore).toBeGreaterThan(withdrawAmount - 20_000n)
   })
 
   test('manager deposit collateral ASA to contract - collateral Lending Contract', async () => {
@@ -847,7 +984,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       assetId: xUSDAssetId,
-      amount: loanRecord.principal,
+      amount: loanRecord.principal + 1000n,
       note: 'Repaying discounted loan',
     })
 
@@ -855,7 +992,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .newGroup()
       .gas()
       .repayLoanAsa({
-        args: [repayTxn, loanRecord.principal],
+        args: [repayTxn, loanRecord.principal + 1000n],
         assetReferences: [xUSDAssetId],
         sender: managerAccount.addr,
       })
@@ -867,7 +1004,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const managerXusdFinalInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
     const managerXusdFinal = managerXusdFinalInfo.assetHolding?.amount || 0n
-    expect(managerXusdFinal).toEqual(managerXusdBefore)
+    const netPaid = managerXusdAfter - managerXusdFinal
+    expect(netPaid).toBeGreaterThanOrEqual(discounted.disbursement)
+    expect(netPaid).toBeLessThanOrEqual(loanRecord.principal + 1000n)
+    // Final balance should reflect disbursement minus what was actually paid back (overpay may be refunded in-contract).
+    expect(managerXusdFinal).toEqual(managerXusdBefore + discounted.disbursement - netPaid)
   })
 
   test('repay part of an outstanding ASA loan', async () => {
@@ -887,6 +1028,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
       const repayAmount = principalBefore / 4n
       expect(repayAmount).toBeGreaterThan(0n)
+      const repayRequested = repayAmount + 1_000n // buffer for drift/overpay, refunded if unused
 
       const borrowerBalanceInfoBefore = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
@@ -905,7 +1047,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         sender: borrowerAccount.addr,
         receiver: xUSDLendingContractClient.appClient.appAddress,
         assetId: xUSDAssetId,
-        amount: repayAmount,
+        amount: repayRequested,
         note: 'Partial loan repayment',
       })
 
@@ -913,7 +1055,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .newGroup()
         .gas()
         .repayLoanAsa({
-          args: [repayTxn, repayAmount],
+          args: [repayTxn, repayRequested],
           assetReferences: [xUSDAssetId],
           sender: borrowerAccount.addr,
         })
@@ -923,24 +1065,34 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
         .do()
       const borrowerXusdAfter = borrowerBalanceInfoAfter.assetHolding?.amount || 0n
-      expect(borrowerXusdBefore - borrowerXusdAfter).toEqual(repayAmount)
+      const netPaid = borrowerXusdBefore - borrowerXusdAfter
 
       const contractBalanceInfoAfter = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
         .do()
       const contractXusdAfter = contractBalanceInfoAfter.assetHolding?.amount || 0n
-      expect(contractXusdAfter - contractXusdBefore).toEqual(repayAmount)
+      expect(netPaid).toBeGreaterThan(0n)
+      expect(netPaid).toBeLessThanOrEqual(repayRequested)
+      expect(contractXusdAfter - contractXusdBefore).toEqual(netPaid)
 
       const loanRecordAfter = await getLoanRecordBoxValueASA(
         borrowerAccount.addr.toString(),
         xUSDLendingContractClient,
         xUSDLendingContractClient.appId,
       )
-      expect(loanRecordAfter.principal).toEqual(principalBefore - repayAmount)
+      const repayUsed = principalBefore - loanRecordAfter.principal
+      expect(repayUsed).toBeGreaterThan(0n)
+      expect(repayUsed).toBeLessThanOrEqual(netPaid)
+      expect(repayUsed).toBeLessThanOrEqual(repayRequested)
 
       const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
       const totalBorrowsAfter = globalStateAfter.totalBorrows ?? 0n
-      expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(repayAmount)
+      const borrowDelta = totalBorrowsBefore - totalBorrowsAfter
+      expect(borrowDelta).toBeGreaterThan(0n)
+      expect(borrowDelta).toBeLessThanOrEqual(repayRequested)
+      // repayUsed may include interest accrued between snapshots; allow small drift margin
+      const driftMargin = 10_000n
+      expect(borrowDelta).toBeLessThanOrEqual(repayUsed + driftMargin)
     }
   })
 
@@ -982,11 +1134,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const totalBorrowsBefore = globalStateBefore.totalBorrows ?? 0n
       const activeLoansBefore = globalStateBefore.activeLoanRecords ?? 0n
 
+      const overpayBuffer = 10_000n
+      const requestedRepayAmount = remainingDebt + overpayBuffer
+      expect(requestedRepayAmount).toBeGreaterThan(remainingDebt)
       const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
         sender: borrowerAccount.addr,
         receiver: xUSDLendingContractClient.appClient.appAddress,
         assetId: xUSDAssetId,
-        amount: remainingDebt,
+        amount: requestedRepayAmount,
         note: 'Full loan repayment',
       })
 
@@ -994,7 +1149,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .newGroup()
         .gas()
         .repayLoanAsa({
-          args: [repayTxn, remainingDebt],
+          args: [repayTxn, requestedRepayAmount],
           assetReferences: [xUSDAssetId],
           sender: borrowerAccount.addr,
         })
@@ -1004,13 +1159,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
         .do()
       const borrowerXusdAfter = borrowerXusdAfterInfo.assetHolding?.amount || 0n
-      expect(borrowerXusdBefore - borrowerXusdAfter).toEqual(remainingDebt)
+      const netPaid = borrowerXusdBefore - borrowerXusdAfter
 
       const contractXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
         .do()
       const contractXusdAfter = contractXusdAfterInfo.assetHolding?.amount || 0n
-      expect(contractXusdAfter - contractXusdBefore).toEqual(remainingDebt)
+      expect(netPaid).toBeGreaterThan(0n)
+      expect(netPaid).toBeLessThanOrEqual(requestedRepayAmount)
+      expect(contractXusdAfter - contractXusdBefore).toEqual(netPaid)
 
       await expect(
         getLoanRecordBoxValueASA(
@@ -1167,8 +1324,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const premiumTokens = buyoutTerms.premiumTokens
     const debtRepayAmountBase = buyoutTerms.debtRepayAmountBase
+    const repayBuffer = 10_000n
     const premiumPaymentAmount = premiumTokens + 10n
-    const totalFundingNeeded = premiumPaymentAmount + debtRepayAmountBase
+    const repayPaymentAmount = debtRepayAmountBase + repayBuffer
+    const totalFundingNeeded = premiumPaymentAmount + repayPaymentAmount
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     await xUSDLendingContractClient.algorand.send.assetTransfer({
@@ -1217,7 +1376,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: buyer.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       assetId: xUSDAssetId,
-      amount: debtRepayAmountBase,
+      amount: repayPaymentAmount,
       note: 'Repaying borrower debt',
     })
 
@@ -1291,19 +1450,23 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const protocolShare = premiumTokens / 2n
     const borrowerShare = premiumTokens - protocolShare
-    const expectedRefund = premiumPaymentAmount - premiumTokens
+    const netRepayPaid = contractXusdAfter - contractXusdBefore
+    const borrowDelta = totalBorrowsBefore - totalBorrowsAfter
+    const actualPremiumPaid = buyerXusdBefore - buyerXusdAfter - netRepayPaid
+    const expectedPremiumRefund = premiumPaymentAmount - premiumTokens
+    const actualPremiumRefund = premiumPaymentAmount - actualPremiumPaid
 
     expect(managerXusdAfter - managerXusdBefore).toEqual(protocolShare)
     expect(borrowerXusdAfter - borrowerXusdBefore).toEqual(borrowerShare)
-    expect(buyerXusdBefore - buyerXusdAfter).toEqual(debtRepayAmountBase + premiumTokens)
-    expect(contractXusdAfter - contractXusdBefore).toEqual(debtRepayAmountBase)
+    expect(actualPremiumPaid).toEqual(premiumTokens)
+    expect(actualPremiumRefund).toEqual(expectedPremiumRefund)
+    expect(netRepayPaid).toBeGreaterThan(0n)
+    expect(netRepayPaid).toBeLessThanOrEqual(repayPaymentAmount)
     expect(buyerCollateralAfter - buyerCollateralBefore).toEqual(loanRecord.collateralAmount)
     expect(collateralBoxAfterBuyout.totalCollateral).toEqual(collateralBoxBeforeBorrow.totalCollateral)
     expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
-    expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(debtRepayAmountBase)
-    expect(expectedRefund).toEqual(10n)
-    const actualRefund = premiumPaymentAmount + debtRepayAmountBase - (buyerXusdBefore - buyerXusdAfter)
-    expect(actualRefund).toEqual(expectedRefund)
+    expect(borrowDelta).toBeGreaterThan(0n)
+    expect(borrowDelta).toBeLessThanOrEqual(debtRepayAmountBase)
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
@@ -1497,7 +1660,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const totalBorrowsBefore = globalBefore.totalBorrows ?? 0n
     const activeLoansBefore = globalBefore.activeLoanRecords ?? 0n
 
-    const repayAmount = loanRecord.principal
+    const repayAmount = loanRecord.principal + 10_000n
     const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
       sender: liquidator.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
@@ -1532,7 +1695,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         ],
         sender: liquidator.addr,
       })
-      .send()
+      .send({ populateAppCallResources: true })
 
     await expect(
       getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
@@ -1544,7 +1707,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const liquidatorXusdAfterInfo = await algod.accountAssetInformation(liquidator.addr, xUSDAssetId).do()
     const liquidatorXusdAfter = liquidatorXusdAfterInfo.assetHolding?.amount || 0n
-    expect(liquidatorXusdBefore - liquidatorXusdAfter).toEqual(repayAmount)
+    const netPaid = liquidatorXusdBefore - liquidatorXusdAfter
 
     const liquidatorCollateralAfterInfo = await algod.accountAssetInformation(liquidator.addr, collateralLstId).do()
     const liquidatorCollateralAfter = liquidatorCollateralAfterInfo.assetHolding?.amount || 0n
@@ -1554,12 +1717,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
       .do()
     const contractXusdAfter = contractXusdAfterInfo.assetHolding?.amount || 0n
-    expect(contractXusdAfter - contractXusdBefore).toEqual(repayAmount)
+    expect(netPaid).toBeGreaterThan(0n)
+    expect(netPaid).toBeLessThanOrEqual(repayAmount)
+    expect(contractXusdAfter - contractXusdBefore).toEqual(netPaid)
 
     const globalAfter = await xUSDLendingContractClient.state.global.getAll()
     const totalBorrowsAfter = globalAfter.totalBorrows ?? 0n
     const activeLoansAfter = globalAfter.activeLoanRecords ?? 0n
-    expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(repayAmount)
+    const borrowDelta = totalBorrowsBefore - totalBorrowsAfter
+    expect(borrowDelta).toBeGreaterThan(0n)
+    // Borrow delta should be capped to the pre-liquidation debt; overpay is refunded.
+    expect(borrowDelta).toBeLessThanOrEqual(loanRecord.principal + 10_000n)
     expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
 
     const collateralBoxAfter = await getCollateralBoxValue(

@@ -28,6 +28,7 @@ import {
   DepositRecordKey,
   INDEX_SCALE,
   LoanRecord,
+  MAXIMUM_ALGO_DEPOSITS,
   MIGRATION_FEE,
   MINIMUM_ADDITIONAL_REWARD,
   MigrationSnapshot,
@@ -41,12 +42,13 @@ import {
   MBR_OPT_IN_LST,
   STANDARD_TXN_FEE,
   BASIS_POINTS,
+  EXCHANGE_PRECISION,
   VALIDATE_BORROW_FEE,
   USD_MICRO_UNITS,
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2000
+const CONTRACT_VERSION: uint64 = 2102
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -102,6 +104,8 @@ export class OrbitalLending extends Contract {
   /** Protocol's share of interest income (e.g., 2000 = 20%) */
   protocol_share_bps = GlobalState<uint64>()
 
+  max_apr_bps = GlobalState<uint64>()
+
   /** Minimum APR at 0% utilization (basis points per year). */
   base_bps = GlobalState<uint64>()
 
@@ -117,29 +121,6 @@ export class OrbitalLending extends Contract {
   /** APR increase from kink → cap (added after kink) over the normalized range. */
   slope2_bps = GlobalState<uint64>()
 
-  /** (Optional) Absolute APR ceiling in bps (0 = no cap). */
-  max_apr_bps = GlobalState<uint64>()
-  /** (Optional) Utilization EMA weight in bps (0..10_000; 0 disables smoothing). */
-  ema_alpha_bps = GlobalState<uint64>()
-
-  /** (Optional) Max APR change per accrual step in bps (0 = no limit). */
-  max_apr_step_bps = GlobalState<uint64>()
-
-  /** (Optional, mutable) Last applied APR in bps (for step limiting). */
-  prev_apr_bps = GlobalState<uint64>()
-
-  /** (Optional, mutable) Stored EMA of normalized utilization in bps. */
-  util_ema_bps = GlobalState<uint64>()
-
-  /** (Optional) Rate model selector (e.g., 0=kinked, 1=linear, 2=power, 3=asymptote). */
-  rate_model_type = GlobalState<uint64>()
-
-  /** (Optional) Power-curve exponent γ in Q16.16 fixed-point. */
-  power_gamma_q16 = GlobalState<uint64>()
-
-  /** (Optional) Strength parameter for asymptotic/scarcity escalator (bps-scaled). */
-  scarcity_K_bps = GlobalState<uint64>()
-
   /** Total outstanding borrower principal + accrued interest (debt) */
   total_borrows = GlobalState<uint64>()
 
@@ -151,6 +132,8 @@ export class OrbitalLending extends Contract {
 
   /** APR (in bps) that applied during [last_accrual_ts, now) before recompute */
   last_apr_bps = GlobalState<uint64>()
+
+  prev_apr_bps = GlobalState<uint64>()
 
   // ═══════════════════════════════════════════════════════════════════════
   // COLLATERAL & LOAN MANAGEMENT
@@ -236,7 +219,6 @@ export class OrbitalLending extends Contract {
     mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
-    liq_bonus_bps: uint64,
     origination_fee_bps: uint64,
     protocol_share_bps: uint64,
     oracle_app_id: Application,
@@ -266,23 +248,18 @@ export class OrbitalLending extends Contract {
     this.oracle_app.value = oracle_app_id
     this.lst_token_id.value = new UintN64(99)
     this.base_bps.value = 50
+    this.prev_apr_bps.value = 50
+    this.max_apr_bps.value = 8000 // 80% APR Cap by Default
     this.util_cap_bps.value = 8000 // 80% utilization cap
     this.total_borrows.value = 0
-    this.rate_model_type.value = 0 // Default to kinked model
     this.kink_norm_bps.value = 5000 // 50% kink point
     this.slope1_bps.value = 1000 // 10% slope to kink
     this.slope2_bps.value = 2000 // 20% slope after kink
-    this.max_apr_bps.value = 6000 // 60% APR Cap by Default
-    this.ema_alpha_bps.value = 0 // No EMA smoothing by default
-    this.prev_apr_bps.value = 50 // Same as base_bps by default
-    this.util_ema_bps.value = 0 // No utilization EMA by default
-    this.power_gamma_q16.value = 0 // No power curve by default
-    this.scarcity_K_bps.value = 0 // No scarcity parameter by default
     this.borrow_index_wad.value = INDEX_SCALE
     this.last_accrual_ts.value = Global.latestTimestamp
     this.last_apr_bps.value = this.base_bps.value
     this.buyout_token_id.value = new UintN64(buyout_token_id)
-    this.liq_bonus_bps.value = liq_bonus_bps
+    this.liq_bonus_bps.value = 800
     this.total_commission_earned.value = 0
     this.current_accumulated_commission.value = 0
     this.commission_percentage.value = additional_rewards_commission_percentage
@@ -336,10 +313,7 @@ export class OrbitalLending extends Contract {
     slope1_bps: uint64,
     slope2_bps: uint64,
     max_apr_bps: uint64,
-    max_apr_step_bps: uint64,
     ema_alpha_bps: uint64,
-    power_gamma_q16: uint64,
-    scarcity_K_bps: uint64,
     rate_model_type: uint64, // or uint8
     liq_bonus_bps: uint64,
   ) {
@@ -361,17 +335,7 @@ export class OrbitalLending extends Contract {
     this.kink_norm_bps.value = kink_norm_bps
     this.slope1_bps.value = slope1_bps
     this.slope2_bps.value = slope2_bps
-    this.max_apr_bps.value = max_apr_bps
-    this.max_apr_step_bps.value = max_apr_step_bps
-    this.rate_model_type.value = rate_model_type
     this.liq_bonus_bps.value = liq_bonus_bps
-    this.ema_alpha_bps.value = ema_alpha_bps
-    this.power_gamma_q16.value = power_gamma_q16
-    this.scarcity_K_bps.value = scarcity_K_bps
-    // Optional: clamp prev_apr if a new max is lower
-    if (this.max_apr_bps.value > 0 && this.prev_apr_bps.value > this.max_apr_bps.value) {
-      this.prev_apr_bps.value = this.max_apr_bps.value
-    }
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -605,12 +569,12 @@ export class OrbitalLending extends Contract {
    * @returns LST units to mint to the depositor.
    */
   private calculateLSTDue(amount: uint64): uint64 {
-    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, BASIS_POINTS)
+    const [highBits1, lowBits1] = mulw(this.circulating_lst.value, EXCHANGE_PRECISION)
 
     const lstRatio = divw(highBits1, lowBits1, this.total_deposits.value)
 
     const [highBits2, lowBits2] = mulw(lstRatio, amount)
-    return divw(highBits2, lowBits2, BASIS_POINTS)
+    return divw(highBits2, lowBits2, EXCHANGE_PRECISION)
   }
 
   // Calculate how much underlying ASA to return for a given LST amount,
@@ -663,7 +627,13 @@ export class OrbitalLending extends Contract {
   public depositAlgo(depositTxn: gtxn.PaymentTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    // Prevent u64 wrap on addition: cap check using subtraction.
+    assert(this.total_deposits.value <= MAXIMUM_ALGO_DEPOSITS, 'DEPOSIT_CAP_INVALID')
+    const remainingCapacity: uint64 = MAXIMUM_ALGO_DEPOSITS - this.total_deposits.value
+    assert(amount <= remainingCapacity, 'DEPOSIT_LIMIT_EXCEEDED')
+
     assertMatch(depositTxn, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: amount,
     })
@@ -674,7 +644,7 @@ export class OrbitalLending extends Contract {
     })
     this.addCash(amount)
 
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
 
     let lstDue: uint64 = 0
     if (this.total_deposits.value === 0) {
@@ -733,6 +703,7 @@ export class OrbitalLending extends Contract {
     const lstAsset = Asset(this.lst_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(assetTransferTxn, {
+      sender: op.Txn.sender,
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: lstAsset,
       assetAmount: amount,
@@ -744,7 +715,7 @@ export class OrbitalLending extends Contract {
       amount: WITHDRAW_MBR,
     })
 
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
 
     //Calculate the return amount of ASA
     let asaDue: uint64 = 0
@@ -775,7 +746,7 @@ export class OrbitalLending extends Contract {
     })
     if (this.deposit_record(depositKey).exists) {
       const existingRecord = this.deposit_record(depositKey).value.copy()
-      const newAmount: uint64 = existingRecord.depositAmount.native - amount
+      const newAmount: uint64 = asaDue > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - asaDue
 
       if (newAmount === 0) {
         this.deposit_record(depositKey).delete()
@@ -835,7 +806,7 @@ export class OrbitalLending extends Contract {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
-    const _interestSlice = this.accrueMarket()
+    this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
       const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
@@ -1005,7 +976,7 @@ export class OrbitalLending extends Contract {
     const U_used: uint64 = U_raw // No EMA smoothing for now
 
     // Model selection (0=kinked; 255=fixed fallback)
-    const apr = this.rate_model_type.value === 0 ? this.apr_bps_kinked(U_used) : this.base_bps.value // Fixed APR fallback
+    const apr = this.apr_bps_kinked(U_used)
 
     this.prev_apr_bps.value = apr
     return apr
@@ -1021,14 +992,13 @@ export class OrbitalLending extends Contract {
   private sliceFactorWad(deltaT: uint64): uint64 {
     if (deltaT === 0) return 0
 
-    // tmp = last_apr_bps * deltaT
-    const [h1, l1] = mulw(this.last_apr_bps.value, deltaT)
-    // tmp2 = tmp / SECONDS_PER_YEAR  (still in "bps")
-    const tmp2: uint64 = divw(h1, l1, SECONDS_PER_YEAR)
+    // ratePerYearWad = INDEX_SCALE * last_apr_bps / BASIS_POINTS
+    const [hRate, lRate] = mulw(INDEX_SCALE, this.last_apr_bps.value)
+    const ratePerYearWad: uint64 = divw(hRate, lRate, BASIS_POINTS)
 
-    // simpleWad = (INDEX_SCALE * tmp2) / BASIS_POINTS
-    const [h2, l2] = mulw(INDEX_SCALE, tmp2)
-    const simpleWad: uint64 = divw(h2, l2, BASIS_POINTS)
+    // simpleWad = ratePerYearWad * deltaT / SECONDS_PER_YEAR
+    const [hSlice, lSlice] = mulw(ratePerYearWad, deltaT)
+    const simpleWad: uint64 = divw(hSlice, lSlice, SECONDS_PER_YEAR)
     return simpleWad // e.g., 0.0123 * INDEX_SCALE for a 1.23% slice
   }
 
@@ -1149,27 +1119,40 @@ export class OrbitalLending extends Contract {
    * @dev Similar to repayLoanASA but specifically for ALGO repayments
    * @dev Accrues interest before processing repayment
    * @dev Full repayment closes loan and returns all collateral
+   * @dev Overpayments are automatically refunded to the sender
    */
   @abimethod({ allowActions: 'NoOp' })
   public repayLoanAlgo(paymentTxn: gtxn.PaymentTxn, repaymentAmount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(paymentTxn, {
+      sender: op.Txn.sender,
       receiver: Global.currentApplicationAddress,
       amount: repaymentAmount,
     })
-    const _interestSlice = this.accrueMarket()
-    const loanRecord = this.getLoanRecord(op.Txn.sender)
+    this.accrueMarket()
     const rec = this.getLoanRecord(op.Txn.sender)
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
-
-    assert(repaymentAmount <= liveDebt)
-
-    const remainingDebt: uint64 = liveDebt - repaymentAmount
+    // Borrower-level repayment is capped to their live debt; global subtraction is saturation-protected.
+    const repayUsed: uint64 = repaymentAmount <= liveDebt ? repaymentAmount : liveDebt
+    const refundAmount: uint64 = repaymentAmount - repayUsed
+    const remainingDebt: uint64 = liveDebt - repayUsed
+    const totalBorrowDelta: uint64 = repayUsed <= this.total_borrows.value ? repayUsed : this.total_borrows.value
 
     // Market aggregate falls by amount repaid (principal or interest, we don’t care here)
-    this.total_borrows.value -= repaymentAmount
+    this.total_borrows.value -= totalBorrowDelta
     this.addCash(repaymentAmount)
+
+    if (refundAmount > 0) {
+      itxn
+        .payment({
+          receiver: op.Txn.sender,
+          amount: refundAmount,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+      this.removeCash(refundAmount)
+    }
 
     if (remainingDebt === 0) {
       this.loan_record(op.Txn.sender).delete()
@@ -1191,7 +1174,7 @@ export class OrbitalLending extends Contract {
         collateralAmount: rec.collateralAmount,
         borrowedTokenId: this.base_token_id.value,
         lastDebtChange: new DebtChange({
-          amount: new UintN64(repaymentAmount),
+          amount: new UintN64(repayUsed),
           timestamp: new UintN64(Global.latestTimestamp),
           changeType: new UintN8(2), // repay
         }),
@@ -1295,6 +1278,7 @@ export class OrbitalLending extends Contract {
     const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
     const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
 
+    assert(premiumAxferTxn.sender === op.Txn.sender, 'INVALID_SENDER');
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
     assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
@@ -1303,11 +1287,10 @@ export class OrbitalLending extends Contract {
     const refund: uint64 = paidAmount - premiumTokens
 
     // 4) Debt repayment in ALGO
-    assertMatch(repayPayTxn, {
-      sender: buyer,
-      receiver: Global.currentApplicationAddress,
-      amount: debtBase,
-    })
+    assert(repayPayTxn.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
+    assert(repayPayTxn.receiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayPayTxn.amount >= debtBase, 'INSUFFICIENT_REPAY')
+    const repayRefund: uint64 = repayPayTxn.amount - debtBase
 
     // 5) Close loan, transfer collateral, update aggregates
     this.loan_record(debtor).delete()
@@ -1333,8 +1316,9 @@ export class OrbitalLending extends Contract {
       originatingAppId: acVal.originatingAppId,
     }).copy()
 
-    this.total_borrows.value = this.total_borrows.value - debtBase
-    this.addCash(debtBase)
+    const borrowDelta: uint64 = debtBase <= this.total_borrows.value ? debtBase : this.total_borrows.value
+    this.total_borrows.value = this.total_borrows.value - borrowDelta
+    this.addCash(repayPayTxn.amount)
 
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
 
@@ -1347,6 +1331,18 @@ export class OrbitalLending extends Contract {
           fee: STANDARD_TXN_FEE,
         })
         .submit()
+      this.removeCash(refund)
+    }
+
+    if (repayRefund > 0) {
+      itxn
+        .payment({
+          receiver: buyer,
+          amount: repayRefund,
+          fee: STANDARD_TXN_FEE,
+        })
+        .submit()
+      this.removeCash(repayRefund)
     }
 
     this.last_apr_bps.value = this.current_apr_bps()
@@ -1651,30 +1647,6 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Returns the current amount of LST tokens in circulation
-   * @returns Total LST tokens representing all depositor claims
-   */
-  getCirculatingLST(): uint64 {
-    return this.circulating_lst.value
-  }
-
-  /**
-   * Returns the total amount of base assets deposited in the protocol
-   * @returns Total underlying assets available for lending
-   */
-  getTotalDeposits(): uint64 {
-    return this.total_deposits.value
-  }
-
-  /**
-   * Returns the number of different collateral types accepted by the protocol
-   * @returns Count of registered collateral asset types
-   */
-  getAcceptedCollateralsCount(): uint64 {
-    return this.accepted_collaterals_count.value
-  }
-
-  /**
    * Liquidates an undercollateralized loan using ALGO payment
    * @param debtor - Account whose loan is being liquidated
    * @param paymentTxn - ALGO payment transaction with full debt repayment
@@ -1686,7 +1658,7 @@ export class OrbitalLending extends Contract {
   public liquidatePartialAlgo(
     debtor: Account,
     repayPay: gtxn.PaymentTxn, // liquidator pays ALGO
-    repayBaseAmount: uint64, // amount to repay in microALGO (≤ live debt)
+    repayBaseAmount: uint64, // requested repay in microALGO (can be >= live debt; excess refunded)
     lstAppId: uint64,
   ): void {
     assert(this.base_token_id.value.native === 0, 'BASE_NOT_ALGO')
@@ -1699,7 +1671,7 @@ export class OrbitalLending extends Contract {
     const collLSTBal: uint64 = rec.collateralAmount.native
     const liveDebt: uint64 = this.currentDebtFromSnapshot(rec)
     assert(liveDebt > 0, 'NO_DEBT')
-    assert(repayBaseAmount > 0 && repayBaseAmount <= liveDebt, 'BAD_REPAY')
+    assert(repayBaseAmount > 0, 'BAD_REPAY')
 
     const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
@@ -1710,21 +1682,20 @@ export class OrbitalLending extends Contract {
     const ltvBps: uint64 = divw(hLTV, lLTV, collateralUSD)
     assert(ltvBps >= this.liq_threshold_bps.value, 'NOT_LIQUIDATABLE')
 
-    // Validate repayment transfer (ALGO)
-    assertMatch(repayPay, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: repayBaseAmount,
-    })
+    // Validate repayment transfer (ALGO) and allow overpay (refunded)
+    assert(repayPay.sender === op.Txn.sender, 'BAD_REPAY_SENDER')
+    assert(repayPay.receiver === Global.currentApplicationAddress, 'BAD_REPAY_RECEIVER')
+    assert(repayPay.amount >= repayBaseAmount, 'INSUFFICIENT_REPAY')
+    const repayRequested: uint64 = repayPay.amount
 
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
     const closeFactorHalf: uint64 = liveDebt / 2
     const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
 
     const bonusBps: uint64 = this.liq_bonus_bps.value
-    const isFullRepayRequest = repayBaseAmount === liveDebt
+    const isFullRepayRequest = repayRequested >= liveDebt
 
-    let repayCandidate: uint64 = repayBaseAmount
+    let repayCandidate: uint64 = repayRequested
     if (!isFullRepayRequest && repayCandidate > maxRepayAllowed) {
       repayCandidate = maxRepayAllowed
     }
@@ -1753,9 +1724,9 @@ export class OrbitalLending extends Contract {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
 
-    const repayUsed: uint64 = isFullRepayRequest ? repayBaseAmount : proposedRepayUsed
+    const repayUsed: uint64 = isFullRepayRequest ? (repayRequested <= liveDebt ? repayRequested : liveDebt) : proposedRepayUsed
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
-    const refundAmount: uint64 = isFullRepayRequest ? 0 : repayBaseAmount - repayUsed
+    const refundAmount: uint64 = repayRequested - repayUsed
 
     itxn
       .assetTransfer({
@@ -1782,7 +1753,7 @@ export class OrbitalLending extends Contract {
 
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
-    this.addCash(repayUsed)
+    this.addCash(repayRequested)
 
     if (newDebtBase === 0) {
       if (remainingLST > 0) {
@@ -2226,6 +2197,30 @@ export class OrbitalLending extends Contract {
   private getGoOnlineFee(): uint64 {
     // this will be needed to determine if our pool is currently NOT eligible and we thus need to pay the fee.
     return Global.payoutsGoOnlineFee
+  }
+
+  /**
+   * Returns the current amount of LST tokens in circulation
+   * @returns Total LST tokens representing all depositor claims
+   */
+  getCirculatingLST(): uint64 {
+    return this.circulating_lst.value
+  }
+
+  /**
+   * Returns the total amount of base assets deposited in the protocol
+   * @returns Total underlying assets available for lending
+   */
+  getTotalDeposits(): uint64 {
+    return this.total_deposits.value
+  }
+
+  /**
+   * Returns the number of different collateral types accepted by the protocol
+   * @returns Count of registered collateral asset types
+   */
+  getAcceptedCollateralsCount(): uint64 {
+    return this.accepted_collaterals_count.value
   }
 
   /**
