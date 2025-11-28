@@ -93,8 +93,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        8n,
-        0n
+
+        0n,
       ],
     })
 
@@ -144,8 +144,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         protocol_interest_fee_bps,
         oracleAppClient.appId,
         xUSDAssetId,
-        8n,
-        0n
+
+        0n,
       ],
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
@@ -456,7 +456,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     //check managers algo balance after
     const { amount: algoBalanceAfterDeposit } = await algod.accountInformation(managerAccount.addr).do()
     expect(algoBalanceAfterDeposit).toEqual(algoBalanceBeforeDeposit - feeTracker - ALGO_DEPOSIT_AMOUNT)
-
   })
 
   test('confirm balances prior to borrowing - xUSD Lending Contract', async () => {
@@ -1005,11 +1004,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(activeLoanRecordsAfter).toEqual(activeLoanRecordsBefore - 1n)
 
     await expect(
-      getLoanRecordBoxValue(
-        debtor.addr.toString(),
-        algoLendingContractClient,
-        algoLendingContractClient.appId,
-      ),
+      getLoanRecordBoxValue(debtor.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
     ).rejects.toThrow()
 
     const liquidatorAssetInfoAfter = await algod
@@ -1150,8 +1145,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const buyerCollateralBalanceAfter = buyerCollateralBalanceAfterRequest.assetHolding?.amount || 0n
 
     const actualPremiumPaid = buyerxUSDBalanceBefore - buyerxUSDBalanceAfter
-    const expectedRefund = (r.premiumTokens + 10n) - r.premiumTokens
-    const actualRefund = (r.premiumTokens + 10n) - actualPremiumPaid
+    const expectedRefund = r.premiumTokens + 10n - r.premiumTokens
+    const actualRefund = r.premiumTokens + 10n - actualPremiumPaid
 
     expect(managerxUSDBalanceAfter).toEqual(managerxUSDBalanceBefore + r.premiumTokens / 2n)
     expect(debtorxUSDBalanceAfter).toEqual(debtorxUSDBalanceBefore + r.premiumTokens / 2n)

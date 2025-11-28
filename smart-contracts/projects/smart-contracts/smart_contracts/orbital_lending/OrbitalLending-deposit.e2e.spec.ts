@@ -429,6 +429,132 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
+  test('withdraw more LST than personal deposit record (extra LST acquired externally) - algo contract', async () => {
+    const user = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const donor = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const algod = algoLendingContractClient.algorand.client.algod
+
+    const globalState = await algoLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId as bigint
+    expect(lstTokenId).toBeGreaterThan(0n)
+
+    // Opt in user & donor to LST
+    algoLendingContractClient.algorand.setSignerFromAccount(user)
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: user.addr,
+      assetId: lstTokenId,
+      note: 'Opt user into LST for over-burn test',
+    })
+    algoLendingContractClient.algorand.setSignerFromAccount(donor)
+    await algoLendingContractClient.algorand.send.assetOptIn({
+      sender: donor.addr,
+      assetId: lstTokenId,
+      note: 'Opt donor into LST for over-burn test',
+    })
+
+    // Fund user and donor with ALGO to cover deposits + fees
+    const userDeposit = 1_000_000n
+    const donorDeposit = 500_000n
+    const fundBuffer = 1_000_000n
+    algoLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await algoLendingContractClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: user.addr,
+      amount: microAlgo(userDeposit + fundBuffer),
+      note: 'Funding user with ALGO for over-burn test',
+    })
+    await algoLendingContractClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: donor.addr,
+      amount: microAlgo(donorDeposit + fundBuffer),
+      note: 'Funding donor with ALGO for over-burn test',
+    })
+
+    // User makes a small deposit to create a deposit record
+    algoLendingContractClient.algorand.setSignerFromAccount(user)
+    const userMbr = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'User deposit MBR',
+    })
+    const userDepositTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(userDeposit),
+      note: 'User ALGO deposit for LST',
+    })
+    await algoLendingContractClient.send.depositAlgo({
+      args: [userDepositTxn, userDeposit, userMbr],
+      sender: user.addr,
+    })
+
+    // Donor mints extra LST and transfers to user (these LST are not in user's deposit record)
+    algoLendingContractClient.algorand.setSignerFromAccount(donor)
+    const donorMbr = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: donor.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'Donor deposit MBR',
+    })
+    const donorDepositTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: donor.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(donorDeposit),
+      note: 'Donor ALGO deposit for LST',
+    })
+    await algoLendingContractClient.send.depositAlgo({
+      args: [donorDepositTxn, donorDeposit, donorMbr],
+      sender: donor.addr,
+    })
+    await algoLendingContractClient.algorand.send.assetTransfer({
+      sender: donor.addr,
+      receiver: user.addr,
+      assetId: lstTokenId,
+      amount: donorDeposit,
+      note: 'Transfer extra LST to user',
+    })
+
+    // User withdraws more than their own deposit record (includes transferred LST)
+    const withdrawAmount = userDeposit + donorDeposit
+    const userAlgoBefore = (await algod.accountInformation(user.addr).do()).amount
+    const userLstBefore = (
+      await algod.accountAssetInformation(user.addr, lstTokenId).do()
+    ).assetHolding?.amount || 0n
+
+    algoLendingContractClient.algorand.setSignerFromAccount(user)
+    const withdrawLstTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: user.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: lstTokenId,
+      amount: withdrawAmount,
+      note: 'Burning extra LST beyond deposit record',
+    })
+    const withdrawMbr = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(3000n),
+      note: 'Funding withdraw',
+    })
+    await algoLendingContractClient.send.withdrawDeposit({
+      args: [withdrawLstTxn, withdrawAmount, algoLendingContractClient.appId, withdrawMbr],
+      assetReferences: [lstTokenId],
+      appReferences: [algoLendingContractClient.appId],
+      sender: user.addr,
+    })
+
+    const userAlgoAfter = (await algod.accountInformation(user.addr).do()).amount
+    const userLstAfter = (
+      await algod.accountAssetInformation(user.addr, lstTokenId).do()
+    ).assetHolding?.amount || 0n
+
+    expect(userLstAfter).toEqual(userLstBefore - withdrawAmount)
+    const netPaidAlgo = userAlgoAfter - userAlgoBefore
+    // Ensure user received some ALGO back and no more than the burned amount (fees aside)
+    expect(netPaidAlgo).toBeGreaterThan(0n)
+    expect(netPaidAlgo).toBeLessThanOrEqual(withdrawAmount)
+  })
+
   test('manager deposit algo to contract - algo Lending Contract', async () => {
     const algod = algoLendingContractClient.algorand.client.algod
     let feeTracker = 0n

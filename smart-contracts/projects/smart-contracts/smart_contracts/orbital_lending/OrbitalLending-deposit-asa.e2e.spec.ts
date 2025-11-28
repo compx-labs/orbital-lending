@@ -414,6 +414,146 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
+  test('withdraw more LST than personal deposit record (extra LST acquired externally) - ASA contract', async () => {
+    const user = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const donor = await localnet.context.generateAccount({ initialFunds: microAlgo(6_000_000) })
+    const algod = xUSDLendingContractClient.algorand.client.algod
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const lstTokenId = globalState.lstTokenId as bigint
+    expect(lstTokenId).toBeGreaterThan(0n)
+
+    // Opt in user & donor to base asset (xUSD) and LST
+    xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: user.addr,
+      assetId: xUSDAssetId,
+      note: 'Opt user into xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: user.addr,
+      assetId: lstTokenId,
+      note: 'Opt user into LST for over-burn test',
+    })
+    xUSDLendingContractClient.algorand.setSignerFromAccount(donor)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: donor.addr,
+      assetId: xUSDAssetId,
+      note: 'Opt donor into xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: donor.addr,
+      assetId: lstTokenId,
+      note: 'Opt donor into LST for over-burn test',
+    })
+
+    // Fund user and donor with xUSD to cover deposits + fees
+    const userDeposit = 1_000_000n
+    const donorDeposit = 500_000n
+    const fundBuffer = 1_000_000n
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: user.addr,
+      assetId: xUSDAssetId,
+      amount: userDeposit + fundBuffer,
+      note: 'Funding user with xUSD for over-burn test',
+    })
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: donor.addr,
+      assetId: xUSDAssetId,
+      amount: donorDeposit + fundBuffer,
+      note: 'Funding donor with xUSD for over-burn test',
+    })
+
+    // User makes a small deposit to create a deposit record
+    xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    const userDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: userDeposit,
+      note: 'User xUSD deposit for LST',
+    })
+    const userMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'User deposit MBR',
+    })
+    await xUSDLendingContractClient.send.depositAsa({
+      args: [userDepositTxn, userDeposit, userMbr],
+      assetReferences: [xUSDAssetId],
+      sender: user.addr,
+    })
+
+    // Donor mints extra LST and transfers to user
+    xUSDLendingContractClient.algorand.setSignerFromAccount(donor)
+    const donorDepositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: donor.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: donorDeposit,
+      note: 'Donor xUSD deposit for LST',
+    })
+    const donorMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: donor.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(10_000n),
+      note: 'Donor deposit MBR',
+    })
+    await xUSDLendingContractClient.send.depositAsa({
+      args: [donorDepositTxn, donorDeposit, donorMbr],
+      assetReferences: [xUSDAssetId],
+      sender: donor.addr,
+    })
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: donor.addr,
+      receiver: user.addr,
+      assetId: lstTokenId,
+      amount: donorDeposit,
+      note: 'Transfer extra LST to user',
+    })
+
+    // User withdraws more than their deposit record
+    const withdrawAmount = userDeposit + donorDeposit
+    const userXusdBefore =
+      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstBefore =
+      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+
+      xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    const withdrawAxfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: lstTokenId,
+      amount: withdrawAmount,
+      note: 'Burning extra LST beyond deposit record',
+    })
+    const withdrawMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
+      sender: user.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      amount: microAlgo(3000n),
+      note: 'Funding withdraw',
+    })
+    await xUSDLendingContractClient.send.withdrawDeposit({
+      args: [withdrawAxfer, withdrawAmount, xUSDLendingContractClient.appId, withdrawMbr],
+      assetReferences: [lstTokenId],
+      appReferences: [xUSDLendingContractClient.appId],
+      sender: user.addr,
+    })
+
+    const userXusdAfter =
+      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstAfter =
+      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+
+    expect(userLstAfter).toEqual(userLstBefore - withdrawAmount)
+    // Should receive underlying for all burned LST; allow minor fee drift
+    expect(userXusdAfter - userXusdBefore).toBeGreaterThan(withdrawAmount - 20_000n)
+  })
+
   test('manager deposit collateral ASA to contract - collateral Lending Contract', async () => {
     const algod = collateralLendingContractClient.algorand.client.algod
 

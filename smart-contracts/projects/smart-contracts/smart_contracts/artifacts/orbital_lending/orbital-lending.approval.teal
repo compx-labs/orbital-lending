@@ -2967,6 +2967,7 @@ withdrawDeposit:
     intc_0 // 0
     dup
     pushbytes ""
+    dup
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:63
     // lst_token_id = GlobalState<UintN64>()
     intc_0 // 0
@@ -3025,7 +3026,7 @@ withdrawDeposit:
     bz withdrawDeposit_bool_false@5
     frame_dig -4
     gtxns XferAsset
-    frame_dig 3
+    frame_dig 4
     ==
     bz withdrawDeposit_bool_false@5
     frame_dig -4
@@ -3259,7 +3260,7 @@ withdrawDeposit_after_if_else@14:
     // if (this.deposit_record(depositKey).exists) {
     box_len
     bury 1
-    bz withdrawDeposit_after_if_else@20
+    bz withdrawDeposit_after_if_else@23
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:748
     // const existingRecord = this.deposit_record(depositKey).value.copy()
     frame_dig 1
@@ -3270,26 +3271,32 @@ withdrawDeposit_after_if_else@14:
     frame_bury 0
     assert // Box must have value
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:749
-    // const newAmount: uint64 = existingRecord.depositAmount.native - amount
+    // const newAmount: uint64 = amount > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - amount
     intc_0 // 0
     extract_uint64
-    frame_dig -3
-    -
     dup
+    frame_bury 3
+    frame_dig -3
+    <
+    bz withdrawDeposit_ternary_false@18
+    intc_0 // 0
     frame_bury 2
+
+withdrawDeposit_ternary_merge@19:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:751
     // if (newAmount === 0) {
-    bnz withdrawDeposit_else_body@18
+    frame_dig 2
+    bnz withdrawDeposit_else_body@21
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:752
     // this.deposit_record(depositKey).delete()
     frame_dig 1
     box_del
     pop
 
-withdrawDeposit_after_if_else@20:
+withdrawDeposit_after_if_else@23:
     retsub
 
-withdrawDeposit_else_body@18:
+withdrawDeposit_else_body@21:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:755
     // assetId: existingRecord.assetId,
     frame_dig 0
@@ -3309,6 +3316,15 @@ withdrawDeposit_else_body@18:
     swap
     box_put
     retsub
+
+withdrawDeposit_ternary_false@18:
+    // smart_contracts/orbital_lending/OrbitalLending.algo.ts:749
+    // const newAmount: uint64 = amount > existingRecord.depositAmount.native ? 0 : existingRecord.depositAmount.native - amount
+    frame_dig 3
+    frame_dig -3
+    -
+    frame_bury 2
+    b withdrawDeposit_ternary_merge@19
 
 withdrawDeposit_else_body@13:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:589-592
