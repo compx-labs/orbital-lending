@@ -8,12 +8,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 
 import { OrbitalLendingClient } from '../artifacts/orbital_lending/orbital-lendingClient'
 import { Account } from 'algosdk'
-import {
-  calculateDisbursement,
-  computeBuyoutTerms,
-  getCollateralBoxValue,
-  getLoanRecordBoxValue,
-} from './testing-utils'
+import { calculateDisbursement, computeBuyoutTerms, getCollateralBoxValue, getLoanRecordBoxValue, liveDebtFromSnapshot } from './testing-utils'
 import { OracleClient } from '../artifacts/Oracle/oracleClient'
 import { deploy } from './orbital-deploy'
 import { createToken } from './token-create'
@@ -2015,13 +2010,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetReferences: [xUSDAssetId],
     })
 
-    const statusResult = await algoLendingContractClient.send.getLoanStatus({
-      args: [borrower.addr.publicKey],
-      appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-      sender: borrower.addr,
-    })
-    expect(statusResult.return?.eligibleForLiquidation).toBe(true)
-
+    const globalState = await algoLendingContractClient.state.global.getAll()
+    const borrowIndexWad = globalState.borrowIndexWad as bigint
     const liquidator = await generateAccount({ initialFunds: microAlgo(8_000_000) })
     algoLendingContractClient.algorand.setSignerFromAccount(liquidator)
     localnet.algorand.setSignerFromAccount(liquidator)
@@ -2030,7 +2020,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: cxusd,
       note: 'Opting liquidator into cxUSD',
     })
-    const liveDebt = ((statusResult.return as any)?.outstandingDebt as bigint) ?? loanRecord.principal
+    const liveDebt = liveDebtFromSnapshot(loanRecord.principal, loanRecord.userIndexWad, borrowIndexWad)
     const repayAmount = liveDebt + 10_000n
 
     await localnet.algorand.send.payment({
@@ -2045,8 +2035,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(borrowerCollateralBefore).toEqual(0n)
     const liquidatorCollateralBeforeInfo = await algod.accountAssetInformation(liquidator.addr, cxusd).do()
     const liquidatorCollateralBefore = liquidatorCollateralBeforeInfo.assetHolding?.amount || 0n
-
-    // Use live debt from status (accrual is performed inside getLoanStatus) to match contract-side repayment check.
 
     const repayPayTxn = algoLendingContractClient.algorand.createTransaction.payment({
       sender: liquidator.addr,

@@ -11,6 +11,7 @@ import {
   getCollateralBoxValue,
   getLoanRecordBoxValue,
   getLoanRecordBoxValueASA,
+  liveDebtFromSnapshot,
 } from './testing-utils'
 import { OracleClient } from '../artifacts/Oracle/oracleClient'
 import { createToken } from './token-create'
@@ -1603,13 +1604,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetReferences: [collateralAssetId],
     })
 
-    // Confirm liquidation eligibility via status check
-    const statusResult = await xUSDLendingContractClient.send.getLoanStatus({
-      args: [borrower.addr.publicKey],
-      appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-      sender: borrower.addr,
-    })
-    expect(statusResult.return?.eligibleForLiquidation).toBe(true)
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const borrowIndexWad = globalState.borrowIndexWad as bigint
 
     // Prepare liquidator
     const liquidator = await generateAccount({ initialFunds: microAlgo(8_000_000) })
@@ -1628,13 +1624,16 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       note: 'Opting liquidator into collateral LST',
     })
 
+    const liveDebt = liveDebtFromSnapshot(loanRecord.principal, loanRecord.userIndexWad, borrowIndexWad)
+    const repayAmount = liveDebt + 10_000n
+
     // Fund liquidator with xUSD for repayment
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     await xUSDLendingContractClient.algorand.send.assetTransfer({
       sender: managerAccount.addr,
       receiver: liquidator.addr,
       assetId: xUSDAssetId,
-      amount: loanRecord.principal + 1_000_000n,
+      amount: repayAmount + 1_000_000n,
       note: 'Funding liquidator with xUSD for liquidation',
     })
 
@@ -1660,7 +1659,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const totalBorrowsBefore = globalBefore.totalBorrows ?? 0n
     const activeLoansBefore = globalBefore.activeLoanRecords ?? 0n
 
-    const repayAmount = loanRecord.principal + 10_000n
     const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
       sender: liquidator.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,

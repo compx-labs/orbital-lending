@@ -453,6 +453,25 @@ export class OrbitalLending extends Contract {
   }
 
   /**
+   * Scales liquidation bonus from 0 at the threshold up to the configured max as LTV worsens.
+   * @param ltvBps live LTV in basis points (debtUSD / collateralUSD * 10_000)
+   */
+  private dynamicLiqBonusBps(ltvBps: uint64): uint64 {
+    const maxBonus: uint64 = this.liq_bonus_bps.value
+    const threshold: uint64 = this.liq_threshold_bps.value
+    if (ltvBps <= threshold) return 0
+
+    const over: uint64 = ltvBps - threshold
+    const room: uint64 = BASIS_POINTS > threshold ? BASIS_POINTS - threshold : 1
+
+    const [h, l] = mulw(over, maxBonus)
+    let bonus: uint64 = divw(h, l, room)
+    if (bonus === 0) bonus = 1
+    if (bonus > maxBonus) bonus = maxBonus
+    return bonus
+  }
+
+  /**
    * Checks whether a collateral asset has already been registered.
    * @param collateralTokenId Asset identifier to look up in collateral storage.
    * @returns True when the collateral entry exists, false otherwise.
@@ -1665,15 +1684,36 @@ export class OrbitalLending extends Contract {
     const repayRequested: uint64 = repayPay.amount
 
     const basePrice = this.getOraclePrice(this.base_token_id.value) // µUSD
-    const closeFactorHalf: uint64 = liveDebt / 2
-    const maxRepayAllowed: uint64 = closeFactorHalf > 0 ? closeFactorHalf : liveDebt
-
-    const bonusBps: uint64 = this.liq_bonus_bps.value
     const isFullRepayRequest = repayRequested >= liveDebt
+    let bonusBps: uint64 = this.dynamicLiqBonusBps(ltvBps)
 
-    let repayCandidate: uint64 = repayRequested
-    if (!isFullRepayRequest && repayCandidate > maxRepayAllowed) {
-      repayCandidate = maxRepayAllowed
+    let repayCandidate: uint64 = repayRequested > liveDebt ? liveDebt : repayRequested
+
+    // Compute max bonus that keeps remaining collateral sufficient against remaining debt at current price.
+    const repayUSDcandidate: uint64 = repayCandidate === 0 ? 0 : divw(mulw(repayCandidate, basePrice)[0], mulw(repayCandidate, basePrice)[1], USD_MICRO_UNITS)
+    // If collateral already <= debt, require full repay.
+    if (collateralUSD <= debtUSDv && !isFullRepayRequest) {
+      assert(false, 'FULL_REPAY_REQUIRED')
+    }
+    if (repayUSDcandidate > 0) {
+      if (collateralUSD <= debtUSDv) {
+        bonusBps = 0
+      } else {
+        const gapUSD: uint64 = collateralUSD - debtUSDv
+        const [hCap, lCap] = mulw(gapUSD, BASIS_POINTS)
+        const bonusCap: uint64 = divw(hCap, lCap, repayUSDcandidate)
+        if (bonusCap < bonusBps) bonusBps = bonusCap
+      }
+    }
+    if (bonusBps > this.liq_bonus_bps.value) bonusBps = this.liq_bonus_bps.value
+
+    // Cap repay so seizeUSD does not exceed available collateral (avoids seizing 100% in a partial).
+    if (!isFullRepayRequest && bonusBps < BASIS_POINTS * 10) {
+      const [hMaxUsd, lMaxUsd] = mulw(collateralUSD, BASIS_POINTS)
+      const maxRepayUSDForCollateral: uint64 = divw(hMaxUsd, lMaxUsd, BASIS_POINTS + bonusBps)
+      const [hMaxBase, lMaxBase] = mulw(maxRepayUSDForCollateral, USD_MICRO_UNITS)
+      const maxRepayBaseForCollateral: uint64 = divw(hMaxBase, lMaxBase, basePrice)
+      if (repayCandidate > maxRepayBaseForCollateral) repayCandidate = maxRepayBaseForCollateral
     }
 
     const [hRU, lRU] = mulw(repayCandidate, basePrice)
@@ -1708,6 +1748,9 @@ export class OrbitalLending extends Contract {
     assert(repayUsed > 0, 'ZERO_REPAY_USED')
     const refundAmount: uint64 = repayRequested - repayUsed
 
+    const remainingLST: uint64 = collLSTBal - seizeLST
+    const newDebtBase: uint64 = liveDebt - repayUsed
+
     itxn
       .assetTransfer({
         assetReceiver: op.Txn.sender,
@@ -1727,9 +1770,6 @@ export class OrbitalLending extends Contract {
         .submit()
       this.removeCash(refundAmount)
     }
-
-    const remainingLST: uint64 = collLSTBal - seizeLST
-    const newDebtBase: uint64 = liveDebt - repayUsed
 
     this.reduceCollateralTotal(collTok, seizeLST)
     this.total_borrows.value = this.total_borrows.value - repayUsed
@@ -1767,52 +1807,6 @@ export class OrbitalLending extends Contract {
     }
 
     this.last_apr_bps.value = this.current_apr_bps()
-  }
-
-  /**
-   * Retrieves comprehensive status information for a borrower's loan
-   * @param borrower - Account address to get loan status for
-   * @returns Object containing debt amount, collateral value, ratios, and liquidation eligibility
-   * @dev Simulates interest accrual to provide most up-to-date status
-   * @dev Includes eligibility flags for liquidation and buyout actions
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public getLoanStatus(borrower: Account): {
-    outstandingDebt: uint64
-    collateralValueUSD: uint64
-    collateralAmount: uint64
-    collateralRatioBps: uint64
-    liquidationThresholdBps: uint64
-    eligibleForLiquidation: boolean
-    eligibleForBuyout: boolean
-  } {
-    assert(this.loan_record(borrower).exists, 'Loan record does not exist')
-    const record = this.loan_record(borrower).value.copy()
-    const collateralRecord = this.getCollateral(record.collateralTokenId)
-    this.accrueMarket()
-    const debt: uint64 = this.currentDebtFromSnapshot(record)
-    const collateralAmount: uint64 = record.collateralAmount.native
-    const liqBps: uint64 = this.liq_threshold_bps.value
-
-    const collateralValueUSD: uint64 = this.calculateCollateralValueUSD(
-      record.collateralTokenId,
-      collateralAmount,
-      collateralRecord.originatingAppId.native,
-    )
-
-    const CR: uint64 = (collateralValueUSD * BASIS_POINTS) / debt
-    const eligibleForLiquidation = CR < liqBps
-    const eligibleForBuyout = CR > liqBps
-
-    return {
-      outstandingDebt: debt,
-      collateralValueUSD: collateralValueUSD,
-      collateralAmount: collateralAmount,
-      collateralRatioBps: CR,
-      liquidationThresholdBps: liqBps,
-      eligibleForLiquidation,
-      eligibleForBuyout,
-    }
   }
 
   /**

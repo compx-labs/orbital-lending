@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Config, microAlgo, microAlgos } from '@algorandfoundation/algokit-utils'
+import { Config, microAlgo, microAlgos, populateAppCallResources } from '@algorandfoundation/algokit-utils'
 import { registerDebugEventHandlers } from '@algorandfoundation/algokit-utils-debug'
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { beforeAll, describe, expect, test } from 'vitest'
@@ -22,14 +22,18 @@ import { createToken } from './token-create'
 import { deployOracle } from '../Oracle/oracle-deploy'
 import { OrbitalLendingAsaClient } from '../artifacts/orbital_lending/orbital-lending-asaClient'
 import { deploy as deployAsa } from './orbital-deploy-asa'
+import { FluxGateClient } from '../fluxOracle/flux-gateClient'
+import { deploy as deployFluxOracle } from '../fluxOracle/deploy'
 
 let xUSDLendingContractClient: OrbitalLendingAsaClient
 let algoLendingContractClient: OrbitalLendingClient
+let fluxOracleAppClient: FluxGateClient
+
 let oracleAppClient: OracleClient
 let managerAccount: Account
 let buyerAccount: Account
 let liquidatorAccount: Account
-
+const USER_TIER = 1n
 let xUSDAssetId = 0n
 let cAlgoAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
@@ -71,6 +75,72 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
     algoLendingContractClient = await deploy(0n, managerAccount)
     oracleAppClient = await deployOracle(managerAccount)
+    fluxOracleAppClient = await deployFluxOracle({ deployer: managerAccount })
+
+    const fluxMbrTxn = await localnet.algorand.createTransaction.payment({
+      sender: managerAccount.addr,
+      receiver: fluxOracleAppClient.appAddress,
+      amount: microAlgo(400_000),
+    })
+
+    fluxOracleAppClient.algorand.setSignerFromAccount(managerAccount)
+
+    await fluxOracleAppClient.send.initApplication({
+      sender: managerAccount.addr,
+      args: {
+        mbrTxn: fluxMbrTxn,
+      },
+      populateAppCallResources: true,
+    })
+
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 0n,
+        tierNumber: 0,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 1000n,
+        tierNumber: 1,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 10000n,
+        tierNumber: 2,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 100000n,
+        tierNumber: 3,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.addFluxTier({
+      sender: managerAccount.addr,
+      args: {
+        minRequired: 1000000n,
+        tierNumber: 4,
+      },
+      populateAppCallResources: true,
+    })
+    await fluxOracleAppClient.send.setUserTier({
+      sender: managerAccount.addr,
+      args: {
+        user: managerAccount.addr.toString(),
+        tier: USER_TIER,
+      },
+      populateAppCallResources: true,
+    })
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
@@ -84,18 +154,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liquidation_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-
-        0n,
-      ],
+      args: {
+        additionalRewardsCommissionPercentage: 8n,
+        buyoutTokenId: xUSDAssetId,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+        liqThresholdBps: liq_threshold_bps,
+        ltvBps: ltv_bps,
+        mbrTxn: payTxn,
+        oracleAppId: oracleAppClient.appId,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+      },
     })
 
     const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
@@ -135,18 +204,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       note: 'Funding contract',
     })
     await algoLendingContractClient.send.initApplication({
-      args: [
-        payTxn,
-        ltv_bps,
-        liq_threshold_bps,
-        liquidation_bonus_bps,
-        origination_fee_bps,
-        protocol_interest_fee_bps,
-        oracleAppClient.appId,
-        xUSDAssetId,
-
-        0n,
-      ],
+      args: {
+        additionalRewardsCommissionPercentage: 8n,
+        buyoutTokenId: xUSDAssetId,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+        liqThresholdBps: liq_threshold_bps,
+        ltvBps: ltv_bps,
+        mbrTxn: payTxn,
+        oracleAppId: oracleAppClient.appId,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+      },
     })
     const lstId = await createToken(managerAccount, 'cALGO', 6)
 
@@ -539,7 +607,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const cxusd: bigint = globalStateXUSDContract.lstTokenId as bigint
       console.log('cxusd', cxusd)
       const lstAppId = xUSDLendingContractClient.appId
-      const arc19String = 'this-is-a-test-arc19-metadata-string'
       const { amount: algoBalanceBefore } = await algoLendingContractClient.algorand.client.algod
         .accountInformation(borrowerAccount.addr)
         .do()
@@ -587,7 +654,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         const reserve = await localnet.context.generateAccount({ initialFunds: microAlgo(100000n) })
 
         //log out params
-        const globalsStateAlgo = await algoLendingContractClient.state.global.getAll()
         const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
         const totalDeposits = xusdGlobalState.totalDeposits
         const circulatingcXUSD = xusdGlobalState.circulatingLst
@@ -606,32 +672,19 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         console.log('collateralPriceReturn', collateralPriceReturn)
         console.log('cxUSD price:', cxusdPrice)
         console.log('Collateral amount:', collateralAmount)
-        const preCalculated = calculateDisbursement({
-          collateralAmount,
-          collateralPrice: cxusdPrice || 0n, //cxusd price
-          ltvBps: ltv_bps,
-          baseTokenPrice: algoPrice.return?.price || 0n, //algo price
-          requestedLoanAmount: borrowAmount,
-          originationFeeBps: origination_fee_bps,
-        })
-        //console.log('preCalculated disbursement:', preCalculated)
 
-        await algoLendingContractClient
-          .newGroup()
-          .gas()
-          .borrow({
-            args: [axferTxn, borrowAmount, collateralAmount, lstAppId, cxusd, mbrTxn],
-            assetReferences: [cxusd],
-            appReferences: [lstAppId, oracleAppClient.appId],
-            boxReferences: [
-              {
-                appId: boxValue.boxRef.appIndex as bigint,
-                name: boxValue.boxRef.name,
-              },
-            ],
-            sender: borrowerAccount.addr,
-          })
-          .send()
+        await algoLendingContractClient.send.borrow({
+          args: {
+            assetTransferTxn: axferTxn,
+            requestedLoanAmount: borrowAmount,
+            lstApp: lstAppId,
+            mbrTxn,
+            collateralAmount: collateralAmount,
+            collateralTokenId: cxusd,
+          },
+          sender: borrowerAccount.addr,
+          populateAppCallResources: true,
+        })
         feeTracker += 1000n
 
         // Confirm borrow was succesful
@@ -706,10 +759,26 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         : loanBefore.principal
     expect(liveDebtBefore).toBeGreaterThan(0n)
 
+    const algoPriceInfo = await oracleAppClient.send.getTokenPrice({
+      args: [0n],
+      assetReferences: [0n],
+    })
+    const algoPrice = algoPriceInfo.return?.price ?? 0n
+    expect(algoPrice).toBeGreaterThan(0n)
+    const debtUsd = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
+    const circulatingLst = xusdGlobalState.circulatingLst ?? 1n
+    const totalDeposits = xusdGlobalState.totalDeposits ?? 0n
+    const underlyingCollateral = (loanBefore.collateralAmount * totalDeposits) / circulatingLst
+    expect(underlyingCollateral).toBeGreaterThan(0n)
+    const breakevenPrice = debtUsd > 0n ? (debtUsd * USD_MICRO_UNITS) / underlyingCollateral : 1n
+
     const computeLiquidationPrice = (repayAmount: bigint): bigint | undefined => {
       if (repayAmount <= 0n) return undefined
       const { collateralAmount } = loanBefore
-      let candidatePrice = priceNeeded > 0n ? priceNeeded : 1n
+      let candidatePrice = priceNeeded > breakevenPrice ? priceNeeded : breakevenPrice + 1n
+      if (candidatePrice >= currentXusdPrice) {
+        candidatePrice = currentXusdPrice - 1n > 0n ? currentXusdPrice - 1n : 1n
+      }
       let priceMatch: bigint | undefined
 
       for (let i = 0; i < 500 && candidatePrice > 0n; i++) {
@@ -742,19 +811,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })()
     expect(repayAttempt).toBeGreaterThan(0n)
 
-    const circulatingLst = xusdGlobalState.circulatingLst ?? 1n
-    const totalDeposits = xusdGlobalState.totalDeposits ?? 0n
-    const underlyingCollateral = (loanBefore.collateralAmount * totalDeposits) / circulatingLst
-    expect(underlyingCollateral).toBeGreaterThan(0n)
-
-    const algoPriceInfo = await oracleAppClient.send.getTokenPrice({
-      args: [0n],
-      assetReferences: [0n],
-    })
-    const algoPrice = algoPriceInfo.return?.price ?? 0n
-    expect(algoPrice).toBeGreaterThan(0n)
-    const debtUsd = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
-
     const liquidationThreshold = algoGlobalState.liqThresholdBps ?? 0n
     const thresholdCollateralUsd = (debtUsd * liquidationThreshold) / BASIS_POINTS
     expect(thresholdCollateralUsd).toBeGreaterThan(0n)
@@ -775,8 +831,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     let liquidationPrice = computeLiquidationPrice(repayAttempt)
 
     if (!liquidationPrice) {
-      const closeFactorRepay = liveDebtBefore / 2n
-      repayAttempt = closeFactorRepay > 0n ? closeFactorRepay : 1n
+      // Try a smaller partial amount before giving up.
+      const smallerRepay = liveDebtBefore / 20n
+      repayAttempt = smallerRepay > 0n ? smallerRepay : 1n
       liquidationPrice = computeLiquidationPrice(repayAttempt)
     }
 
@@ -798,6 +855,22 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(liquidationPreview.repayUsed).toBeGreaterThan(0n)
     expect(liquidationPreview.fullRepayRequired).toBe(false)
 
+    // Debug: capture inputs used for the on-chain call (single-liquidator scenario).
+    const debtUsdPreview = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
+    const collatUsdPreview = (loanBefore.collateralAmount * chosenLiquidationPrice) / USD_MICRO_UNITS
+    console.log(
+      '[Single partial] debt:',
+      liveDebtBefore.toString(),
+      'repayAttempt:',
+      repayAttempt.toString(),
+      'debtUSD:',
+      debtUsdPreview.toString(),
+      'collatUSD:',
+      collatUsdPreview.toString(),
+      'bonusBps:',
+      bonusBps.toString(),
+    )
+
     oracleAppClient.algorand.setSignerFromAccount(managerAccount)
     await oracleAppClient.send.updateTokenPrice({
       args: [xUSDAssetId, chosenLiquidationPrice],
@@ -813,6 +886,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         .do()
       const liquidatorCollateralBefore = BigInt(liquidatorAssetInfoBefore.assetHolding?.amount ?? 0)
 
+      console.log('Attempting liquidation with repay amount:', repayAttempt)
+
       const repayTxn = algoLendingContractClient.algorand.createTransaction.payment({
         sender: liquidatorAccount.addr,
         receiver: algoLendingContractClient.appClient.appAddress,
@@ -822,24 +897,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
       await algoLendingContractClient
         .newGroup()
-        .gas()
+        .gas({ sender: liquidatorAccount.addr, args: {} })
         .liquidatePartialAlgo({
-          args: [debtor.addr.publicKey, repayTxn, repayAttempt, lstAppId],
+          args: {
+            debtor: debtor.addr.toString(),
+            lstAppId,
+            repayBaseAmount: repayAttempt,
+            repayPay: repayTxn,
+          },
           sender: liquidatorAccount.addr,
-          appReferences: [algoLendingContractClient.appId, lstAppId, oracleAppClient.appId],
-          assetReferences: [loanBefore.collateralTokenId],
-          boxReferences: [
-            {
-              appId: loanBefore.boxRef.appIndex as bigint,
-              name: loanBefore.boxRef.name,
-            },
-            {
-              appId: collateralBox.boxRef.appIndex as bigint,
-              name: collateralBox.boxRef.name,
-            },
-          ],
         })
-        .send()
+        .send({ populateAppCallResources: true })
 
       const loanAfter = await getLoanRecordBoxValue(
         debtor.addr.toString(),
@@ -873,6 +941,403 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         args: [xUSDAssetId, currentXusdPrice],
       })
     }
+  })
+
+  test('Multiple partial liquidations until a final full repay on Algo market', async () => {
+    const debtor = depositors[0]
+    const lstAppId = xUSDLendingContractClient.appId
+
+    const initialLoan = await getLoanRecordBoxValue(
+      debtor.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    expect(initialLoan.principal).toBeGreaterThan(0n)
+
+    const algoGlobalState = await algoLendingContractClient.state.global.getAll()
+    const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
+    const borrowIndexWadBefore = (algoGlobalState.borrowIndexWad ?? 0n) as bigint
+    const userIndexWadBefore = initialLoan.userIndexWad ?? 0n
+    const liveDebtBefore =
+      userIndexWadBefore > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(initialLoan.principal, userIndexWadBefore, borrowIndexWadBefore)
+        : initialLoan.principal
+    expect(liveDebtBefore).toBeGreaterThan(0n)
+
+    const algoPriceInfo = await oracleAppClient.send.getTokenPrice({
+      args: [0n],
+      assetReferences: [0n],
+    })
+    const algoPrice = algoPriceInfo.return?.price ?? 0n
+    expect(algoPrice).toBeGreaterThan(0n)
+
+    const debtUsd = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
+    const circulatingLst = xusdGlobalState.circulatingLst ?? 1n
+    const totalDeposits = xusdGlobalState.totalDeposits ?? 0n
+    const underlyingCollateral = (initialLoan.collateralAmount * totalDeposits) / circulatingLst
+    const breakevenPrice = debtUsd > 0n ? (debtUsd * USD_MICRO_UNITS) / underlyingCollateral : 1n
+
+    const liquidationThreshold = algoGlobalState.liqThresholdBps ?? 0n
+    const thresholdCollateralUsd = (debtUsd * liquidationThreshold) / BASIS_POINTS
+
+    const currentXusdPriceInfo = await oracleAppClient.send.getTokenPrice({
+      args: [xUSDAssetId],
+      assetReferences: [xUSDAssetId],
+    })
+    const currentXusdPrice = currentXusdPriceInfo.return?.price ?? 0n
+
+    const priceNeeded = (thresholdCollateralUsd * USD_MICRO_UNITS) / underlyingCollateral
+    const chosenLiquidationPriceBase =
+      priceNeeded > breakevenPrice ? priceNeeded : breakevenPrice + 1n
+    // Add a small margin above breakeven to keep collateralUSD above debtUSD while staying at/near threshold.
+    const chosenLiquidationPrice =
+      chosenLiquidationPriceBase > 0n ? chosenLiquidationPriceBase + chosenLiquidationPriceBase / 100n : 1n
+
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.updateTokenPrice({
+      args: [xUSDAssetId, chosenLiquidationPrice],
+    })
+
+    // second liquidator
+    const { generateAccount } = localnet.context
+    const secondLiquidator = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    for (const liq of [liquidatorAccount, secondLiquidator]) {
+      algoLendingContractClient.algorand.setSignerFromAccount(liq)
+      localnet.algorand.setSignerFromAccount(liq)
+      await algoLendingContractClient.algorand.send.assetOptIn({
+        sender: liq.addr,
+        assetId: initialLoan.collateralTokenId,
+        note: 'Opting liquidator into collateral',
+      })
+    }
+
+    // First partial (~5% of debt) by liquidatorAccount
+    const firstRepay = liveDebtBefore / 20n > 0n ? liveDebtBefore / 20n : 1n
+    const firstDebtUsd = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
+    const firstCollatUsd = (initialLoan.collateralAmount * chosenLiquidationPrice) / USD_MICRO_UNITS
+    console.log(
+      '[First partial] liveDebtBefore:',
+      liveDebtBefore.toString(),
+      'repay:',
+      firstRepay.toString(),
+      'debtUSD:',
+      firstDebtUsd.toString(),
+      'collatUSD:',
+      firstCollatUsd.toString(),
+    )
+    const firstTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: liquidatorAccount.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(firstRepay),
+      note: 'First partial repay',
+    })
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: liquidatorAccount.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: debtor.addr.toString(), lstAppId, repayBaseAmount: firstRepay, repayPay: firstTxn },
+        sender: liquidatorAccount.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    const loanAfterFirst = await getLoanRecordBoxValue(
+      debtor.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const liveDebtAfterFirst =
+      loanAfterFirst.userIndexWad > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanAfterFirst.principal, loanAfterFirst.userIndexWad, borrowIndexWadBefore)
+        : loanAfterFirst.principal
+
+    // Recompute price for second partial to preserve headroom
+    const liveDebtUsdAfterFirst = (liveDebtAfterFirst * algoPrice) / USD_MICRO_UNITS
+    const underlyingAfterFirst = (loanAfterFirst.collateralAmount * totalDeposits) / circulatingLst
+    const breakevenPrice2 =
+      liveDebtUsdAfterFirst > 0n ? (liveDebtUsdAfterFirst * USD_MICRO_UNITS) / underlyingAfterFirst : 1n
+    const priceNeeded2 = (liveDebtUsdAfterFirst * (algoGlobalState.liqThresholdBps ?? 0n)) / BASIS_POINTS
+    const chosenLiquidationPrice2Base =
+      priceNeeded2 > breakevenPrice2 ? priceNeeded2 : breakevenPrice2 + 1n
+    const chosenLiquidationPrice2 =
+      chosenLiquidationPrice2Base > 0n ? chosenLiquidationPrice2Base + chosenLiquidationPrice2Base / 100n : 1n
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.updateTokenPrice({
+      args: [xUSDAssetId, chosenLiquidationPrice2],
+    })
+
+    // Second partial (~10% of remaining) by secondLiquidator
+    const secondRepay = liveDebtAfterFirst / 10n > 0n ? liveDebtAfterFirst / 10n : 1n
+    const secondDebtUsd = (liveDebtAfterFirst * algoPrice) / USD_MICRO_UNITS
+    const secondCollatUsd = (loanAfterFirst.collateralAmount * chosenLiquidationPrice2) / USD_MICRO_UNITS
+    console.log(
+      '[Second partial] liveDebtAfterFirst:',
+      liveDebtAfterFirst.toString(),
+      'repay:',
+      secondRepay.toString(),
+      'debtUSD:',
+      secondDebtUsd.toString(),
+      'collatUSD:',
+      secondCollatUsd.toString(),
+    )
+    const secondTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: secondLiquidator.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(secondRepay),
+      note: 'Second partial repay',
+    })
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: secondLiquidator.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: debtor.addr.toString(), lstAppId, repayBaseAmount: secondRepay, repayPay: secondTxn },
+        sender: secondLiquidator.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    const loanAfterSecond = await getLoanRecordBoxValue(
+      debtor.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const liveDebtAfterSecond =
+      loanAfterSecond.userIndexWad > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanAfterSecond.principal, loanAfterSecond.userIndexWad, borrowIndexWadBefore)
+        : loanAfterSecond.principal
+    expect(liveDebtAfterSecond).toBeGreaterThan(0n)
+
+    // Final full repay by secondLiquidator
+    const finalRepay = liveDebtAfterSecond
+    const finalDebtUsd = (liveDebtAfterSecond * algoPrice) / USD_MICRO_UNITS
+    const finalCollatUsd = (loanAfterSecond.collateralAmount * chosenLiquidationPrice) / USD_MICRO_UNITS
+    console.log(
+      '[Final repay] liveDebtAfterSecond:',
+      liveDebtAfterSecond.toString(),
+      'repay:',
+      finalRepay.toString(),
+      'debtUSD:',
+      finalDebtUsd.toString(),
+      'collatUSD:',
+      finalCollatUsd.toString(),
+    )
+    const finalTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: secondLiquidator.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(finalRepay),
+      note: 'Final full repay',
+    })
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: secondLiquidator.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: debtor.addr.toString(), lstAppId, repayBaseAmount: finalRepay, repayPay: finalTxn },
+        sender: secondLiquidator.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    await expect(
+      getLoanRecordBoxValue(debtor.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
+    ).rejects.toThrowError()
+  })
+
+  test('Fresh loan: multiple partials then final full repay on Algo market', async () => {
+    const { generateAccount } = localnet.context
+    const borrower = await generateAccount({ initialFunds: microAlgo(10_000_000) })
+    const liquidator1 = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+    const liquidator2 = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    const lstAppId = xUSDLendingContractClient.appId
+    const globalStateXUSDContract = await xUSDLendingContractClient.state.global.getAll()
+    const cxusd: bigint = globalStateXUSDContract.lstTokenId as bigint
+    expect(cxusd).toBeGreaterThan(0n)
+
+    // Set oracle prices: ALGO $1.00, xUSD $1.20 (healthy), then drop to $0.80 for liquidation.
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.updateTokenPrice({
+      args: [0n, 1_000_000n],
+      assetReferences: [0n],
+    })
+    await oracleAppClient.send.updateTokenPrice({
+      args: [xUSDAssetId, 1_200_000n],
+      assetReferences: [xUSDAssetId],
+    })
+
+    // Opt-in liquidators to collateral
+    for (const liq of [liquidator1, liquidator2]) {
+      algoLendingContractClient.algorand.setSignerFromAccount(liq)
+      await algoLendingContractClient.algorand.send.assetOptIn({
+        sender: liq.addr,
+        assetId: cxusd,
+        note: 'Opting liquidator into collateral',
+      })
+    }
+
+    // Borrower deposits collateral and borrows ALGO
+    algoLendingContractClient.algorand.setSignerFromAccount(borrower)
+    const collateralAmount = 20_000_000n
+    const borrowAmount = 10_000_000n
+    const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      assetId: cxusd,
+      amount: collateralAmount,
+      note: 'Depositing cxUSD collateral for borrowing',
+    })
+    const mbrTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: borrower.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgo(4000n),
+      note: 'Funding borrow',
+    })
+
+    await algoLendingContractClient.send.borrow({
+      args: {
+        assetTransferTxn: axferTxn,
+        requestedLoanAmount: borrowAmount,
+        lstApp: lstAppId,
+        mbrTxn,
+        collateralAmount,
+        collateralTokenId: cxusd,
+      },
+      sender: borrower.addr,
+      populateAppCallResources: true,
+    })
+
+    // Reset oracle prices: ALGO $1.00, then drop xUSD to chosen liquidation price.
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.updateTokenPrice({
+      args: [0n, 1_000_000n],
+      assetReferences: [0n],
+    })
+    const liquidationPrice = 550_000n // $0.55
+    await oracleAppClient.send.updateTokenPrice({
+      args: [xUSDAssetId, liquidationPrice],
+      assetReferences: [xUSDAssetId],
+    })
+
+    const loanBefore = await getLoanRecordBoxValue(
+      borrower.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const algoGlobalState = await algoLendingContractClient.state.global.getAll()
+    const borrowIndexWadBefore = (algoGlobalState.borrowIndexWad ?? 0n) as bigint
+    const liveDebtBefore =
+      loanBefore.userIndexWad > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanBefore.principal, loanBefore.userIndexWad, borrowIndexWadBefore)
+        : loanBefore.principal
+    const algoPriceReturn = await oracleAppClient.send.getTokenPrice({
+      args: [0n],
+      assetReferences: [0n],
+    })
+    const algoPrice = algoPriceReturn.return?.price ?? 1_000_000n
+    const xusdPriceReturn = await oracleAppClient.send.getTokenPrice({
+      args: [xUSDAssetId],
+      assetReferences: [xUSDAssetId],
+    })
+    const xusdPrice = xusdPriceReturn.return?.price ?? liquidationPrice
+    const collateralUSD = (loanBefore.collateralAmount * xusdPrice) / USD_MICRO_UNITS
+    const debtUSDv = (liveDebtBefore * algoPrice) / USD_MICRO_UNITS
+    const ltvBps = collateralUSD === 0n ? 0n : (debtUSDv * BASIS_POINTS) / collateralUSD
+    console.log(
+      '[Fresh loan pre-liquidation]',
+      'algoPriceµUSD:',
+      algoPrice.toString(),
+      'xusdPriceµUSD:',
+      xusdPrice.toString(),
+      'collatUSD:',
+      collateralUSD.toString(),
+      'debtUSD:',
+      debtUSDv.toString(),
+      'LTVbps:',
+      ltvBps.toString(),
+      'thresholdbps:',
+      (algoGlobalState.liqThresholdBps ?? 0n).toString(),
+    )
+
+    // First partial by liquidator1 (25% of debt)
+    const firstRepay = liveDebtBefore / 4n > 0n ? liveDebtBefore / 4n : 1n
+    const firstTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: liquidator1.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(firstRepay),
+      note: 'First partial repay',
+    })
+    algoLendingContractClient.algorand.setSignerFromAccount(liquidator1)
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: liquidator1.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: borrower.addr.toString(), lstAppId, repayBaseAmount: firstRepay, repayPay: firstTxn },
+        sender: liquidator1.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    const loanAfterFirst = await getLoanRecordBoxValue(
+      borrower.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const liveDebtAfterFirst =
+      loanAfterFirst.userIndexWad > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanAfterFirst.principal, loanAfterFirst.userIndexWad, borrowIndexWadBefore)
+        : loanAfterFirst.principal
+
+    // Second partial by liquidator2 (50% of remaining debt)
+    const secondRepay = liveDebtAfterFirst / 2n > 0n ? liveDebtAfterFirst / 2n : 1n
+    const secondTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: liquidator2.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(secondRepay),
+      note: 'Second partial repay',
+    })
+    algoLendingContractClient.algorand.setSignerFromAccount(liquidator2)
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: liquidator2.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: borrower.addr.toString(), lstAppId, repayBaseAmount: secondRepay, repayPay: secondTxn },
+        sender: liquidator2.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    const loanAfterSecond = await getLoanRecordBoxValue(
+      borrower.addr.toString(),
+      algoLendingContractClient,
+      algoLendingContractClient.appId,
+    )
+    const liveDebtAfterSecond =
+      loanAfterSecond.userIndexWad > 0n && borrowIndexWadBefore > 0n
+        ? liveDebtFromSnapshot(loanAfterSecond.principal, loanAfterSecond.userIndexWad, borrowIndexWadBefore)
+        : loanAfterSecond.principal
+    expect(liveDebtAfterSecond).toBeGreaterThan(0n)
+
+    // Final full repay by liquidator2
+    const finalTxn = algoLendingContractClient.algorand.createTransaction.payment({
+      sender: liquidator2.addr,
+      receiver: algoLendingContractClient.appClient.appAddress,
+      amount: microAlgos(liveDebtAfterSecond),
+      note: 'Final full repay',
+    })
+    await algoLendingContractClient
+      .newGroup()
+      .gas({ sender: liquidator2.addr, args: {} })
+      .liquidatePartialAlgo({
+        args: { debtor: borrower.addr.toString(), lstAppId, repayBaseAmount: liveDebtAfterSecond, repayPay: finalTxn },
+        sender: liquidator2.addr,
+      })
+      .send({ populateAppCallResources: true })
+
+    await expect(
+      getLoanRecordBoxValue(borrower.addr.toString(), algoLendingContractClient, algoLendingContractClient.appId),
+    ).rejects.toThrowError()
+
+    // Reset oracle price for other tests
+    oracleAppClient.algorand.setSignerFromAccount(managerAccount)
+    await oracleAppClient.send.updateTokenPrice({
+      args: [xUSDAssetId, 1_200_000n],
+      assetReferences: [xUSDAssetId],
+    })
   })
 
   test('partial liquidation requires full repayment when remaining collateral cannot support bonus cushion', async () => {
