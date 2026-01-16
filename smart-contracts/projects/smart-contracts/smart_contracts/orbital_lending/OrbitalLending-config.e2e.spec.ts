@@ -5,8 +5,7 @@ import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { beforeAll, describe, expect, test } from 'vitest'
 
 import { OrbitalLendingClient, OrbitalLendingFactory } from '../artifacts/orbital_lending/orbital-lendingClient'
-import algosdk, { Account, Address } from 'algosdk'
-import { exp, len } from '@algorandfoundation/algorand-typescript/op'
+import algosdk, { Account } from 'algosdk'
 import { OracleClient, OracleFactory } from '../artifacts/Oracle/oracleClient'
 import { deploy as deployAsa } from './orbital-deploy-asa'
 import { deploy } from './orbital-deploy'
@@ -19,6 +18,7 @@ let managerAccount: Account
 
 let xUSDAssetId = 0n
 const INIT_CONTRACT_AMOUNT = 400000n
+const MAX_FEE = 250_000n
 const ltv_bps = 2500n
 const liq_threshold_bps = 1000000n
 const liq_bonus_bps = 500n
@@ -85,7 +85,7 @@ describe('orbital-lending Testing - config', () => {
   test('orbital initialization - xUSD client', async () => {
     expect(xUSDLendingContractClient).toBeDefined()
 
-    const payTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+    await xUSDLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
@@ -94,10 +94,8 @@ describe('orbital-lending Testing - config', () => {
 
     await xUSDLendingContractClient.send.initApplication({
       args: {
-        mbrTxn: payTxn,
         ltvBps: ltv_bps,
         liqThresholdBps: liq_threshold_bps,
-        liqBonusBps: liq_bonus_bps,
         originationFeeBps: origination_fee_bps,
         additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
         buyoutTokenId: xUSDAssetId,
@@ -105,18 +103,18 @@ describe('orbital-lending Testing - config', () => {
         protocolShareBps: protocol_interest_fee_bps,
         fluxOracleAppId: 0n,
       },
-    })
-
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(102000n),
-      note: 'Funding contract',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     await xUSDLendingContractClient.send.generateLstToken({
-      args: [mbrTxn],
+      args: {},
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
+
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     console.log('global state', globalState)
     expect(globalState).toBeDefined()
@@ -138,18 +136,17 @@ describe('orbital-lending Testing - config', () => {
   test('orbital initialization - algo client', async () => {
     expect(algoLendingContractClient).toBeDefined()
 
-    const payTxn = algoLendingContractClient.algorand.createTransaction.payment({
+    await algoLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: algoLendingContractClient.appClient.appAddress,
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
       note: 'Funding contract',
     })
+
     await algoLendingContractClient.send.initApplication({
       args: {
-        mbrTxn: payTxn,
         ltvBps: ltv_bps,
         liqThresholdBps: liq_threshold_bps,
-        liqBonusBps: liq_bonus_bps,
         originationFeeBps: origination_fee_bps,
         additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
         buyoutTokenId: xUSDAssetId,
@@ -157,6 +154,8 @@ describe('orbital-lending Testing - config', () => {
         protocolShareBps: protocol_interest_fee_bps,
         fluxOracleAppId: 0n,
       },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
     })
 
     //create lst externally
@@ -182,7 +181,9 @@ describe('orbital-lending Testing - config', () => {
     })
 
     await algoLendingContractClient.send.optInToLst({
-      args: [lstId, mbrTxn],
+      args: { lstAssetId: lstId },
+      coverAppCallInnerTransactionFees: true,
+      maxFee: microAlgo(MAX_FEE),
     })
 
     const axferTxn = algoLendingContractClient.algorand.createTransaction.assetTransfer({
@@ -236,10 +237,8 @@ describe('orbital-lending Testing - config', () => {
     await expect(
       tempClient.send.initApplication({
         args: {
-          mbrTxn,
           ltvBps: ltv_bps,
           liqThresholdBps: liq_threshold_bps,
-          liqBonusBps: liq_bonus_bps,
           originationFeeBps: origination_fee_bps,
           additionalRewardsCommissionPercentage: 8n,
           buyoutTokenId: xUSDAssetId,
@@ -260,18 +259,17 @@ describe('orbital-lending Testing - config', () => {
     await expect(
       xUSDLendingContractClient.send.setRateParams({
         args: {
+          liqThresholdBps: liq_threshold_bps,
+          ltvBps: ltv_bps,
           baseBps: 50n,
           utilCapBps: 8000n,
           kinkNormBps: 5000n,
           slope1Bps: 1000n,
           slope2Bps: 2000n,
           maxAprBps: 6000n,
-          maxAprStepBps: 0n,
           rateModelType: 0n,
           liqBonusBps: liq_bonus_bps,
           emaAlphaBps: 200n,
-          powerGammaQ16: 65536n,
-          scarcityKBps: 200n,
         },
         sender: outsider.addr,
       }),
@@ -284,18 +282,17 @@ describe('orbital-lending Testing - config', () => {
     await expect(
       xUSDLendingContractClient.send.setRateParams({
         args: {
+          liqThresholdBps: liq_threshold_bps,
+          ltvBps: ltv_bps,
           baseBps: 50n,
           utilCapBps: 0n,
           kinkNormBps: 5000n,
           slope1Bps: 1000n,
           slope2Bps: 2000n,
           maxAprBps: 6000n,
-          maxAprStepBps: 0n,
           rateModelType: 0n,
           liqBonusBps: liq_bonus_bps,
           emaAlphaBps: 200n,
-          powerGammaQ16: 65536n,
-          scarcityKBps: 200n,
         },
       }),
     ).rejects.toThrowError()
@@ -331,19 +328,16 @@ describe('orbital-lending Testing - config', () => {
 
   test('non-admin cannot withdraw platform fees', async () => {
     const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
-    const feeTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: outsider.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
-      note: 'Attempt unauthorized fee withdrawal',
-    })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
 
     await expect(
       xUSDLendingContractClient.send.withdrawPlatformFees({
-        args: [outsider.addr.toString(), feeTxn],
+        args: { paymentReceiver: outsider.addr.toString() },
         sender: outsider.addr,
+        populateAppCallResources: true,
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
       }),
     ).rejects.toThrowError()
 
@@ -366,20 +360,19 @@ describe('orbital-lending Testing - config', () => {
     })
 
     const outsider = await localnet.context.generateAccount({ initialFunds: microAlgo(2_000_000) })
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: outsider.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(101000n),
-      note: 'Attempt unauthorized collateral add',
-    })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(outsider)
 
     await expect(
       xUSDLendingContractClient.send.addNewCollateralType({
-        args: [collateralAssetId, 0n, mbrTxn, algoLendingContractClient.appId],
-        assetReferences: [collateralAssetId],
-        appReferences: [algoLendingContractClient.appId],
+        args: {
+          collateralBaseTokenId: 0n,
+          collateralTokenId: collateralAssetId,
+          originatingAppId: algoLendingContractClient.appId,
+        },
+        coverAppCallInnerTransactionFees: true,
+        maxFee: microAlgo(MAX_FEE),
+        populateAppCallResources: true,
         sender: outsider.addr,
       }),
     ).rejects.toThrowError()
@@ -387,38 +380,21 @@ describe('orbital-lending Testing - config', () => {
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
   })
 
-  /* 
-  public setRateParams(
-      base_bps: uint64,
-      util_cap_bps: uint64,
-      kink_norm_bps: uint64,
-      slope1_bps: uint64,
-      slope2_bps: uint64,
-      max_apr_bps: uint64,
-      borrow_gate_enabled: uint64, // or uint8
-      ema_alpha_bps: uint64,
-      max_apr_step_bps: uint64,
-      rate_model_type: uint64, // or uint8
-      power_gamma_q16: uint64,
-      scarcity_K_bps: uint64,
-    )
-   */
   test('Set Rate params on xUSD Lending', async () => {
     await xUSDLendingContractClient.send.setRateParams({
       /* args: [50n, 8000n, 5000n, 1000n, 2000n, 6000n, 1n, 0n, 0n, 0n, 0n, 0n], */
       args: {
+        liqThresholdBps: liq_threshold_bps,
+        ltvBps: ltv_bps,
         baseBps: 50n,
         utilCapBps: 8000n,
         kinkNormBps: 5000n,
         slope1Bps: 1000n,
         slope2Bps: 2000n,
         maxAprBps: 6000n,
-        maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
         liqBonusBps: 500n,
         emaAlphaBps: 200n,
-        powerGammaQ16: 65536n,
-        scarcityKBps: 200n,
       },
     })
 
@@ -431,25 +407,22 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.slope1Bps).toEqual(1000n)
     expect(globalState.slope2Bps).toEqual(2000n)
     expect(globalState.maxAprBps).toEqual(6000n)
-    expect(globalState.maxAprStepBps).toEqual(0n)
-    expect(globalState.rateModelType).toEqual(0n) // kinked
   })
 
   test('Set Rate params on ALGO Lending', async () => {
     await algoLendingContractClient.send.setRateParams({
       args: {
+        liqThresholdBps: liq_threshold_bps,
+        ltvBps: ltv_bps,
         baseBps: 50n,
         utilCapBps: 8000n,
         kinkNormBps: 5000n,
         slope1Bps: 1000n,
         slope2Bps: 2000n,
         maxAprBps: 6000n,
-        maxAprStepBps: 0n,
         rateModelType: 0n, // or uint8
         liqBonusBps: 500n,
         emaAlphaBps: 200n,
-        powerGammaQ16: 65536n,
-        scarcityKBps: 200n,
       },
     })
 
@@ -461,9 +434,6 @@ describe('orbital-lending Testing - config', () => {
     expect(globalState.kinkNormBps).toEqual(5000n)
     expect(globalState.slope1Bps).toEqual(1000n)
     expect(globalState.slope2Bps).toEqual(2000n)
-    expect(globalState.maxAprBps).toEqual(6000n)
-    expect(globalState.maxAprStepBps).toEqual(0n)
-    expect(globalState.rateModelType).toEqual(0n) // kinked
   })
 
   test("set migration admin and verify it's set - algo lending", async () => {

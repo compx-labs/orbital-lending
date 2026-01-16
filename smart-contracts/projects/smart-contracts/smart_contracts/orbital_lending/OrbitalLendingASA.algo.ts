@@ -219,7 +219,6 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public initApplication(
-    mbrTxn: gtxn.PaymentTxn,
     ltv_bps: uint64,
     liq_threshold_bps: uint64,
     origination_fee_bps: uint64,
@@ -230,13 +229,6 @@ export class OrbitalLending extends Contract {
     flux_oracle_app_id: Application,
   ): void {
     assert(op.Txn.sender === this.admin_account.value)
-
-    assertMatch(mbrTxn, {
-      sender: this.admin_account.value,
-      receiver: Global.currentApplicationAddress,
-      amount: MBR_CREATE_APP,
-    })
-
     assert(additional_rewards_commission_percentage <= 100, 'COMMISSION_TOO_HIGH')
 
     this.ltv_bps.value = ltv_bps
@@ -277,7 +269,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: Global.currentApplicationAddress,
           xferAsset: this.base_token_id.value.native,
           assetAmount: 0,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
     }
@@ -287,7 +279,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: Global.currentApplicationAddress,
           xferAsset: this.buyout_token_id.value.native,
           assetAmount: 0,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
     }
@@ -307,10 +299,14 @@ export class OrbitalLending extends Contract {
    * @param rate_model_type - Rate model type (0 = kinked, 1 = linear, 2 = power, 3 = asymptote)
    * @param power_gamma_q16 - Power curve exponent in Q16.16 fixed-point (0 = no power curve)
    * @param scarcity_K_bps - Scarcity parameter in basis points (0 = no scarcity)
+   * @param liq_threshold_bps - Liquidation threshold in basis points (e.g., 8500 = 85%)
+   * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)
    * @dev Only callable by admin account. Updates all core lending parameters atomically
    */
   @abimethod({ allowActions: 'NoOp' })
   public setRateParams(
+    ltv_bps: uint64,
+    liq_threshold_bps: uint64,
     base_bps: uint64,
     util_cap_bps: uint64,
     kink_norm_bps: uint64,
@@ -335,6 +331,8 @@ export class OrbitalLending extends Contract {
     // (optional) restrict model types you actually implement now
     assert(rate_model_type === 0 /* kinked */ || rate_model_type === 255 /* fixed */, 'UNSUPPORTED_MODEL')
     this.base_bps.value = base_bps
+    this.liq_threshold_bps.value = liq_threshold_bps
+    this.ltv_bps.value = ltv_bps
     this.util_cap_bps.value = util_cap_bps
     this.kink_norm_bps.value = kink_norm_bps
     this.slope1_bps.value = slope1_bps
@@ -369,15 +367,8 @@ export class OrbitalLending extends Contract {
    * @dev Admin-only path that mints a brand-new LST mirroring the base token supply.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public generateLSTToken(mbrTxn: gtxn.PaymentTxn): void {
+  public generateLSTToken(): void {
     assert(op.Txn.sender === this.admin_account.value)
-    assertMatch(mbrTxn, {
-      sender: this.admin_account.value,
-      receiver: Global.currentApplicationAddress,
-      amount: MBR_INIT_APP,
-    })
-    /// Submit opt-in transaction: 0 asset transfer to self
-
     //Create LST token
     const baseToken = Asset(this.base_token_id.value.native)
     const result = itxn
@@ -389,7 +380,7 @@ export class OrbitalLending extends Contract {
         manager: Global.currentApplicationAddress,
         unitName: 'c' + String(baseToken.unitName),
         assetName: 'c' + String(baseToken.unitName),
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
     this.lst_token_id.value = new UintN64(result.createdAsset.id)
@@ -402,13 +393,8 @@ export class OrbitalLending extends Contract {
    * @dev Admin-only. Use when an LST has already been deployed for this market.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public optInToLST(lstAssetId: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  public optInToLST(lstAssetId: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
-    assertMatch(mbrTxn, {
-      sender: this.admin_account.value,
-      receiver: Global.currentApplicationAddress,
-      amount: MBR_OPT_IN_LST,
-    })
     this.lst_token_id.value = new UintN64(lstAssetId)
 
     //Opt-in to the LST token
@@ -417,7 +403,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: lstAssetId,
         assetAmount: 0,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
   }
@@ -455,7 +441,7 @@ export class OrbitalLending extends Contract {
     const result = abiCall(PriceOracleStub.prototype.getTokenPrice, {
       appId: contractAppId,
       args: [tokenId],
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
 
     return result.price.native
@@ -588,22 +574,12 @@ export class OrbitalLending extends Contract {
   public addNewCollateralType(
     collateralTokenId: UintN64,
     collateralBaseTokenId: UintN64,
-    mbrTxn: gtxn.PaymentTxn,
     originatingAppId: UintN64,
   ): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
     assert(!this.collateralExists(collateralTokenId), 'COLLATERAL_ALREADY_EXISTS')
-    assertMatch(
-      mbrTxn,
-      {
-        sender: this.admin_account.value,
-        receiver: Global.currentApplicationAddress,
-        amount: MBR_COLLATERAL,
-      },
-      'INSUFFICIENT_MBR',
-    )
 
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
@@ -621,7 +597,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: Global.currentApplicationAddress,
         xferAsset: collateralTokenId.native,
         assetAmount: 0,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -680,11 +656,11 @@ export class OrbitalLending extends Contract {
   private calculateASADue(amount: uint64, lstApp: uint64): uint64 {
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
     const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
       appId: lstApp,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
 
     // underlyingCollateral = (amount * totalDepositsExternal) / circulatingExternalLST
@@ -716,7 +692,7 @@ export class OrbitalLending extends Contract {
    * @dev If this is the first deposit, LST:asset ratio is 1:1
    */
   @abimethod({ allowActions: 'NoOp' })
-  public depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  public depositASA(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
     const baseToken = Asset(this.base_token_id.value.native)
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
@@ -724,11 +700,7 @@ export class OrbitalLending extends Contract {
       assetAmount: amount,
       sender: op.Txn.sender,
     })
-    assertMatch(mbrTxn, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: DEPOSIT_MBR,
-    })
+
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.addCash(amount)
 
@@ -749,7 +721,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.lst_token_id.value.native,
         assetAmount: lstDue,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -785,12 +757,7 @@ export class OrbitalLending extends Contract {
    * @dev Exchange rate depends on whether using local or external LST app
    */
   @abimethod({ allowActions: 'NoOp' })
-  public withdrawDeposit(
-    assetTransferTxn: gtxn.AssetTransferTxn,
-    amount: uint64,
-    lstAppId: uint64,
-    mbrTxn: gtxn.PaymentTxn,
-  ): void {
+  public withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, lstAppId: uint64): void {
     const lstAsset = Asset(this.lst_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(assetTransferTxn, {
@@ -798,12 +765,6 @@ export class OrbitalLending extends Contract {
       xferAsset: lstAsset,
       assetAmount: amount,
       sender: op.Txn.sender,
-    })
-
-    assertMatch(mbrTxn, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: WITHDRAW_MBR,
     })
 
     this.accrueMarket()
@@ -823,7 +784,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: this.base_token_id.value.native,
         assetAmount: asaDue,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -857,7 +818,6 @@ export class OrbitalLending extends Contract {
    * @param collateralAmount - Amount of collateral being deposited
    * @param lstApp - Application ID for LST exchange rate calculation
    * @param collateralTokenId - Asset ID of the collateral being deposited
-   * @param mbrTxn - Payment transaction covering transaction fees
    * @dev Validates LTV ratio, charges origination fee, and disburses loan amount
    * @dev Supports both new loans and top-ups of existing loans
    * @dev Collateral value determined via oracle pricing and LST exchange rates
@@ -869,7 +829,6 @@ export class OrbitalLending extends Contract {
     collateralAmount: uint64,
     lstApp: uint64,
     collateralTokenId: UintN64,
-    mbrTxn: gtxn.PaymentTxn,
   ): void {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
@@ -882,7 +841,7 @@ export class OrbitalLending extends Contract {
     } else {
       collateralToUse = collateralAmount
     }
-    this.validateBorrowRequest(assetTransferTxn, collateralAmount, collateralTokenId, mbrTxn)
+    this.validateBorrowRequest(assetTransferTxn, collateralAmount, collateralTokenId)
     const collateralUSD = this.calculateCollateralValueUSD(collateralTokenId, collateralToUse, lstApp)
     const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / BASIS_POINTS
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
@@ -895,7 +854,7 @@ export class OrbitalLending extends Contract {
         appId: this.flux_oracle_app.value.id,
         args: [new Address(op.Txn.sender)],
         sender: Global.currentApplicationAddress,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
         apps: [this.flux_oracle_app.value],
         accounts: [op.Txn.sender],
       }).returnValue
@@ -907,11 +866,9 @@ export class OrbitalLending extends Contract {
     if (hasLoan) {
       this.processLoanTopUp(
         op.Txn.sender,
-        collateralAmount,
         disbursement,
         maxBorrowUSD,
         baseTokenOraclePrice,
-        requestedLoanAmount,
         collateralTokenId,
       )
     } else {
@@ -958,7 +915,7 @@ export class OrbitalLending extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  public accrueLoanInterest(debtor: Account, templateReserveAddress: Account): void {
+  public accrueLoanInterest(debtor: Account): void {
     assert(this.loan_record(debtor).exists, 'Loan record does not exist')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
@@ -1126,11 +1083,6 @@ export class OrbitalLending extends Contract {
 
     const deltaT: uint64 = now - last
 
-    /*     if (deltaT < SECONDS_PER_YEAR) {
-      deltaT = 10000
-    }
-    this.last_apr_bps.value = 5000 */
-
     // 1) Compute simple slice factor in INDEX_SCALE
     const simpleWad: uint64 = this.sliceFactorWad(deltaT)
     if (simpleWad === 0) {
@@ -1275,14 +1227,10 @@ export class OrbitalLending extends Contract {
    * @param feeTxn Separate payment covering inner-transaction fees.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public withdrawPlatformFees(paymentReceiver: Account, feeTxn: gtxn.PaymentTxn): void {
+  public withdrawPlatformFees(paymentReceiver: Account): void {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    assertMatch(feeTxn, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: STANDARD_TXN_FEE,
-    })
+
     const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
     if (payout > 0) {
       itxn
@@ -1290,7 +1238,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: paymentReceiver,
           xferAsset: this.base_token_id.value.native,
           assetAmount: payout,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
 
@@ -1316,16 +1264,9 @@ export class OrbitalLending extends Contract {
     premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
     repayAxferTxn: gtxn.AssetTransferTxn, // BASE TOKEN (ASA) full DEBT
     lstAppId: uint64, // LST app backing the collateral
-    mbrTxn: gtxn.PaymentTxn,
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-
-    assertMatch(mbrTxn, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: BUYOUT_MBR,
-    })
 
     // 1) Make time current
     this.accrueMarket()
@@ -1392,7 +1333,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: buyer,
         xferAsset: collateralTokenId.native,
         assetAmount: collateralAmount,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -1422,7 +1363,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: buyer,
           xferAsset: buyoutTokenId,
           assetAmount: refund,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
       this.removeCash(refund)
@@ -1434,7 +1375,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: buyer,
           xferAsset: baseAssetId,
           assetAmount: repayRefund,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
       this.removeCash(repayRefund)
@@ -1459,7 +1400,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: this.admin_account.value,
         xferAsset: buyoutTokenId,
         assetAmount: halfPremium,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
     // pay original borrower half
@@ -1468,7 +1409,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: debtor,
         xferAsset: buyoutTokenId,
         assetAmount: premiumTokens - halfPremium, // cover odd token if any
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
   }
@@ -1525,11 +1466,11 @@ export class OrbitalLending extends Contract {
     // Pull LST exchange data
     const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
     const totalDeposits = abiCall(TargetContract.prototype.getTotalDeposits, {
       appId: lstAppId,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
 
     // Base token price for this LST’s underlying
@@ -1590,7 +1531,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: borrower,
         xferAsset: collateralTokenId, // LST ASA
         assetAmount: amountLST,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -1743,7 +1684,9 @@ export class OrbitalLending extends Contract {
     let repayCandidate: uint64 = repayRequested > liveDebt ? liveDebt : repayRequested
 
     const repayUSDcandidate: uint64 =
-      repayCandidate === 0 ? 0 : divw(mulw(repayCandidate, basePrice)[0], mulw(repayCandidate, basePrice)[1], USD_MICRO_UNITS)
+      repayCandidate === 0
+        ? 0
+        : divw(mulw(repayCandidate, basePrice)[0], mulw(repayCandidate, basePrice)[1], USD_MICRO_UNITS)
     if (collateralUSD <= debtUSDv && !isFullRepayRequest) {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
@@ -1811,7 +1754,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: op.Txn.sender,
         xferAsset: collTok.native,
         assetAmount: seizeLST,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
 
@@ -1827,7 +1770,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: op.Txn.sender,
           xferAsset: baseAssetId,
           assetAmount: refundAmount,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
       this.removeCash(refundAmount)
@@ -1841,7 +1784,7 @@ export class OrbitalLending extends Contract {
             assetReceiver: debtor,
             xferAsset: collTok.native,
             assetAmount: remainingLST,
-            fee: STANDARD_TXN_FEE,
+            fee: 0,
           })
           .submit()
         this.reduceCollateralTotal(collTok, remainingLST)
@@ -1883,14 +1826,7 @@ export class OrbitalLending extends Contract {
     assetTransferTxn: gtxn.AssetTransferTxn,
     collateralAmount: uint64,
     collateralTokenId: UintN64,
-    mbrTxn: gtxn.PaymentTxn,
   ): void {
-    assertMatch(mbrTxn, {
-      sender: op.Txn.sender,
-      receiver: Global.currentApplicationAddress,
-      amount: VALIDATE_BORROW_FEE,
-    })
-
     assertMatch(assetTransferTxn, {
       assetReceiver: Global.currentApplicationAddress,
       assetAmount: collateralAmount,
@@ -1916,12 +1852,12 @@ export class OrbitalLending extends Contract {
     // 1) Get LST exchange rate: (totalDeposits / circulatingLST)
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
       appId: lstApp,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
 
     const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
       appId: lstApp,
-      fee: STANDARD_TXN_FEE,
+      fee: 0,
     }).returnValue
 
     // underlyingCollateral = (collateralAmount * totalDeposits) / circulatingLST
@@ -1997,9 +1933,7 @@ export class OrbitalLending extends Contract {
     borrower: Account,
     collateralAmount: uint64,
     disbursement: uint64,
-    maxBorrowUSD: uint64,
     baseTokenOraclePrice: uint64,
-    requestedLoanAmount: uint64,
     collateralTokenId: UintN64,
   ): void {
     const existingLoan = this.getLoanRecord(borrower)
@@ -2082,7 +2016,7 @@ export class OrbitalLending extends Contract {
     this.total_deposits.value += netReward
   }
 
-  public migrateCollateralTokenId(collateralTokenId: uint64, mbrTxn: gtxn.PaymentTxn): void {
+  public migrateCollateralTokenId(collateralTokenId: uint64): void {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate collateral')
     // validate collateral exists
     const acKey = new AcceptedCollateralKey({ assetId: new UintN64(collateralTokenId) })
@@ -2094,7 +2028,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: this.migration_admin.value,
           xferAsset: collateralTokenId,
           assetAmount: collateralBalance,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
     }
@@ -2106,15 +2040,9 @@ export class OrbitalLending extends Contract {
    * @param snapshot Snapshot of accounting fields expected to be exported to the new deployment.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public migrateContract(feeTxn: gtxn.PaymentTxn): MigrationSnapshot {
+  public migrateContract(): MigrationSnapshot {
     assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
     this.setContractState(2) // set to migrating
-    assertMatch(feeTxn, {
-      sender: this.migration_admin.value,
-      receiver: Global.currentApplicationAddress,
-      amount: MIGRATION_FEE,
-    })
-
     //get lst balance
     const lstAsset = Asset(this.lst_token_id.value.native)
     const lstBalance = lstAsset.balance(Global.currentApplicationAddress)
@@ -2125,7 +2053,7 @@ export class OrbitalLending extends Contract {
         assetReceiver: this.migration_admin.value,
         xferAsset: this.lst_token_id.value.native,
         assetAmount: lstBalance,
-        fee: STANDARD_TXN_FEE,
+        fee: 0,
       })
       .submit()
     //send ASA
@@ -2137,7 +2065,7 @@ export class OrbitalLending extends Contract {
           assetReceiver: this.migration_admin.value,
           xferAsset: this.base_token_id.value.native,
           assetAmount: assetBalance,
-          fee: STANDARD_TXN_FEE,
+          fee: 0,
         })
         .submit()
     }
@@ -2173,7 +2101,6 @@ export class OrbitalLending extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   public acceptMigrationASAContract(
     lstTransferTxn: gtxn.AssetTransferTxn,
-    algoTxn: gtxn.PaymentTxn,
     baseAssetTransferTxn: gtxn.AssetTransferTxn,
     snapshot: MigrationSnapshot,
     migrationAdmin: Account,
@@ -2184,10 +2111,7 @@ export class OrbitalLending extends Contract {
       assetReceiver: Global.currentApplicationAddress,
       xferAsset: Asset(this.lst_token_id.value.native),
     })
-    assertMatch(algoTxn, {
-      sender: migrationAdmin,
-      receiver: Global.currentApplicationAddress,
-    })
+
     assertMatch(baseAssetTransferTxn, {
       sender: migrationAdmin,
       assetReceiver: Global.currentApplicationAddress,
