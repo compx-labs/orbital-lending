@@ -796,6 +796,8 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
   ): void {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
+    assert(collateralAmount > 0, 'COLLATERAL_REQUIRED')
+    assert(requestedLoanAmount > 0, 'LOAN_AMOUNT_REQUIRED')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
     this.accrueMarket()
@@ -1827,6 +1829,7 @@ export class OrbitalLending extends Contract {
    */
   private validateLoanAmount(requestedLoanAmount: uint64, maxBorrowUSD: uint64, baseTokenOraclePrice: uint64): uint64 {
     // Convert requested loan to USD
+    assert(baseTokenOraclePrice > 0, 'invalid base token price')
     const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
     const requestedLoanUSD = divw(rH, rL, USD_MICRO_UNITS)
 
