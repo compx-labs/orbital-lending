@@ -407,7 +407,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         })
 
         await xUSDLendingContractClient.send.withdrawDeposit({
-          args: { amount: withdrawAmount, assetTransferTxn: axferTxn, lstAppId: xUSDLendingContractClient.appId },
+          args: { amount: withdrawAmount, assetTransferTxn: axferTxn },
           assetReferences: [lstTokenId],
           appReferences: [xUSDLendingContractClient.appId],
           sender: depositorAccount.addr,
@@ -566,7 +566,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.withdrawDeposit({
-      args: { amount: withdrawAmount, assetTransferTxn: withdrawAxfer, lstAppId: xUSDLendingContractClient.appId },
+      args: { amount: withdrawAmount, assetTransferTxn: withdrawAxfer},
       sender: user.addr,
       maxFee: microAlgo(MAX_FEE),
       coverAppCallInnerTransactionFees: true,
@@ -738,7 +738,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
             assetTransferTxn: collateralTransfer,
             collateralAmount: collateralAmount,
             collateralTokenId: collateralLstId,
-            lstApp: collateralLendingContractClient.appId,
             requestedLoanAmount: excessiveBorrowAmount,
           },
           maxFee: microAlgo(MAX_FEE),
@@ -806,7 +805,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
       const collateralPriceReturn = await xUSDLendingContractClient.send.calculateCollateralValueUsd({
         /* args: [collateralLstId, collateralAmount, lstAppId] */
-        args: { collateralAmount, collateralTokenId: collateralLstId, lstApp: lstAppId },
+        args: { collateralAmount, collateralTokenId: collateralLstId},
         sender: borrowerAccount.addr,
         maxFee: microAlgo(MAX_FEE),
         coverAppCallInnerTransactionFees: true,
@@ -825,7 +824,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           args: {
             assetTransferTxn: collateralTransfer,
             requestedLoanAmount: borrowAmount,
-            lstApp: lstAppId,
             collateralAmount,
             collateralTokenId: collateralLstId,
           },
@@ -974,7 +972,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           assetTransferTxn: collateralTransfer,
           collateralAmount: collateralAmount,
           collateralTokenId: collateralLstId,
-          lstApp: lstAppId,
           requestedLoanAmount: borrowAmount,
         },
         maxFee: microAlgo(MAX_FEE),
@@ -1295,7 +1292,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           assetTransferTxn: collateralTransfer,
           requestedLoanAmount: borrowAmount,
           collateralAmount,
-          lstApp: lstAppId,
           collateralTokenId: collateralLstId,
         },
         maxFee: microAlgo(MAX_FEE),
@@ -1605,7 +1601,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           requestedLoanAmount: DEPOSITOR_INITIAL_BORROW_AMOUNT,
           collateralAmount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
           collateralTokenId: collateralLstId,
-          lstApp: lstAppId,
         },
         maxFee: microAlgo(MAX_FEE),
         sender: borrower.addr,

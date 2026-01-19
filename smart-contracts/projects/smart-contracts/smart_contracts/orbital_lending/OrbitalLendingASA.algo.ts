@@ -773,7 +773,7 @@ export class OrbitalLending extends Contract {
    * @dev Exchange rate depends on whether using local or external LST app
    */
   @abimethod({ allowActions: 'NoOp' })
-  public withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64, lstAppId: uint64): void {
+  public withdrawDeposit(assetTransferTxn: gtxn.AssetTransferTxn, amount: uint64): void {
     const lstAsset = Asset(this.lst_token_id.value.native)
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     assertMatch(assetTransferTxn, {
@@ -787,11 +787,8 @@ export class OrbitalLending extends Contract {
 
     //Calculate the return amount of ASA
     let asaDue: uint64 = 0
-    if (lstAppId === Global.currentApplicationId.id) {
-      asaDue = this.calculateLSTDueLocal(amount)
-    } else {
-      asaDue = this.calculateASADue(amount, lstAppId)
-    }
+    asaDue = this.calculateLSTDueLocal(amount)
+
     this.removeCash(asaDue)
 
     assert(op.AssetHolding.assetBalance(Global.currentApplicationAddress, this.base_token_id.value.native)[0] >= asaDue)
@@ -843,7 +840,6 @@ export class OrbitalLending extends Contract {
     assetTransferTxn: gtxn.AssetTransferTxn,
     requestedLoanAmount: uint64,
     collateralAmount: uint64,
-    lstApp: uint64,
     collateralTokenId: UintN64,
   ): void {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
@@ -858,7 +854,7 @@ export class OrbitalLending extends Contract {
       collateralToUse = collateralAmount
     }
     this.validateBorrowRequest(assetTransferTxn, collateralAmount, collateralTokenId)
-    const collateralUSD = this.calculateCollateralValueUSD(collateralTokenId, collateralToUse, lstApp)
+    const collateralUSD = this.calculateCollateralValueUSD(collateralTokenId, collateralToUse)
     const maxBorrowUSD: uint64 = (collateralUSD * this.ltv_bps.value) / BASIS_POINTS
     const baseTokenOraclePrice: uint64 = this.getOraclePrice(this.base_token_id.value)
     this.validateLoanAmount(requestedLoanAmount, maxBorrowUSD, baseTokenOraclePrice)
@@ -1291,7 +1287,7 @@ export class OrbitalLending extends Contract {
     assert(debtBase > 0, 'NO_DEBT')
 
     // 3) USD legs
-    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount, lstAppId)
+    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collateralTokenId, collateralAmount)
     const debtUSDv: uint64 = this.debtUSD(debtBase)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
     assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
@@ -1376,7 +1372,9 @@ export class OrbitalLending extends Contract {
           fee: 0,
         })
         .submit()
-      this.removeCash(refund)
+      if (buyoutTokenId === this.base_token_id.value.native) {
+        this.removeCash(refund)
+      }
     }
 
     if (repayRefund > 0) {
@@ -1442,14 +1440,13 @@ export class OrbitalLending extends Contract {
    * @param lstAppId External LST app backing the collateral.
    * @returns Maximum withdrawable LST amount.
    */
-  private computeMaxWithdrawableCollateralLST(borrower: Account, lstAppId: uint64): uint64 {
+  private computeMaxWithdrawableCollateralLST(borrower: Account): uint64 {
     assert(this.loan_record(borrower).exists, 'NO_LOAN')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     this.accrueMarket()
 
     const rec = this.loan_record(borrower).value.copy()
     const collateral = this.getCollateral(rec.collateralTokenId)
-    assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
     const debtBase: uint64 = this.currentDebtFromSnapshot(rec)
     if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
 
@@ -1457,7 +1454,6 @@ export class OrbitalLending extends Contract {
     const currCollatUSD: uint64 = this.calculateCollateralValueUSD(
       rec.collateralTokenId,
       rec.collateralAmount.native,
-      lstAppId,
     )
 
     // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
@@ -1475,11 +1471,11 @@ export class OrbitalLending extends Contract {
     // Convert removable USD → underlying base units → LST amount
     // Pull LST exchange data
     const circulatingLST = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstAppId,
+      appId: collateral.originatingAppId.native,
       fee: 0,
     }).returnValue
     const totalDeposits = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstAppId,
+      appId: collateral.originatingAppId.native,
       fee: 0,
     }).returnValue
 
@@ -1504,8 +1500,8 @@ export class OrbitalLending extends Contract {
    * @returns Maximum withdrawable LST balance for the borrower.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public maxWithdrawableCollateralLST(lstAppId: uint64): uint64 {
-    return this.computeMaxWithdrawableCollateralLST(op.Txn.sender, lstAppId)
+  public maxWithdrawableCollateralLST(): uint64 {
+    return this.computeMaxWithdrawableCollateralLST(op.Txn.sender)
   }
 
   /**
@@ -1515,7 +1511,7 @@ export class OrbitalLending extends Contract {
    * @param lstAppId LST application ID used for exchange-rate validation.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public withdrawCollateral(amountLST: uint64, collateralTokenId: uint64, lstAppId: uint64): void {
+  public withdrawCollateral(amountLST: uint64, collateralTokenId: uint64): void {
     assert(amountLST > 0, 'ZERO_AMOUNT')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
     const borrower = op.Txn.sender
@@ -1528,9 +1524,8 @@ export class OrbitalLending extends Contract {
     const acKey = new AcceptedCollateralKey({ assetId: new UintN64(collateralTokenId) })
     assert(this.accepted_collaterals(acKey).exists, 'BAD_COLLATERAL')
     const acVal = this.accepted_collaterals(acKey).value.copy()
-    assert(acVal.originatingAppId.native === lstAppId, 'mismatched LST app')
 
-    const maxSafe = this.computeMaxWithdrawableCollateralLST(borrower, lstAppId)
+    const maxSafe = this.computeMaxWithdrawableCollateralLST(borrower)
     assert(amountLST <= maxSafe, 'EXCEEDS_LIMITS')
     assert(amountLST < loan.collateralAmount.native, 'INSUFFICIENT_COLLATERAL')
     const remainLST: uint64 = loan.collateralAmount.native - amountLST
@@ -1668,7 +1663,7 @@ export class OrbitalLending extends Contract {
     assert(repayBaseAmount > 0, 'BAD_REPAY')
 
     // USD legs (for liquidatability & seize math)
-    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal, lstAppId)
+    const collateralUSD: uint64 = this.calculateCollateralValueUSD(collTok, collLSTBal)
     const debtUSDv: uint64 = this.debtUSD(liveDebt)
     assert(debtUSDv > 0, 'BAD_DEBT_USD')
     assert(collateralUSD > 0, 'BAD_COLLATERAL_USD')
@@ -1854,19 +1849,18 @@ export class OrbitalLending extends Contract {
    * @param lstApp LST application ID supplying exchange-rate data.
    * @returns Collateral value denominated in USD micro-units.
    */
-  public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64, lstApp: uint64): uint64 {
+  public calculateCollateralValueUSD(collateralTokenId: UintN64, collateralAmount: uint64): uint64 {
     // get collateral and check inputs match
     assert(this.collateralExists(collateralTokenId), 'unknown collateral')
     const collateralInfo = this.getCollateral(collateralTokenId)
-    assert(collateralInfo.originatingAppId.native === lstApp, 'mismatched LST app')
     // 1) Get LST exchange rate: (totalDeposits / circulatingLST)
     const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
-      appId: lstApp,
+      appId: collateralInfo.originatingAppId.native,
       fee: 0,
     }).returnValue
 
     const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
-      appId: lstApp,
+      appId: collateralInfo.originatingAppId.native,
       fee: 0,
     }).returnValue
 
