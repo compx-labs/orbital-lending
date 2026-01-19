@@ -828,8 +828,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           .do()
 
         const collateralPriceReturn = await algoLendingContractClient.send.calculateCollateralValueUsd({
-          args: [cxusd, collateralAmount, lstAppId],
+          args: { collateralTokenId: cxusd, collateralAmount: collateralAmount, lstApp: lstAppId },
           sender: borrowerAccount.addr,
+          maxFee: microAlgo(MAX_FEE),
+          populateAppCallResources: true,
+          coverAppCallInnerTransactionFees: true,
         })
         const cxusdPrice =
           collateralPriceReturn?.returns && collateralPriceReturn.returns.length > 0

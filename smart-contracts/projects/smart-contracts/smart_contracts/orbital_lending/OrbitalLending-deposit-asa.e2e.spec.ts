@@ -29,7 +29,9 @@ let managerAccount: Account
 let xUSDAssetId = 0n
 let collateralAssetId = 0n
 let collateralLstAssetId = 0n
-const INIT_CONTRACT_AMOUNT = 400000n
+const INIT_CONTRACT_AMOUNT = 10_000_000n
+const MAX_FEE = 250_000n
+
 const ltv_bps = 2500n
 const liq_threshold_bps = 1000000n
 const liq_bonus_bps = 500n
@@ -73,14 +75,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     oracleAppClient = await deployOracle(managerAccount)
     fluxOracleAppClient = await deployFluxOracle({ deployer: managerAccount })
 
-    console.log("fluxOracleAppClient.appAddress", fluxOracleAppClient.appAddress);
+    console.log('fluxOracleAppClient.appAddress', fluxOracleAppClient.appAddress)
     const mbrTxn = await localnet.algorand.createTransaction.payment({
       sender: managerAccount.addr,
       receiver: fluxOracleAppClient.appAddress,
       amount: microAlgo(400_000),
-    });
+    })
 
-    fluxOracleAppClient.algorand.setSignerFromAccount(managerAccount);
+    fluxOracleAppClient.algorand.setSignerFromAccount(managerAccount)
 
     await fluxOracleAppClient.send.initApplication({
       sender: managerAccount.addr,
@@ -88,7 +90,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         mbrTxn,
       },
       populateAppCallResources: true,
-    });
+    })
 
     await fluxOracleAppClient.send.addFluxTier({
       sender: managerAccount.addr,
@@ -97,7 +99,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tierNumber: 0,
       },
       populateAppCallResources: true,
-    });
+    })
 
     await fluxOracleAppClient.send.addFluxTier({
       sender: managerAccount.addr,
@@ -106,7 +108,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tierNumber: 1,
       },
       populateAppCallResources: true,
-    });
+    })
     await fluxOracleAppClient.send.addFluxTier({
       sender: managerAccount.addr,
       args: {
@@ -114,7 +116,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tierNumber: 2,
       },
       populateAppCallResources: true,
-    });
+    })
     await fluxOracleAppClient.send.addFluxTier({
       sender: managerAccount.addr,
       args: {
@@ -122,7 +124,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tierNumber: 3,
       },
       populateAppCallResources: true,
-    });
+    })
     await fluxOracleAppClient.send.addFluxTier({
       sender: managerAccount.addr,
       args: {
@@ -130,7 +132,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tierNumber: 4,
       },
       populateAppCallResources: true,
-    });
+    })
     await fluxOracleAppClient.send.setUserTier({
       sender: managerAccount.addr,
       args: {
@@ -138,13 +140,13 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         tier: USER_TIER,
       },
       populateAppCallResources: true,
-    });
+    })
   }, 30000)
 
   test('orbital initialization - xUSD client', async () => {
     expect(xUSDLendingContractClient).toBeDefined()
 
-    const payTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+    await xUSDLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
@@ -153,7 +155,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await xUSDLendingContractClient.send.initApplication({
       args: {
-        mbrTxn: payTxn,
         ltvBps: ltv_bps,
         liqThresholdBps: liq_threshold_bps,
         originationFeeBps: origination_fee_bps,
@@ -162,10 +163,13 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         buyoutTokenId: xUSDAssetId,
         additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
         fluxOracleAppId: fluxOracleAppClient.appId,
-      }
+      },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+    await xUSDLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       amount: microAlgo(102000n),
@@ -173,7 +177,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await xUSDLendingContractClient.send.generateLstToken({
-      args: [mbrTxn],
+      args: {},
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     expect(globalState).toBeDefined()
@@ -192,7 +199,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   test('orbital initialization - collateral ASA client', async () => {
     expect(collateralLendingContractClient).toBeDefined()
 
-    const payTxn = collateralLendingContractClient.algorand.createTransaction.payment({
+    await collateralLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: collateralLendingContractClient.appClient.appAddress,
       amount: microAlgo(INIT_CONTRACT_AMOUNT),
@@ -201,7 +208,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await collateralLendingContractClient.send.initApplication({
       args: {
-        mbrTxn: payTxn,
         ltvBps: ltv_bps,
         liqThresholdBps: liq_threshold_bps,
         originationFeeBps: origination_fee_bps,
@@ -210,10 +216,13 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         buyoutTokenId: xUSDAssetId,
         additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
         fluxOracleAppId: fluxOracleAppClient.appId,
-      }
+      },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
-    const mbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
+    await collateralLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: collateralLendingContractClient.appClient.appAddress,
       amount: microAlgo(102000n),
@@ -221,7 +230,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await collateralLendingContractClient.send.generateLstToken({
-      args: [mbrTxn],
+      args: {},
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const globalState = await collateralLendingContractClient.state.global.getAll()
@@ -239,7 +251,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   })
 
   test('add new collateral - xUSD Lending Contract - collateral ASA', async () => {
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
+    await xUSDLendingContractClient.algorand.send.payment({
       sender: managerAccount.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       amount: microAlgo(101000n),
@@ -250,8 +262,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Box names before:', boxNames)
 
     await xUSDLendingContractClient.send.addNewCollateralType({
-      args: [collateralLstAssetId, collateralAssetId, mbrTxn, collateralLendingContractClient.appId],
-      assetReferences: [collateralLstAssetId],
+      args: [collateralLstAssetId, collateralAssetId, collateralLendingContractClient.appId],
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const boxValue = await getCollateralBoxValue(
@@ -325,6 +339,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           sender: depositorAccount.addr,
           assetId: lstTokenId,
           note: 'Opting in to cxUSD asset',
+          maxFee: microAlgo(MAX_FEE),
+          coverAppCallInnerTransactionFees: true,
+          populateAppCallResources: true,
         })
 
         const depositTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
@@ -333,19 +350,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           assetId: xUSDAssetId,
           amount: depositAmount,
           note: 'Depositing xUSD',
-        })
-
-        const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-          sender: depositorAccount.addr,
-          receiver: xUSDLendingContractClient.appClient.appAddress,
-          amount: microAlgo(10_000n),
-          note: 'Funding deposit',
+          maxFee: microAlgo(MAX_FEE),
         })
 
         await xUSDLendingContractClient.send.depositAsa({
-          args: [depositTxn, depositAmount, mbrTxn],
-          assetReferences: [xUSDAssetId],
+          args: { assetTransferTxn: depositTxn, amount: depositAmount },
           sender: depositorAccount.addr,
+          maxFee: microAlgo(MAX_FEE),
+          coverAppCallInnerTransactionFees: true,
+          populateAppCallResources: true,
         })
 
         const userTokenBalance = await xUSDLendingContractClient.algorand.client.algod
@@ -394,10 +407,13 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         })
 
         await xUSDLendingContractClient.send.withdrawDeposit({
-          args: [axferTxn, withdrawAmount, xUSDLendingContractClient.appId, mbrTxn],
+          args: { amount: withdrawAmount, assetTransferTxn: axferTxn, lstAppId: xUSDLendingContractClient.appId },
           assetReferences: [lstTokenId],
           appReferences: [xUSDLendingContractClient.appId],
           sender: depositorAccount.addr,
+          maxFee: microAlgo(MAX_FEE),
+          coverAppCallInnerTransactionFees: true,
+          populateAppCallResources: true,
         })
 
         // Get xUSD asset balance prior to withdraw call
@@ -430,22 +446,34 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: user.addr,
       assetId: xUSDAssetId,
       note: 'Opt user into xUSD for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     await xUSDLendingContractClient.algorand.send.assetOptIn({
       sender: user.addr,
       assetId: lstTokenId,
       note: 'Opt user into LST for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     xUSDLendingContractClient.algorand.setSignerFromAccount(donor)
     await xUSDLendingContractClient.algorand.send.assetOptIn({
       sender: donor.addr,
       assetId: xUSDAssetId,
       note: 'Opt donor into xUSD for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     await xUSDLendingContractClient.algorand.send.assetOptIn({
       sender: donor.addr,
       assetId: lstTokenId,
       note: 'Opt donor into LST for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // Fund user and donor with xUSD to cover deposits + fees
@@ -459,6 +487,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: userDeposit + fundBuffer,
       note: 'Funding user with xUSD for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     await xUSDLendingContractClient.algorand.send.assetTransfer({
       sender: managerAccount.addr,
@@ -466,6 +497,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: donorDeposit + fundBuffer,
       note: 'Funding donor with xUSD for over-burn test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // User makes a small deposit to create a deposit record
@@ -476,17 +510,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: userDeposit,
       note: 'User xUSD deposit for LST',
+      maxFee: microAlgo(MAX_FEE),
     })
-    const userMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: user.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(10_000n),
-      note: 'User deposit MBR',
-    })
+
     await xUSDLendingContractClient.send.depositAsa({
-      args: [userDepositTxn, userDeposit, userMbr],
-      assetReferences: [xUSDAssetId],
+      args: { amount: userDeposit, assetTransferTxn: userDepositTxn },
       sender: user.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // Donor mints extra LST and transfers to user
@@ -497,17 +529,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: donorDeposit,
       note: 'Donor xUSD deposit for LST',
+      maxFee: microAlgo(MAX_FEE),
     })
-    const donorMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: donor.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(10_000n),
-      note: 'Donor deposit MBR',
-    })
+
     await xUSDLendingContractClient.send.depositAsa({
-      args: [donorDepositTxn, donorDeposit, donorMbr],
-      assetReferences: [xUSDAssetId],
+      args: { amount: donorDeposit, assetTransferTxn: donorDepositTxn },
       sender: donor.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     await xUSDLendingContractClient.algorand.send.assetTransfer({
       sender: donor.addr,
@@ -515,40 +545,36 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: lstTokenId,
       amount: donorDeposit,
       note: 'Transfer extra LST to user',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // User withdraws more than their deposit record
     const withdrawAmount = userDeposit + donorDeposit
-    const userXusdBefore =
-      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
-    const userLstBefore =
-      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+    const userXusdBefore = (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstBefore = (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
 
-      xUSDLendingContractClient.algorand.setSignerFromAccount(user)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(user)
     const withdrawAxfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
       sender: user.addr,
       receiver: xUSDLendingContractClient.appClient.appAddress,
       assetId: lstTokenId,
       amount: withdrawAmount,
       note: 'Burning extra LST beyond deposit record',
-    })
-    const withdrawMbr = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: user.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(3000n),
-      note: 'Funding withdraw',
-    })
-    await xUSDLendingContractClient.send.withdrawDeposit({
-      args: [withdrawAxfer, withdrawAmount, xUSDLendingContractClient.appId, withdrawMbr],
-      assetReferences: [lstTokenId],
-      appReferences: [xUSDLendingContractClient.appId],
-      sender: user.addr,
+      maxFee: microAlgo(MAX_FEE),
     })
 
-    const userXusdAfter =
-      (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
-    const userLstAfter =
-      (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
+    await xUSDLendingContractClient.send.withdrawDeposit({
+      args: { amount: withdrawAmount, assetTransferTxn: withdrawAxfer, lstAppId: xUSDLendingContractClient.appId },
+      sender: user.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    const userXusdAfter = (await algod.accountAssetInformation(user.addr, xUSDAssetId).do()).assetHolding?.amount || 0n
+    const userLstAfter = (await algod.accountAssetInformation(user.addr, lstTokenId).do()).assetHolding?.amount || 0n
 
     expect(userLstAfter).toEqual(userLstBefore - withdrawAmount)
     // Should receive underlying for all burned LST; allow minor fee drift
@@ -566,6 +592,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: managerAccount.addr,
       assetId: lstTokenId,
       note: 'Opting in to collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const managerCollateralBeforeInfo = await algod.accountAssetInformation(managerAccount.addr, collateralAssetId).do()
@@ -576,25 +605,21 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .do()
     const contractCollateralBefore = contractCollateralBeforeInfo.assetHolding?.amount || 0n
 
-    const mbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: collateralLendingContractClient.appClient.appAddress,
-      amount: microAlgo(10_000n),
-      note: 'Funding collateral deposit',
-    })
-
     const depositTxn = collateralLendingContractClient.algorand.createTransaction.assetTransfer({
       sender: managerAccount.addr,
       receiver: collateralLendingContractClient.appClient.appAddress,
       assetId: collateralAssetId,
       amount: COLLATERAL_DEPOSIT_AMOUNT,
       note: 'Depositing collateral ASA',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await collateralLendingContractClient.send.depositAsa({
-      args: [depositTxn, COLLATERAL_DEPOSIT_AMOUNT, mbrTxn],
-      assetReferences: [collateralAssetId],
+      args: { amount: COLLATERAL_DEPOSIT_AMOUNT, assetTransferTxn: depositTxn },
       sender: managerAccount.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const managerCollateralAfterInfo = await algod.accountAssetInformation(managerAccount.addr, collateralAssetId).do()
@@ -617,6 +642,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         sender: depositor.addr,
         assetId: lstTokenId,
         note: 'Opting in to collateral LST',
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
 
       await collateralLendingContractClient.algorand.send.assetTransfer({
@@ -625,6 +653,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: lstTokenId,
         amount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
         note: 'Funding depositor with collateral LST',
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
     }
   })
@@ -672,12 +703,16 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(boxValue).toBeDefined()
 
     const collateralPrice = await oracleAppClient.send.getTokenPrice({
-      args: [collateralAssetId],
-      assetReferences: [collateralAssetId],
+      args: { assetId: collateralAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     const xusdPrice = await oracleAppClient.send.getTokenPrice({
-      args: [xUSDAssetId],
-      assetReferences: [xUSDAssetId],
+      args: { assetId: xUSDAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     expect(collateralPrice.return?.price).toBeDefined()
     expect(xusdPrice.return?.price).toBeDefined()
@@ -691,39 +726,25 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: collateralAmount,
       note: 'Collateral for failing borrow',
-    })
-
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: borrower.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(4000n),
-      note: 'MBR for borrow attempt',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await expect(
       xUSDLendingContractClient
         .newGroup()
-        .gas()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
         .borrow({
-          args: [
-            collateralTransfer,
-            excessiveBorrowAmount,
-            collateralAmount,
-            collateralLendingContractClient.appId,
-            collateralLstId,
-            mbrTxn,
-          ],
-          assetReferences: [collateralLstId],
-          appReferences: [collateralLendingContractClient.appId, oracleAppClient.appId, fluxOracleAppClient.appId],
-          boxReferences: [
-            {
-              appId: boxValue.boxRef.appIndex as bigint,
-              name: boxValue.boxRef.name,
-            },
-          ],
+          args: {
+            assetTransferTxn: collateralTransfer,
+            collateralAmount: collateralAmount,
+            collateralTokenId: collateralLstId,
+            lstApp: collateralLendingContractClient.appId,
+            requestedLoanAmount: excessiveBorrowAmount,
+          },
+          maxFee: microAlgo(MAX_FEE),
           sender: borrower.addr,
         })
-        .send(),
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true }),
     ).rejects.toThrowError()
 
     await expect(
@@ -744,13 +765,17 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       expect(collateralLstId).toBeGreaterThan(0n)
 
       const collateralPrice = await oracleAppClient.send.getTokenPrice({
-        args: [collateralAssetId],
-        assetReferences: [collateralAssetId],
+        args: { assetId: collateralAssetId },
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
       expect(collateralPrice.return?.price).toBeDefined()
       const xUSDPrice = await oracleAppClient.send.getTokenPrice({
-        args: [xUSDAssetId],
-        assetReferences: [xUSDAssetId],
+        args: { assetId: xUSDAssetId },
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
 
       const borrowerXusdBalanceBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
@@ -771,13 +796,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: collateralLstId,
         amount: collateralAmount,
         note: 'Depositing collateral LST for borrowing',
-      })
-
-      const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-        sender: borrowerAccount.addr,
-        receiver: xUSDLendingContractClient.appClient.appAddress,
-        amount: microAlgo(4000n),
-        note: 'Funding borrow',
+        maxFee: microAlgo(MAX_FEE),
       })
 
       const contractXusdBalanceBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
@@ -786,9 +805,14 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const contractXusdBalanceBefore = contractXusdBalanceBeforeInfo.assetHolding?.amount || 0n
 
       const collateralPriceReturn = await xUSDLendingContractClient.send.calculateCollateralValueUsd({
-        args: [collateralLstId, collateralAmount, lstAppId],
+        /* args: [collateralLstId, collateralAmount, lstAppId] */
+        args: { collateralAmount, collateralTokenId: collateralLstId, lstApp: lstAppId },
         sender: borrowerAccount.addr,
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
+
       const collateralValueUsd =
         collateralPriceReturn?.returns && collateralPriceReturn.returns.length > 0
           ? (collateralPriceReturn.returns[0].returnValue as bigint)
@@ -796,20 +820,19 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
       await xUSDLendingContractClient
         .newGroup()
-        .gas()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrowerAccount.addr })
         .borrow({
-          args: [collateralTransfer, borrowAmount, collateralAmount, lstAppId, collateralLstId, mbrTxn],
-          assetReferences: [collateralLstId],
-          appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-          boxReferences: [
-            {
-              appId: boxValue.boxRef.appIndex as bigint,
-              name: boxValue.boxRef.name,
-            },
-          ],
+          args: {
+            assetTransferTxn: collateralTransfer,
+            requestedLoanAmount: borrowAmount,
+            lstApp: lstAppId,
+            collateralAmount,
+            collateralTokenId: collateralLstId,
+          },
+          maxFee: microAlgo(MAX_FEE),
           sender: borrowerAccount.addr,
         })
-        .send()
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
       const borrowerXusdBalanceAfterInfo = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
@@ -866,18 +889,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: collateralAssetId,
         amount: COLLATERAL_DEPOSIT_AMOUNT,
         note: 'Top up collateral supply for flux test',
-      })
-      const topUpMbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
-        sender: managerAccount.addr,
-        receiver: collateralLendingContractClient.appClient.appAddress,
-        amount: microAlgo(10_000n),
-        note: 'Funding collateral top-up',
+        maxFee: microAlgo(MAX_FEE),
       })
 
       await collateralLendingContractClient.send.depositAsa({
-        args: [topUpDepositTxn, COLLATERAL_DEPOSIT_AMOUNT, topUpMbrTxn],
-        assetReferences: [collateralAssetId],
+        args: { amount: COLLATERAL_DEPOSIT_AMOUNT, assetTransferTxn: topUpDepositTxn },
         sender: managerAccount.addr,
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
 
       managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, collateralLstId).do()
@@ -889,12 +909,16 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     localnet.algorand.setSignerFromAccount(managerAccount)
 
     const collateralPrice = await oracleAppClient.send.getTokenPrice({
-      args: [collateralAssetId],
-      assetReferences: [collateralAssetId],
+      args: { assetId: collateralAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     const xUSDPrice = await oracleAppClient.send.getTokenPrice({
-      args: [xUSDAssetId],
-      assetReferences: [xUSDAssetId],
+      args: { assetId: xUSDAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const discounted = calculateDisbursement({
@@ -914,7 +938,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       requestedLoanAmount: borrowAmount,
       originationFeeBps: origination_fee_bps,
     })
-    if(USER_TIER > 0n){
+    if (USER_TIER > 0n) {
       expect(discounted.fee).toBeLessThan(baseline.fee)
     } else {
       expect(discounted.fee).toEqual(baseline.fee)
@@ -939,30 +963,24 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: collateralAmount,
       note: 'Depositing collateral LST with flux discount',
-    })
-    const borrowMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(4000n),
-      note: 'Funding borrow with flux discount',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: managerAccount.addr })
       .borrow({
-        args: [collateralTransfer, borrowAmount, collateralAmount, lstAppId, collateralLstId, borrowMbrTxn],
-        assetReferences: [collateralLstId],
-        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-        boxReferences: [
-          {
-            appId: boxValue.boxRef.appIndex as bigint,
-            name: boxValue.boxRef.name,
-          },
-        ],
+        args: {
+          assetTransferTxn: collateralTransfer,
+          collateralAmount: collateralAmount,
+          collateralTokenId: collateralLstId,
+          lstApp: lstAppId,
+          requestedLoanAmount: borrowAmount,
+        },
+        maxFee: microAlgo(MAX_FEE),
         sender: managerAccount.addr,
       })
-      .send()
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     const managerXusdAfterInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
     const managerXusdAfter = managerXusdAfterInfo.assetHolding?.amount || 0n
@@ -987,20 +1005,29 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: loanRecord.principal + 1000n,
       note: 'Repaying discounted loan',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: managerAccount.addr })
       .repayLoanAsa({
-        args: [repayTxn, loanRecord.principal + 1000n],
-        assetReferences: [xUSDAssetId],
+        /* args: [repayTxn, loanRecord.principal + 1000n] */
+        args: {
+          assetTransferTxn: repayTxn,
+          repaymentAmount: loanRecord.principal + 1000n,
+        },
         sender: managerAccount.addr,
+        maxFee: microAlgo(MAX_FEE),
       })
-      .send()
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     await expect(
-      getLoanRecordBoxValueASA(managerAccount.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
+      getLoanRecordBoxValueASA(
+        managerAccount.addr.toString(),
+        xUSDLendingContractClient,
+        xUSDLendingContractClient.appId,
+      ),
     ).rejects.toThrowError()
 
     const managerXusdFinalInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
@@ -1050,17 +1077,18 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: xUSDAssetId,
         amount: repayRequested,
         note: 'Partial loan repayment',
+        maxFee: microAlgo(MAX_FEE),
       })
 
       await xUSDLendingContractClient
         .newGroup()
-        .gas()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrowerAccount.addr })
         .repayLoanAsa({
-          args: [repayTxn, repayRequested],
-          assetReferences: [xUSDAssetId],
+          args: { assetTransferTxn: repayTxn, repaymentAmount: repayRequested },
           sender: borrowerAccount.addr,
+          maxFee: microAlgo(MAX_FEE),
         })
-        .send()
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
       const borrowerBalanceInfoAfter = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
@@ -1144,17 +1172,18 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: xUSDAssetId,
         amount: requestedRepayAmount,
         note: 'Full loan repayment',
+        maxFee: microAlgo(MAX_FEE),
       })
 
       await xUSDLendingContractClient
         .newGroup()
-        .gas()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrowerAccount.addr })
         .repayLoanAsa({
-          args: [repayTxn, requestedRepayAmount],
-          assetReferences: [xUSDAssetId],
+          args: { assetTransferTxn: repayTxn, repaymentAmount: requestedRepayAmount },
           sender: borrowerAccount.addr,
+          maxFee: microAlgo(MAX_FEE),
         })
-        .send()
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
       const borrowerXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
         .accountAssetInformation(borrowerAccount.addr, xUSDAssetId)
@@ -1212,6 +1241,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: borrower.addr,
       assetId: xUSDAssetId,
       note: 'Opting borrower into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     collateralLendingContractClient.algorand.setSignerFromAccount(borrower)
@@ -1219,6 +1251,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: borrower.addr,
       assetId: collateralLstId,
       note: 'Opting borrower into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // Fund borrower with collateral LST from manager
@@ -1229,6 +1264,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: collateralAmount,
       note: 'Funding borrower with collateral LST for buyout scenario',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
@@ -1246,31 +1284,24 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: collateralAmount,
       note: 'Depositing collateral LST for new loan',
-    })
-
-    const borrowMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: borrower.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(4000n),
-      note: 'Funding borrow MBR',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
       .borrow({
-        args: [collateralTransfer, borrowAmount, collateralAmount, lstAppId, collateralLstId, borrowMbrTxn],
-        assetReferences: [collateralLstId],
-        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-        boxReferences: [
-          {
-            appId: collateralBoxBeforeBorrow.boxRef.appIndex as bigint,
-            name: collateralBoxBeforeBorrow.boxRef.name,
-          },
-        ],
+        args: {
+          assetTransferTxn: collateralTransfer,
+          requestedLoanAmount: borrowAmount,
+          collateralAmount,
+          lstApp: lstAppId,
+          collateralTokenId: collateralLstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
         sender: borrower.addr,
       })
-      .send()
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     const loanRecord = await getLoanRecordBoxValueASA(
       borrower.addr.toString(),
@@ -1282,12 +1313,16 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const collateralStateAfterBorrow = await collateralLendingContractClient.state.global.getAll()
 
     const xUSDPrice = await oracleAppClient.send.getTokenPrice({
-      args: [xUSDAssetId],
-      assetReferences: [xUSDAssetId],
+      args: { assetId: xUSDAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
     const collateralPrice = await oracleAppClient.send.getTokenPrice({
-      args: [collateralAssetId],
-      assetReferences: [collateralAssetId],
+      args: { assetId: collateralAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const buyoutTerms = computeBuyoutTerms({
@@ -1314,6 +1349,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: buyer.addr,
       assetId: xUSDAssetId,
       note: 'Opting buyer into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     collateralLendingContractClient.algorand.setSignerFromAccount(buyer)
@@ -1321,6 +1359,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: buyer.addr,
       assetId: collateralLstId,
       note: 'Opting buyer into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const premiumTokens = buyoutTerms.premiumTokens
@@ -1337,6 +1378,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: totalFundingNeeded + 1_000_000n,
       note: 'Funding buyer with xUSD for buyout',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
@@ -1371,6 +1415,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: premiumPaymentAmount,
       note: 'Paying buyout premium',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     const repayAxferTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
@@ -1379,13 +1424,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: repayPaymentAmount,
       note: 'Repaying borrower debt',
-    })
-
-    const buyoutMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: buyer.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(10_000n),
-      note: 'Funding buyout MBR',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     const collateralBoxForBuyout = await getCollateralBoxValue(
@@ -1396,7 +1435,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: buyer.addr })
       .buyoutSplitAsa({
         args: {
           buyer: buyer.addr.publicKey,
@@ -1404,19 +1443,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           premiumAxferTxn,
           repayAxferTxn,
           lstAppId,
-          mbrTxn: buyoutMbrTxn,
         },
-        assetReferences: [xUSDAssetId, collateralLstId],
-        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-        boxReferences: [
-          {
-            appId: collateralBoxForBuyout.boxRef.appIndex as bigint,
-            name: collateralBoxForBuyout.boxRef.name,
-          },
-        ],
+        maxFee: microAlgo(MAX_FEE),
         sender: buyer.addr,
       })
-      .send()
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     await expect(
       getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
@@ -1492,6 +1523,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: borrower.addr,
       assetId: xUSDAssetId,
       note: 'Opting borrower into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     collateralLendingContractClient.algorand.setSignerFromAccount(borrower)
@@ -1499,6 +1533,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: borrower.addr,
       assetId: collateralLstId,
       note: 'Opting borrower into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     // Ensure manager holds enough LST to fund borrower
@@ -1512,19 +1549,15 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         assetId: collateralAssetId,
         amount: COLLATERAL_DEPOSIT_AMOUNT,
         note: 'Topping up collateral pool for liquidation scenario',
-      })
-
-      const topUpMbrTxn = collateralLendingContractClient.algorand.createTransaction.payment({
-        sender: managerAccount.addr,
-        receiver: collateralLendingContractClient.appClient.appAddress,
-        amount: microAlgo(10_000n),
-        note: 'Funding collateral top-up',
+        maxFee: microAlgo(MAX_FEE),
       })
 
       await collateralLendingContractClient.send.depositAsa({
-        args: [topUpDepositTxn, COLLATERAL_DEPOSIT_AMOUNT, topUpMbrTxn],
-        assetReferences: [collateralAssetId],
+        args: { amount: COLLATERAL_DEPOSIT_AMOUNT, assetTransferTxn: topUpDepositTxn },
         sender: managerAccount.addr,
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
       })
 
       const refreshedManagerLstInfo = await algod.accountAssetInformation(managerAccount.addr, collateralLstId).do()
@@ -1539,6 +1572,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
       note: 'Funding borrower collateral for liquidation scenario',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const collateralBoxBaseline = await getCollateralBoxValue(
@@ -1557,38 +1593,24 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: collateralLstId,
       amount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
       note: 'Depositing collateral for liquidation scenario',
-    })
-
-    const borrowMbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: borrower.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(4000n),
-      note: 'Funding borrow MBR',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
       .borrow({
-        args: [
-          collateralTransfer,
-          DEPOSITOR_INITIAL_BORROW_AMOUNT,
-          DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
-          lstAppId,
-          collateralLstId,
-          borrowMbrTxn,
-        ],
-        assetReferences: [collateralLstId],
-        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-        boxReferences: [
-          {
-            appId: collateralBoxBaseline.boxRef.appIndex as bigint,
-            name: collateralBoxBaseline.boxRef.name,
-          },
-        ],
+        args: {
+          assetTransferTxn: collateralTransfer,
+          requestedLoanAmount: DEPOSITOR_INITIAL_BORROW_AMOUNT,
+          collateralAmount: DEPOSITOR_INITIAL_COLLATERAL_AMOUNT,
+          collateralTokenId: collateralLstId,
+          lstApp: lstAppId,
+        },
+        maxFee: microAlgo(MAX_FEE),
         sender: borrower.addr,
       })
-      .send()
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     const loanRecord = await getLoanRecordBoxValueASA(
       borrower.addr.toString(),
@@ -1600,8 +1622,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     // Sharply devalue collateral to trigger liquidation eligibility
     oracleAppClient.algorand.setSignerFromAccount(managerAccount)
     await oracleAppClient.send.addTokenListing({
-      args: [collateralAssetId, COLLATERAL_LIQUIDATION_PRICE],
-      assetReferences: [collateralAssetId],
+      args: { assetId: collateralAssetId, initialPrice: COLLATERAL_LIQUIDATION_PRICE },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const globalState = await xUSDLendingContractClient.state.global.getAll()
@@ -1615,6 +1639,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: liquidator.addr,
       assetId: xUSDAssetId,
       note: 'Opting liquidator into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     collateralLendingContractClient.algorand.setSignerFromAccount(liquidator)
@@ -1622,6 +1649,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: liquidator.addr,
       assetId: collateralLstId,
       note: 'Opting liquidator into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const liveDebt = liveDebtFromSnapshot(loanRecord.principal, loanRecord.userIndexWad, borrowIndexWad)
@@ -1635,6 +1665,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: repayAmount + 1_000_000n,
       note: 'Funding liquidator with xUSD for liquidation',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(liquidator)
@@ -1665,6 +1698,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetId: xUSDAssetId,
       amount: repayAmount,
       note: 'Repaying debt for liquidation',
+      maxFee: microAlgo(MAX_FEE),
     })
 
     const collateralBoxForLiquidation = await getCollateralBoxValue(
@@ -1675,7 +1709,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     await xUSDLendingContractClient
       .newGroup()
-      .gas()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: liquidator.addr })
       .liquidatePartialAsa({
         args: {
           debtor: borrower.addr.publicKey,
@@ -1683,17 +1717,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
           repayBaseAmount: repayAmount,
           lstAppId,
         },
-        assetReferences: [xUSDAssetId, collateralLstId],
-        appReferences: [lstAppId, oracleAppClient.appId, fluxOracleAppClient.appId],
-        boxReferences: [
-          {
-            appId: collateralBoxForLiquidation.boxRef.appIndex as bigint,
-            name: collateralBoxForLiquidation.boxRef.name,
-          },
-        ],
+        maxFee: microAlgo(MAX_FEE),
         sender: liquidator.addr,
       })
-      .send({ populateAppCallResources: true })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     await expect(
       getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
@@ -1738,8 +1765,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     // Restore collateral oracle price for subsequent tests
     oracleAppClient.algorand.setSignerFromAccount(managerAccount)
     await oracleAppClient.send.addTokenListing({
-      args: [collateralAssetId, COLLATERAL_ORACLE_PRICE],
-      assetReferences: [collateralAssetId],
+      args: { assetId: collateralAssetId, initialPrice: COLLATERAL_ORACLE_PRICE },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
@@ -1759,15 +1788,12 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Fee pool before withdrawal:', feePool)
     expect(feePool).toBeGreaterThan(0n)
 
-    const mbrTxn = xUSDLendingContractClient.algorand.createTransaction.payment({
-      sender: managerAccount.addr,
-      receiver: xUSDLendingContractClient.appClient.appAddress,
-      amount: microAlgo(1000n),
-      note: 'Funding fee withdrawal',
-    })
     await xUSDLendingContractClient.send.withdrawPlatformFees({
-      args: [managerAccount.addr.toString(), mbrTxn],
+      args: { paymentReceiver: managerAccount.addr.toString() },
       sender: managerAccount.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
     })
 
     const globalStateAfter = await xUSDLendingContractClient.state.global.getAll()
