@@ -3,7 +3,7 @@
 
 // @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
 main:
-    intcblock 0 1 10000 4 1000000 1000 1000000000000 69000000000000 1000000000000000
+    intcblock 0 1 10000 4 1000000 1000000000000 69000000000000 1000000000000000
     bytecblock "base_token_id" "total_borrows" 0x151f7c75 "admin_account" "total_deposits" "contract_state" "loan_record" "circulating_lst" "active_loan_records" "lst_token_id" "borrow_index_wad" "accepted_collaterals" "migration_admin" "last_apr_bps" "cash_on_hand" "fee_pool" "accepted_collaterals_count" "buyout_token_id" "liq_bonus_bps" "current_accumulated_commission" 0x09ef525f 0xae859f3b "liq_threshold_bps" "total_commission_earned" "total_additional_rewards" "ltv_bps" "base_bps" "util_cap_bps" "last_accrual_ts" "commission_percentage" "flux_oracle_app" 0x0000000000000000 "kink_norm_bps" "slope1_bps" "slope2_bps" "deposit_record" "origination_fee_bps" "protocol_share_bps" "oracle_app" "prev_apr_bps" "max_apr_bps"
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:44-45
     // @contract({ name: 'orbital-lending', avmVersion: 11 })
@@ -1049,7 +1049,7 @@ initApplication:
     bytec 33 // "slope1_bps"
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:240
     // this.slope1_bps.value = 1000 // 10% slope to kink
-    intc 5 // 1000
+    pushint 1000 // 1000
     app_global_put
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:113
     // slope2_bps = GlobalState<uint64>()
@@ -1063,7 +1063,7 @@ initApplication:
     bytec 10 // "borrow_index_wad"
     // smart_contracts/orbital_lending/config.algo.ts:12
     // export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
-    intc 6 // 1000000000000
+    intc 5 // 1000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:242
     // this.borrow_index_wad.value = INDEX_SCALE
     app_global_put
@@ -2280,7 +2280,7 @@ depositAlgo:
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/config.algo.ts:20
     // export const MAXIMUM_ALGO_DEPOSITS: uint64 = 69_000_000_000_000 // 69,000,000 ALGO
-    intc 7 // 69000000000000
+    intc 6 // 69000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:634
     // assert(this.total_deposits.value <= MAXIMUM_ALGO_DEPOSITS, 'DEPOSIT_CAP_INVALID')
     <=
@@ -2293,7 +2293,7 @@ depositAlgo:
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/config.algo.ts:20
     // export const MAXIMUM_ALGO_DEPOSITS: uint64 = 69_000_000_000_000 // 69,000,000 ALGO
-    intc 7 // 69000000000000
+    intc 6 // 69000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:635
     // const remainingCapacity: uint64 = MAXIMUM_ALGO_DEPOSITS - this.total_deposits.value
     swap
@@ -2558,7 +2558,7 @@ depositAlgo_else_body@7:
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/config.algo.ts:10
     // export const EXCHANGE_PRECISION: uint64 = 1_000_000_000_000_000
-    intc 8 // 1000000000000000
+    intc 7 // 1000000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:575
     // const [highBits1, lowBits1] = mulw(this.circulating_lst.value, EXCHANGE_PRECISION)
     mulw
@@ -2577,7 +2577,7 @@ depositAlgo_else_body@7:
     mulw
     // smart_contracts/orbital_lending/config.algo.ts:10
     // export const EXCHANGE_PRECISION: uint64 = 1_000_000_000_000_000
-    intc 8 // 1000000000000000
+    intc 7 // 1000000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:580
     // return divw(highBits2, lowBits2, EXCHANGE_PRECISION)
     divw
@@ -4327,7 +4327,7 @@ accrueMarket_after_if_else@4:
     mulw
     // smart_contracts/orbital_lending/config.algo.ts:12
     // export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
-    intc 6 // 1000000000000
+    intc 5 // 1000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1055
     // const incrIndex: uint64 = divw(hiI, loI, INDEX_SCALE)
     divw
@@ -4365,7 +4365,7 @@ accrueMarket_after_if_else@4:
     mulw
     // smart_contracts/orbital_lending/config.algo.ts:12
     // export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
-    intc 6 // 1000000000000
+    intc 5 // 1000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1066
     // interest = divw(hiB, loB, INDEX_SCALE)
     divw
@@ -4467,7 +4467,7 @@ accrueMarket_after_if_else@9:
     assert // check GlobalState exists
     // smart_contracts/orbital_lending/config.algo.ts:12
     // export const INDEX_SCALE: uint64 = 1_000_000_000_000 // 1e12
-    intc 6 // 1000000000000
+    intc 5 // 1000000000000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:988
     // const [hRate, lRate] = mulw(INDEX_SCALE, this.last_apr_bps.value)
     mulw
@@ -7332,7 +7332,7 @@ calculateCollateralValueUSD:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1790-1793
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
-    //   fee: 1000,
+    //   fee: 0,
     // }).returnValue
     itxn_begin
     bytec 20 // method "getCirculatingLST()uint64"
@@ -7342,13 +7342,13 @@ calculateCollateralValueUSD:
     pushint 6 // appl
     itxn_field TypeEnum
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1792
-    // fee: 1000,
-    intc 5 // 1000
+    // fee: 0,
+    intc_0 // 0
     itxn_field Fee
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1790-1793
     // const circulatingExternalLST = abiCall(TargetContract.prototype.getCirculatingLST, {
     //   appId: lstApp,
-    //   fee: 1000,
+    //   fee: 0,
     // }).returnValue
     itxn_submit
     itxn LastLog
@@ -7363,7 +7363,7 @@ calculateCollateralValueUSD:
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1795-1798
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
-    //   fee: 1000,
+    //   fee: 0,
     // }).returnValue
     itxn_begin
     bytec 21 // method "getTotalDeposits()uint64"
@@ -7373,13 +7373,13 @@ calculateCollateralValueUSD:
     pushint 6 // appl
     itxn_field TypeEnum
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1797
-    // fee: 1000,
-    intc 5 // 1000
+    // fee: 0,
+    intc_0 // 0
     itxn_field Fee
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1795-1798
     // const totalDepositsExternal = abiCall(TargetContract.prototype.getTotalDeposits, {
     //   appId: lstApp,
-    //   fee: 1000,
+    //   fee: 0,
     // }).returnValue
     itxn_submit
     itxn LastLog
@@ -7801,7 +7801,7 @@ migrateContract:
     -
     // smart_contracts/orbital_lending/config.algo.ts:7
     // export const STANDARD_TXN_FEE: uint64 = 1_000
-    intc 5 // 1000
+    pushint 1000 // 1000
     // smart_contracts/orbital_lending/OrbitalLending.algo.ts:1995
     // Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance - STANDARD_TXN_FEE
     -
