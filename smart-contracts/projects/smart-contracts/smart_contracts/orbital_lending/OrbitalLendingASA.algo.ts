@@ -563,6 +563,22 @@ export class OrbitalLending extends Contract {
     this.accepted_collaterals_count.value = this.accepted_collaterals_count.value - 1
   }
 
+  @abimethod({ allowActions: 'NoOp' })
+  public updateCollateralOriginationId(collateralTokenId: UintN64, newOriginationAppId: UintN64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(this.collateralExists(collateralTokenId), 'COLLATERAL_NOT_FOUND')
+
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId }).copy()
+    const collateral = this.accepted_collaterals(key).value.copy()
+    this.accepted_collaterals(key).value = new AcceptedCollateral({
+      assetId: collateral.assetId,
+      baseAssetId: collateral.baseAssetId,
+      marketBaseAssetId: collateral.marketBaseAssetId,
+      totalCollateral: collateral.totalCollateral,
+      originatingAppId: newOriginationAppId,
+    }).copy()
+  }
+
   /**
    * Adds a new asset type as accepted collateral for borrowing
    * @param collateralTokenId - Asset ID of the new collateral type to accept
@@ -864,13 +880,7 @@ export class OrbitalLending extends Contract {
     const { disbursement } = this.calculateDisbursement(requestedLoanAmount, calculatedFee)
 
     if (hasLoan) {
-      this.processLoanTopUp(
-        op.Txn.sender,
-        disbursement,
-        maxBorrowUSD,
-        baseTokenOraclePrice,
-        collateralTokenId,
-      )
+      this.processLoanTopUp(op.Txn.sender, disbursement, maxBorrowUSD, baseTokenOraclePrice, collateralTokenId)
     } else {
       this.mintLoanRecord(disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
       this.updateCollateralTotal(collateralTokenId, collateralAmount)

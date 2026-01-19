@@ -525,6 +525,22 @@ export class OrbitalLending extends Contract {
     this.accepted_collaterals_count.value = this.accepted_collaterals_count.value - 1
   }
 
+  @abimethod({ allowActions: 'NoOp' })
+  public updateCollateralOriginationId(collateralTokenId: UintN64, newOriginationAppId: UintN64): void {
+    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(this.collateralExists(collateralTokenId), 'COLLATERAL_NOT_FOUND')
+
+    const key = new AcceptedCollateralKey({ assetId: collateralTokenId }).copy()
+    const collateral = this.accepted_collaterals(key).value.copy()
+    this.accepted_collaterals(key).value = new AcceptedCollateral({
+      assetId: collateral.assetId,
+      baseAssetId: collateral.baseAssetId,
+      marketBaseAssetId: collateral.marketBaseAssetId,
+      totalCollateral: collateral.totalCollateral,
+      originatingAppId: newOriginationAppId,
+    }).copy()
+  }
+
   /**
    * Adds a new asset type as accepted collateral for borrowing
    * @param collateralTokenId - Asset ID of the new collateral type to accept
@@ -1668,7 +1684,7 @@ export class OrbitalLending extends Contract {
     }
 
     if (seizeLST === collLSTBal) {
-      repayCandidate = repayBaseAmount
+      repayCandidate = repayRequested
     }
 
     const proposedRepayUsed: uint64 = repayCandidate <= repaySupported ? repayCandidate : repaySupported
@@ -1709,7 +1725,8 @@ export class OrbitalLending extends Contract {
     }
 
     this.reduceCollateralTotal(collTok, seizeLST)
-    this.total_borrows.value = this.total_borrows.value - repayUsed
+    const borrowDelta: uint64 = repayUsed <= this.total_borrows.value ? repayUsed : this.total_borrows.value
+    this.total_borrows.value = this.total_borrows.value - borrowDelta
     this.addCash(repayRequested)
 
     if (newDebtBase === 0) {
