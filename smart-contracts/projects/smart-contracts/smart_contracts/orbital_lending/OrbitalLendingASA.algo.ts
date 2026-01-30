@@ -47,7 +47,7 @@ import {
   SECONDS_PER_YEAR,
 } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2103
+const CONTRACT_VERSION: uint64 = 3000
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -1271,7 +1271,6 @@ export class OrbitalLending extends Contract {
     debtor: Account,
     premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
     repayAxferTxn: gtxn.AssetTransferTxn, // BASE TOKEN (ASA) full DEBT
-    lstAppId: uint64, // LST app backing the collateral
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')

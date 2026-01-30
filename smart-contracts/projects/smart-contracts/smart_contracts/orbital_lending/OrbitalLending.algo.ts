@@ -33,7 +33,7 @@ import {
 import { TokenPrice } from '../Oracle/config.algo'
 import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, USD_MICRO_UNITS, SECONDS_PER_YEAR } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 2103
+const CONTRACT_VERSION: uint64 = 3000
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -1226,7 +1226,6 @@ export class OrbitalLending extends Contract {
     debtor: Account,
     premiumAxferTxn: gtxn.AssetTransferTxn, // buyout token (xUSD) PREMIUM
     repayPayTxn: gtxn.PaymentTxn, // ALGO DEBT repayment
-    lstAppId: uint64,
   ): void {
     assert(this.loan_record(debtor).exists, 'NO_LOAN_RECORD')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
