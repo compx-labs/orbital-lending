@@ -28,12 +28,11 @@ import {
   LoanRecord,
   MAXIMUM_ALGO_DEPOSITS,
   MINIMUM_ADDITIONAL_REWARD,
-  MigrationSnapshot,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
-import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, USD_MICRO_UNITS, SECONDS_PER_YEAR } from './config.algo'
+import { BASIS_POINTS, EXCHANGE_PRECISION, USD_MICRO_UNITS, SECONDS_PER_YEAR } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 3000
+const CONTRACT_VERSION: uint64 = 4000
 
 @contract({ name: 'orbital-lending', avmVersion: 11 })
 export class OrbitalLending extends Contract {
@@ -324,19 +323,9 @@ export class OrbitalLending extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   public setContractState(state: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value || op.Txn.sender === this.migration_admin.value, 'UNAUTHORIZED')
-    assert(state <= 2, 'INVALID_STATE') // 0=inactive,1=active,2=migrating
-    this.contract_state.value = new UintN64(state)
-  }
-
-  /**
-   * Sets or updates the migration administrator account used during contract upgrades.
-   * @param migrationAdmin Account that will temporarily custody balances while migrating.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public setMigrationAdmin(migrationAdmin: Account): void {
     assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
-    this.migration_admin.value = migrationAdmin
+    assert(state === 0 || state === 1, 'INVALID_STATE')
+    this.contract_state.value = new UintN64(state)
   }
 
   /**
@@ -368,32 +357,10 @@ export class OrbitalLending extends Contract {
   }
 
   /**
-   * Opts into an externally created LST token instead of minting a new one.
-   * @param lstAssetId Asset ID of the pre-existing LST contract.
-   * @param mbrTxn Payment covering the opt-in minimum balance requirement.
-   * @dev Admin-only. Use when an LST has already been deployed for this market.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public optInToLST(lstAssetId: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value)
-    this.lst_token_id.value = new UintN64(lstAssetId)
-
-    //Opt-in to the LST token
-    itxn
-      .assetTransfer({
-        assetReceiver: Global.currentApplicationAddress,
-        xferAsset: lstAssetId,
-        assetAmount: 0,
-        fee: 0,
-      })
-      .submit()
-  }
-
-  /**
    * Configures the LST token by seeding the initial circulating supply.
    * @param axferTxn Asset transfer from the admin delivering LST units to the app.
    * @param circulating_lst Initial circulating amount to record on-chain.
-   * @dev Must be called after `generateLSTToken` or `optInToLST` to finalize setup.
+   * @dev Must be called after `generateLSTToken` to finalize setup.
    */
   @abimethod({ allowActions: 'NoOp' })
   public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
@@ -873,33 +840,6 @@ export class OrbitalLending extends Contract {
     }).copy()
 
     this.active_loan_records.value = this.active_loan_records.value + 1
-  }
-
-  @abimethod({ allowActions: 'NoOp' })
-  public addLoanRecordExternal(
-    disbursement: uint64,
-    collateralTokenId: UintN64,
-    borrowerAddress: Account,
-    collateralAmount: uint64,
-  ): void {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
-    this.mintLoanRecord(disbursement, collateralTokenId, borrowerAddress, collateralAmount)
-    this.updateCollateralTotal(collateralTokenId, collateralAmount)
-    this.total_borrows.value = this.total_borrows.value + disbursement
-    this.last_apr_bps.value = this.current_apr_bps()
-  }
-
-  @abimethod({ allowActions: 'NoOp' })
-  public addDepositRecordExternal(userAddress: Account, assetId: uint64, depositAmount: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
-    const depositKey = new DepositRecordKey({
-      assetId: new UintN64(assetId),
-      userAddress: new Address(userAddress),
-    }).copy()
-    this.deposit_record(depositKey).value = new DepositRecord({
-      assetId: new UintN64(assetId),
-      depositAmount: new UintN64(depositAmount),
-    }).copy()
   }
 
   @abimethod({ allowActions: 'NoOp' })
@@ -1395,10 +1335,7 @@ export class OrbitalLending extends Contract {
     if (debtBase === 0) return rec.collateralAmount.native // all collateral is withdrawable if no debt
 
     // Current collateral USD (before any withdrawal)
-    const currCollatUSD: uint64 = this.calculateCollateralValueUSD(
-      rec.collateralTokenId,
-      rec.collateralAmount.native,
-    )
+    const currCollatUSD: uint64 = this.calculateCollateralValueUSD(rec.collateralTokenId, rec.collateralAmount.native)
 
     // Required collateral USD to satisfy LTV: debtUSD <= collatUSD * LTV
     const debtUSDv: uint64 = this.debtUSD(debtBase)
@@ -1953,142 +1890,6 @@ export class OrbitalLending extends Contract {
     const netReward: uint64 = rawReward - commission
     this.total_additional_rewards.value += netReward
     this.total_deposits.value += netReward
-  }
-
-  @abimethod({ allowActions: 'NoOp' })
-  public migrateCollateralTokenId(collateralTokenId: uint64): void {
-    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate collateral')
-    const collateralBalance = Asset(collateralTokenId).balance(Global.currentApplicationAddress)
-    if (collateralBalance > 0) {
-      itxn
-        .assetTransfer({
-          assetReceiver: this.migration_admin.value,
-          xferAsset: collateralTokenId,
-          assetAmount: collateralBalance,
-          fee: 0,
-        })
-        .submit()
-    }
-  }
-  /**
-   * Initiates migration by sweeping balances from this contract to the migration administrator.
-   * @param feeTxn Payment covering all inner-transaction fees required for the sweep.
-   * @param snapshot Snapshot of accounting fields expected to be exported to the new deployment.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public migrateContract(): MigrationSnapshot {
-    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can migrate')
-    this.setContractState(2) // set to migrating
-    this.goOfflineInternal()
-
-    //get lst balance
-    const lstAsset = Asset(this.lst_token_id.value.native)
-    const lstBalance = lstAsset.balance(Global.currentApplicationAddress)
-
-    //send LST
-    itxn
-      .assetTransfer({
-        assetReceiver: this.migration_admin.value,
-        xferAsset: this.lst_token_id.value.native,
-        assetAmount: lstBalance,
-        fee: 0,
-      })
-      .submit()
-
-    if (this.base_token_id.value.native === 0) {
-      //send ALGO
-      const algoBalance: uint64 =
-        Global.currentApplicationAddress.balance - Global.currentApplicationAddress.minBalance - STANDARD_TXN_FEE
-      if (algoBalance > 0) {
-        itxn
-          .payment({
-            receiver: this.migration_admin.value,
-            amount: algoBalance,
-            fee: 0,
-          })
-          .submit()
-      }
-    } else {
-      //send ASA
-      const baseAsset = Asset(this.base_token_id.value.native)
-      const assetBalance = baseAsset.balance(Global.currentApplicationAddress)
-      if (assetBalance > 0) {
-        itxn
-          .assetTransfer({
-            assetReceiver: this.migration_admin.value,
-            xferAsset: this.base_token_id.value.native,
-            assetAmount: assetBalance,
-            fee: 0,
-          })
-          .submit()
-      }
-    }
-
-    return new MigrationSnapshot({
-      accepted_collaterals_count: new UintN64(this.accepted_collaterals_count.value),
-      cash_on_hand: new UintN64(this.cash_on_hand.value),
-      circulating_lst: new UintN64(this.circulating_lst.value),
-      total_deposits: new UintN64(this.total_deposits.value),
-      total_borrows: new UintN64(this.total_borrows.value),
-      total_additional_rewards: new UintN64(this.total_additional_rewards.value),
-      total_commission_earned: new UintN64(this.total_commission_earned.value),
-      current_accumulated_commission: new UintN64(this.current_accumulated_commission.value),
-      fee_pool: new UintN64(this.fee_pool.value),
-      borrowIndexWad: new UintN64(this.borrow_index_wad.value),
-      base_token_id: new UintN64(this.base_token_id.value.native),
-      lst_token_id: new UintN64(this.lst_token_id.value.native),
-      buyout_token_id: new UintN64(this.buyout_token_id.value.native),
-      commission_percentage: new UintN64(this.commission_percentage.value),
-      liq_bonus_bps: new UintN64(this.liq_bonus_bps.value),
-      active_loan_records: new UintN64(this.active_loan_records.value),
-    })
-  }
-
-  /**
-   * Finalises migration by importing balances and restoring accounting on the new contract.
-   * @param lstTransferTxn LST asset transfer from the migration admin to this contract.
-   * @param algoFundingTxn ALGO payment accompanying the migration to restore cash on hand.
-   * @param baseAssetTransferTxn Base-token asset transfer (ignored when base token is ALGO).
-   * @param snapshot Snapshot of accounting fields that should be set on the new deployment.
-   * @param migrationAdmin Account expected to have initiated the migration.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public acceptMigrationAlgoContract(
-    lstTransferTxn: gtxn.AssetTransferTxn,
-    algoTxn: gtxn.PaymentTxn,
-    snapshot: MigrationSnapshot,
-    migrationAdmin: Account,
-  ): void {
-    assert(op.Txn.sender === this.migration_admin.value, 'Only migration admin can accept migration')
-
-    assertMatch(lstTransferTxn, {
-      sender: migrationAdmin,
-      assetReceiver: Global.currentApplicationAddress,
-      xferAsset: Asset(this.lst_token_id.value.native),
-    })
-    assertMatch(algoTxn, {
-      sender: migrationAdmin,
-      receiver: Global.currentApplicationAddress,
-    })
-    //set accounting state
-    this.cash_on_hand.value = snapshot.cash_on_hand.native
-    this.total_deposits.value = snapshot.total_deposits.native
-    this.circulating_lst.value = snapshot.circulating_lst.native
-    this.total_borrows.value = snapshot.total_borrows.native
-    this.total_additional_rewards.value = snapshot.total_additional_rewards.native
-    this.total_commission_earned.value = snapshot.total_commission_earned.native
-    this.current_accumulated_commission.value = snapshot.current_accumulated_commission.native
-    this.fee_pool.value = snapshot.fee_pool.native
-    this.borrow_index_wad.value = snapshot.borrowIndexWad.native
-    this.accepted_collaterals_count.value = snapshot.accepted_collaterals_count.native
-    this.base_token_id.value = new UintN64(snapshot.base_token_id.native)
-    this.lst_token_id.value = new UintN64(snapshot.lst_token_id.native)
-    this.buyout_token_id.value = new UintN64(snapshot.buyout_token_id.native)
-    this.commission_percentage.value = snapshot.commission_percentage.native
-    this.liq_bonus_bps.value = snapshot.liq_bonus_bps.native
-    this.active_loan_records.value = snapshot.active_loan_records.native
-
-    this.contract_state.value = new UintN64(1) // active
   }
 
   /**
