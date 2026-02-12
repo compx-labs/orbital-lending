@@ -28,28 +28,31 @@ export class Oracle extends Contract {
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  public addTokenListing(assetId: UintN64, initialPrice: UintN64): void {
+  public addTokenListing(assetId: UintN64, initialPrice: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
+    assert(initialPrice > 0, 'PRICE_MUST_BE_POSITIVE')
+    const key = new OracleKey({ assetId: assetId })
+    assert(!this.token_prices(key).exists, 'ASSET_ALREADY_LISTED')
 
     const newTokenPrice = new TokenPrice({
       assetId: assetId,
-      price: initialPrice,
+      price: new UintN64(initialPrice),
       lastUpdated: new UintN64(Global.latestTimestamp),
     })
-    const key = new OracleKey({ assetId: assetId })
     this.token_prices(key).value = newTokenPrice.copy()
   }
 
   @abimethod({ allowActions: 'NoOp' })
-  public updateTokenPrice(assetId: UintN64, newPrice: UintN64): void {
+  public updateTokenPrice(assetId: UintN64, newPrice: uint64): void {
     assert(op.Txn.sender === this.admin_account.value)
+    assert(newPrice > 0, 'PRICE_MUST_BE_POSITIVE')
 
     const key = new OracleKey({ assetId: assetId })
     assert(this.token_prices(key).exists)
 
     const newTokenPrice = new TokenPrice({
       assetId: assetId,
-      price: newPrice,
+      price: new UintN64(newPrice),
       lastUpdated: new UintN64(Global.latestTimestamp),
     })
     this.token_prices(key).value = newTokenPrice.copy()
@@ -65,6 +68,7 @@ export class Oracle extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   public removeTokenListing(assetId: UintN64): void {
     assert(op.Txn.sender === this.admin_account.value)
+    assert(this.token_prices(new OracleKey({ assetId: assetId })).exists, 'ASSET_NOT_LISTED')
 
     const key = new OracleKey({ assetId: assetId })
     assert(this.token_prices(key).exists)

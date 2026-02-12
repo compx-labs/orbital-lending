@@ -29,13 +29,7 @@ import {
   MINIMUM_ADDITIONAL_REWARD,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
-import {
-  STANDARD_TXN_FEE,
-  BASIS_POINTS,
-  EXCHANGE_PRECISION,
-  USD_MICRO_UNITS,
-  SECONDS_PER_YEAR,
-} from './config.algo'
+import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, USD_MICRO_UNITS, SECONDS_PER_YEAR } from './config.algo'
 
 const CONTRACT_VERSION: uint64 = 4000
 
@@ -68,8 +62,14 @@ export class OrbitalLending extends Contract {
   // PROTOCOL GOVERNANCE & ACCESS CONTROL
   // ═══════════════════════════════════════════════════════════════════════
 
-  /** Administrative account with privileged access to protocol functions */
-  admin_account = GlobalState<Account>()
+  /** Administrator account to create and init application */
+  init_admin = GlobalState<Account>()
+
+  /** Administrative account with access to setRateParam functions */
+  param_admin = GlobalState<Account>()
+
+  /** Administration account with access to payFees */
+  fee_admin = GlobalState<Account>()
 
   /** External oracle application for asset price feeds */
   oracle_app = GlobalState<Application>()
@@ -182,8 +182,10 @@ export class OrbitalLending extends Contract {
    * @dev This method can only be called during contract creation (onCreate: 'require')
    */
   @abimethod({ allowActions: 'NoOp', onCreate: 'require' })
-  public createApplication(admin: Account, baseTokenId: uint64): void {
-    this.admin_account.value = admin
+  public createApplication(paramAdmin: Account, feeAdmin: Account, baseTokenId: uint64): void {
+    this.param_admin.value = paramAdmin
+    this.fee_admin.value = feeAdmin
+    this.init_admin.value = op.Txn.sender
     this.base_token_id.value = new UintN64(baseTokenId)
     this.contract_state.value = new UintN64(0) // inactive
     this.contract_version.value = new UintN64(CONTRACT_VERSION)
@@ -210,7 +212,7 @@ export class OrbitalLending extends Contract {
     additional_rewards_commission_percentage: uint64,
     flux_oracle_app_id: Application,
   ): void {
-    assert(op.Txn.sender === this.admin_account.value)
+    assert(op.Txn.sender === this.init_admin.value)
     assert(additional_rewards_commission_percentage <= 100, 'COMMISSION_TOO_HIGH')
 
     this.ltv_bps.value = ltv_bps
@@ -299,7 +301,7 @@ export class OrbitalLending extends Contract {
     rate_model_type: uint64, // or uint8
     liq_bonus_bps: uint64,
   ) {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(op.Txn.sender === this.param_admin.value, 'UNAUTHORIZED')
 
     // Invariants
     assert(util_cap_bps >= 1 && util_cap_bps <= 10_000, 'BAD_UTIL_CAP')
@@ -329,7 +331,7 @@ export class OrbitalLending extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   public setContractState(state: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(op.Txn.sender === this.init_admin.value, 'UNAUTHORIZED')
     assert(state === 0 || state === 1, 'INVALID_STATE')
     this.contract_state.value = new UintN64(state)
   }
@@ -341,7 +343,8 @@ export class OrbitalLending extends Contract {
    */
   @abimethod({ allowActions: 'NoOp' })
   public generateLSTToken(): void {
-    assert(op.Txn.sender === this.admin_account.value)
+    assert(op.Txn.sender === this.init_admin.value)
+    assert((this.lst_token_id.value === new UintN64(99)))
     //Create LST token
     const baseToken = Asset(this.base_token_id.value.native)
     const result = itxn
@@ -359,23 +362,6 @@ export class OrbitalLending extends Contract {
     this.lst_token_id.value = new UintN64(result.createdAsset.id)
   }
 
-  /**
-   * Configures the LST token by seeding the initial circulating supply.
-   * @param axferTxn Asset transfer from the admin delivering LST units to the app.
-   * @param circulating_lst Initial circulating amount to record on-chain.
-   * @dev Must be called after `generateLSTToken` or `optInToLST` to finalize setup.
-   */
-  @abimethod({ allowActions: 'NoOp' })
-  public configureLSTToken(axferTxn: gtxn.AssetTransferTxn, circulating_lst: uint64): void {
-    assert(op.Txn.sender === this.admin_account.value)
-    assert(this.lst_token_id.value.native === axferTxn.xferAsset.id, 'LST token not set')
-
-    assertMatch(axferTxn, {
-      sender: this.admin_account.value,
-      assetReceiver: Global.currentApplicationAddress,
-    })
-    this.circulating_lst.value = circulating_lst
-  }
 
   /**
    * Retrieves current price for a token from the configured oracle
@@ -503,7 +489,7 @@ export class OrbitalLending extends Contract {
 
   @abimethod({ allowActions: 'NoOp' })
   public removeCollateralType(collateralTokenId: UintN64): void {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(op.Txn.sender === this.init_admin.value, 'UNAUTHORIZED')
     assert(this.collateralExists(collateralTokenId), 'COLLATERAL_NOT_FOUND')
 
     const key = new AcceptedCollateralKey({ assetId: collateralTokenId }).copy()
@@ -528,7 +514,7 @@ export class OrbitalLending extends Contract {
     originatingAppId: UintN64,
   ): void {
     const baseToken = Asset(this.base_token_id.value.native)
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+    assert(op.Txn.sender === this.init_admin.value, 'UNAUTHORIZED')
     assert(collateralTokenId.native !== baseToken.id, 'CANNOT_USE_BASE_AS_COLLATERAL')
     assert(!this.collateralExists(collateralTokenId), 'COLLATERAL_ALREADY_EXISTS')
 
@@ -1143,15 +1129,15 @@ export class OrbitalLending extends Contract {
    * @param feeTxn Separate payment covering inner-transaction fees.
    */
   @abimethod({ allowActions: 'NoOp' })
-  public withdrawPlatformFees(paymentReceiver: Account): void {
-    assert(op.Txn.sender === this.admin_account.value, 'UNAUTHORIZED')
+  public withdrawPlatformFees(): void {
+    assert(op.Txn.sender === this.fee_admin.value, 'UNAUTHORIZED')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
 
     const payout: uint64 = this.fee_pool.value + this.current_accumulated_commission.value
     if (payout > 0) {
       itxn
         .assetTransfer({
-          assetReceiver: paymentReceiver,
+          assetReceiver: this.fee_admin.value,
           xferAsset: this.base_token_id.value.native,
           assetAmount: payout,
           fee: 0,
@@ -1314,7 +1300,7 @@ export class OrbitalLending extends Contract {
     // pay protocol half
     itxn
       .assetTransfer({
-        assetReceiver: this.admin_account.value,
+        assetReceiver: this.fee_admin.value,
         xferAsset: buyoutTokenId,
         assetAmount: halfPremium,
         fee: 0,
@@ -1895,11 +1881,10 @@ export class OrbitalLending extends Contract {
 
   /**
    * Harvests newly accrued rewards for ASA-based markets.
-   * @dev Admin-only; mirrors logic of `pickupAlgoRewards` for ASA base tokens.
    */
   @abimethod({ allowActions: 'NoOp' })
   pickupASARewards(): void {
-    assert(op.Txn.sender === this.admin_account.value, 'Only admin can pickup rewards')
+    assert(op.Txn.sender === this.fee_admin.value, 'Only admin can pickup rewards')
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
 
     const baseAsset = Asset(this.base_token_id.value.native)
