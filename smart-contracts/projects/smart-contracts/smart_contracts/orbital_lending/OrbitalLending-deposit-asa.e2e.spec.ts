@@ -25,6 +25,8 @@ let collateralLendingContractClient: OrbitalLendingAsaClient
 let fluxOracleAppClient: FluxGateClient
 let oracleAppClient: OracleClient
 let managerAccount: Account
+let feeAdminAccount: Account
+let paramAdminAccount: Account
 
 let xUSDAssetId = 0n
 let collateralAssetId = 0n
@@ -67,11 +69,28 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const { generateAccount } = localnet.context
     managerAccount = await generateAccount({ initialFunds: microAlgo(90_000_000_000) })
+    feeAdminAccount = await generateAccount({ initialFunds: microAlgo(5_000_000) })
+    paramAdminAccount = await generateAccount({ initialFunds: microAlgo(5_000_000) })
     xUSDAssetId = await createToken(managerAccount, 'xUSD', 6)
     collateralAssetId = await createToken(managerAccount, 'xCOL', 6)
 
-    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount)
-    collateralLendingContractClient = await deployAsa(collateralAssetId, managerAccount)
+    // Fee admin must opt into xUSD to receive protocol fee withdrawals.
+    localnet.algorand.setSignerFromAccount(feeAdminAccount)
+    await localnet.algorand.send.assetOptIn({
+      sender: feeAdminAccount.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting fee admin into xUSD asset',
+    })
+    localnet.algorand.setSignerFromAccount(managerAccount)
+
+    xUSDLendingContractClient = await deployAsa(xUSDAssetId, managerAccount, {
+      feeAdmin: feeAdminAccount,
+      paramAdmin: paramAdminAccount,
+    })
+    collateralLendingContractClient = await deployAsa(collateralAssetId, managerAccount, {
+      feeAdmin: feeAdminAccount,
+      paramAdmin: paramAdminAccount,
+    })
     oracleAppClient = await deployOracle(managerAccount)
     fluxOracleAppClient = await deployFluxOracle({ deployer: managerAccount })
 
@@ -192,6 +211,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.baseTokenId).toEqual(xUSDAssetId)
     expect(globalState.lstTokenId).toBeDefined()
     expect(globalState.lstTokenId).not.toEqual(99n)
+    expect(globalState.initAdmin).toEqual(managerAccount.addr.toString())
+    expect(globalState.paramAdmin).toEqual(paramAdminAccount.addr.toString())
+    expect(globalState.feeAdmin).toEqual(feeAdminAccount.addr.toString())
 
     await xUSDLendingContractClient.send.setContractState({ args: { state: 1n } })
   })
@@ -244,6 +266,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(globalState.originationFeeBps).toEqual(origination_fee_bps)
     expect(globalState.protocolShareBps).toEqual(protocol_interest_fee_bps)
     expect(globalState.lstTokenId).toBeDefined()
+    expect(globalState.initAdmin).toEqual(managerAccount.addr.toString())
+    expect(globalState.paramAdmin).toEqual(paramAdminAccount.addr.toString())
+    expect(globalState.feeAdmin).toEqual(feeAdminAccount.addr.toString())
     collateralLstAssetId = globalState.lstTokenId ?? 0n
     expect(collateralLstAssetId).toBeGreaterThan(0n)
 
@@ -1385,8 +1410,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const algod = xUSDLendingContractClient.algorand.client.algod
 
-    const managerXusdBeforeInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
-    const managerXusdBefore = managerXusdBeforeInfo.assetHolding?.amount || 0n
+    const feeAdminXusdBeforeInfo = await algod.accountAssetInformation(feeAdminAccount.addr, xUSDAssetId).do()
+    const feeAdminXusdBefore = feeAdminXusdBeforeInfo.assetHolding?.amount || 0n
 
     const borrowerXusdBeforeInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
     const borrowerXusdBefore = borrowerXusdBeforeInfo.assetHolding?.amount || 0n
@@ -1448,8 +1473,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
     ).rejects.toThrowError()
 
-    const managerXusdAfterInfo = await algod.accountAssetInformation(managerAccount.addr, xUSDAssetId).do()
-    const managerXusdAfter = managerXusdAfterInfo.assetHolding?.amount || 0n
+    const feeAdminXusdAfterInfo = await algod.accountAssetInformation(feeAdminAccount.addr, xUSDAssetId).do()
+    const feeAdminXusdAfter = feeAdminXusdAfterInfo.assetHolding?.amount || 0n
 
     const borrowerXusdAfterInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
     const borrowerXusdAfter = borrowerXusdAfterInfo.assetHolding?.amount || 0n
@@ -1483,7 +1508,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const expectedPremiumRefund = premiumPaymentAmount - premiumTokens
     const actualPremiumRefund = premiumPaymentAmount - actualPremiumPaid
 
-    expect(managerXusdAfter - managerXusdBefore).toEqual(protocolShare)
+    expect(feeAdminXusdAfter - feeAdminXusdBefore).toEqual(protocolShare)
     expect(borrowerXusdAfter - borrowerXusdBefore).toEqual(borrowerShare)
     expect(actualPremiumPaid).toEqual(premiumTokens)
     expect(actualPremiumRefund).toEqual(expectedPremiumRefund)
@@ -1615,8 +1640,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     // Sharply devalue collateral to trigger liquidation eligibility
     oracleAppClient.algorand.setSignerFromAccount(managerAccount)
-    await oracleAppClient.send.addTokenListing({
-      args: { assetId: collateralAssetId, initialPrice: COLLATERAL_LIQUIDATION_PRICE },
+    await oracleAppClient.send.updateTokenPrice({
+      args: { assetId: collateralAssetId, newPrice: COLLATERAL_LIQUIDATION_PRICE },
       maxFee: microAlgo(MAX_FEE),
       coverAppCallInnerTransactionFees: true,
       populateAppCallResources: true,
@@ -1758,8 +1783,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     // Restore collateral oracle price for subsequent tests
     oracleAppClient.algorand.setSignerFromAccount(managerAccount)
-    await oracleAppClient.send.addTokenListing({
-      args: { assetId: collateralAssetId, initialPrice: COLLATERAL_ORACLE_PRICE },
+    await oracleAppClient.send.updateTokenPrice({
+      args: { assetId: collateralAssetId, newPrice: COLLATERAL_ORACLE_PRICE },
       maxFee: microAlgo(MAX_FEE),
       coverAppCallInnerTransactionFees: true,
       populateAppCallResources: true,
@@ -1771,11 +1796,11 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
   })
 
   test('withdraw platform fees - ASA Lending Contract', async () => {
-    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
-    const managerXusdBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
-      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
+    xUSDLendingContractClient.algorand.setSignerFromAccount(feeAdminAccount)
+    const feeAdminXusdBeforeInfo = await xUSDLendingContractClient.algorand.client.algod
+      .accountAssetInformation(feeAdminAccount.addr, xUSDAssetId)
       .do()
-    const managerXusdBefore = managerXusdBeforeInfo.assetHolding?.amount || 0n
+    const feeAdminXusdBefore = feeAdminXusdBeforeInfo.assetHolding?.amount || 0n
 
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     const feePool = globalState.feePool ?? 0n
@@ -1783,8 +1808,8 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(feePool).toBeGreaterThan(0n)
 
     await xUSDLendingContractClient.send.withdrawPlatformFees({
-      args: { paymentReceiver: managerAccount.addr.toString() },
-      sender: managerAccount.addr,
+      args: {},
+      sender: feeAdminAccount.addr,
       maxFee: microAlgo(MAX_FEE),
       coverAppCallInnerTransactionFees: true,
       populateAppCallResources: true,
@@ -1795,12 +1820,12 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     console.log('Fee pool after withdrawal:', feePoolAfter)
     expect(feePoolAfter).toEqual(0n)
 
-    const managerXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
-      .accountAssetInformation(managerAccount.addr, xUSDAssetId)
+    const feeAdminXusdAfterInfo = await xUSDLendingContractClient.algorand.client.algod
+      .accountAssetInformation(feeAdminAccount.addr, xUSDAssetId)
       .do()
-    const managerXusdAfter = managerXusdAfterInfo.assetHolding?.amount || 0n
-    console.log('Manager xUSD before fee withdrawal:', managerXusdBefore)
-    console.log('Manager xUSD after fee withdrawal:', managerXusdAfter)
-    expect(managerXusdAfter).toEqual(managerXusdBefore + feePool)
+    const feeAdminXusdAfter = feeAdminXusdAfterInfo.assetHolding?.amount || 0n
+    console.log('Fee admin xUSD before fee withdrawal:', feeAdminXusdBefore)
+    console.log('Fee admin xUSD after fee withdrawal:', feeAdminXusdAfter)
+    expect(feeAdminXusdAfter).toEqual(feeAdminXusdBefore + feePool)
   })
 })

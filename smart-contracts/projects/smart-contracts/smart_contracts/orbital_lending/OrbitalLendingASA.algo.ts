@@ -77,6 +77,9 @@ export class OrbitalLending extends Contract {
   /** External oracle application for user flux tier feeds */
   flux_oracle_app = GlobalState<Application>()
 
+  /** External registery with app Ids */
+  master_registry_app = GlobalState<Application>()
+
   // ═══════════════════════════════════════════════════════════════════════
   // LENDING PARAMETERS (ALL IN BASIS POINTS)
   // ═══════════════════════════════════════════════════════════════════════
