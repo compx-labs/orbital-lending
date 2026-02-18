@@ -21,7 +21,9 @@ export const MAXIMUM_ALGO_DEPOSITS: uint64 = 69_000_000_000_000 // 69,000,000 AL
 export class AcceptedCollateral extends arc4.Struct<{
   assetId: arc4.UintN64
   baseAssetId: arc4.UintN64
+  baseAssetDecimals: arc4.UintN64
   marketBaseAssetId: arc4.UintN64
+  marketBaseAssetDecimals: arc4.UintN64
   totalCollateral: arc4.UintN64
   originatingAppId: arc4.UintN64
 }> {}

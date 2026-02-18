@@ -42,6 +42,9 @@ export class OrbitalLending extends Contract {
   /** The main lending token used for deposits and borrowing (0 for ALGO) */
   base_token_id = GlobalState<UintN64>()
 
+  /** Decimal precision for the base lending token (atomic units per token). */
+  base_token_decimals = GlobalState<uint64>()
+
   /** LST (Liquidity Staking Token) representing depositor shares in the pool */
   lst_token_id = GlobalState<UintN64>()
 
@@ -250,6 +253,12 @@ export class OrbitalLending extends Contract {
     this.total_additional_rewards.value = 0
     this.flux_oracle_app.value = flux_oracle_app_id
 
+    if (this.base_token_id.value.native === 0) {
+      this.base_token_decimals.value = 6
+    } else {
+      this.base_token_decimals.value = Asset(this.base_token_id.value.native).decimals
+    }
+
     if (this.base_token_id.value.native !== 0) {
       itxn
         .assetTransfer({
@@ -388,6 +397,40 @@ export class OrbitalLending extends Contract {
   }
 
   /**
+   * Returns 10^decimals for converting between atomic token units and whole-token prices.
+   * ASA decimals are bounded, so capping keeps scale within uint64.
+   */
+  private decimalScale(decimals: uint64): uint64 {
+    assert(decimals <= 19, 'BAD_DECIMALS')
+    let scale: uint64 = 1
+    let i: uint64 = 0
+    while (i < decimals) {
+      scale = scale * 10
+      i = i + 1
+    }
+    return scale
+  }
+
+  /**
+   * Converts atomic token units into USD micro-units using token decimals and oracle price.
+   */
+  private amountToUsd(amountAtomic: uint64, oraclePriceMicroUsd: uint64, tokenDecimals: uint64): uint64 {
+    const scale = this.decimalScale(tokenDecimals)
+    const [h, l] = mulw(amountAtomic, oraclePriceMicroUsd)
+    return divw(h, l, scale)
+  }
+
+  /**
+   * Converts USD micro-units into atomic token units using token decimals and oracle price.
+   */
+  private usdToAmount(usdMicro: uint64, oraclePriceMicroUsd: uint64, tokenDecimals: uint64): uint64 {
+    assert(oraclePriceMicroUsd > 0, 'BAD_PRICE')
+    const scale = this.decimalScale(tokenDecimals)
+    const [h, l] = mulw(usdMicro, scale)
+    return divw(h, l, oraclePriceMicroUsd)
+  }
+
+  /**
    * Scales liquidation bonus from 0 at the threshold up to the configured max as LTV worsens.
    * @param ltvBps live LTV in basis points (debtUSD / collateralUSD * 10_000)
    */
@@ -463,7 +506,9 @@ export class OrbitalLending extends Contract {
     this.accepted_collaterals(key).value = new AcceptedCollateral({
       assetId: collateral.assetId,
       baseAssetId: collateral.baseAssetId,
+      baseAssetDecimals: collateral.baseAssetDecimals,
       marketBaseAssetId: collateral.marketBaseAssetId,
+      marketBaseAssetDecimals: collateral.marketBaseAssetDecimals,
       totalCollateral: new UintN64(newTotal),
       originatingAppId: collateral.originatingAppId,
     }).copy()
@@ -484,7 +529,9 @@ export class OrbitalLending extends Contract {
     this.accepted_collaterals(key).value = new AcceptedCollateral({
       assetId: collateral.assetId,
       baseAssetId: collateral.baseAssetId,
+      baseAssetDecimals: collateral.baseAssetDecimals,
       marketBaseAssetId: collateral.marketBaseAssetId,
+      marketBaseAssetDecimals: collateral.marketBaseAssetDecimals,
       totalCollateral: new UintN64(newTotal),
       originatingAppId: collateral.originatingAppId,
     }).copy()
@@ -524,7 +571,9 @@ export class OrbitalLending extends Contract {
     const newAcceptedCollateral: AcceptedCollateral = new AcceptedCollateral({
       assetId: collateralTokenId,
       baseAssetId: collateralBaseTokenId,
+      baseAssetDecimals: new UintN64(Asset(collateralBaseTokenId.native).decimals),
       marketBaseAssetId: this.base_token_id.value,
+      marketBaseAssetDecimals: new UintN64(this.base_token_decimals.value),
       totalCollateral: new UintN64(0),
       originatingAppId: originatingAppId,
     })
@@ -1248,8 +1297,10 @@ export class OrbitalLending extends Contract {
     this.accepted_collaterals(acKey).value = new AcceptedCollateral({
       assetId: acVal.assetId,
       baseAssetId: acVal.baseAssetId,
+      baseAssetDecimals: acVal.baseAssetDecimals,
       totalCollateral: new UintN64(updatedTotal),
       marketBaseAssetId: acVal.marketBaseAssetId,
+      marketBaseAssetDecimals: acVal.marketBaseAssetDecimals,
       originatingAppId: acVal.originatingAppId,
     }).copy()
 
@@ -1327,8 +1378,7 @@ export class OrbitalLending extends Contract {
    */
   private debtUSD(debtBaseUnits: uint64): uint64 {
     const baseTokenPrice: uint64 = this.getOraclePrice(this.base_token_id.value) // price of market base token
-    const [h, l] = mulw(debtBaseUnits, baseTokenPrice)
-    return divw(h, l, USD_MICRO_UNITS) // micro-USD
+    return this.amountToUsd(debtBaseUnits, baseTokenPrice, this.base_token_decimals.value)
   }
 
   /**
@@ -1379,8 +1429,7 @@ export class OrbitalLending extends Contract {
     const basePrice = this.getOraclePrice(ac.baseAssetId)
 
     // underlying = removableUSD * 1e6 / basePrice
-    const [hU, lU] = mulw(removableUSD, USD_MICRO_UNITS)
-    const removableUnderlying: uint64 = divw(hU, lU, basePrice)
+    const removableUnderlying: uint64 = this.usdToAmount(removableUSD, basePrice, ac.baseAssetDecimals.native)
 
     // LST = underlying * circulating / totalDeposits
     const [hL, lL] = mulw(removableUnderlying, circulatingLST)
@@ -1473,8 +1522,11 @@ export class OrbitalLending extends Contract {
   ): uint64 {
     // USD -> underlying base units
     const underlyingPrice = this.getOraclePrice(this.getCollateral(collateralTokenId).baseAssetId) // µUSD
-    const [hUnd, lUnd] = mulw(seizeUSD, USD_MICRO_UNITS)
-    const seizeUnderlying: uint64 = divw(hUnd, lUnd, underlyingPrice)
+    const seizeUnderlying: uint64 = this.usdToAmount(
+      seizeUSD,
+      underlyingPrice,
+      this.getCollateral(collateralTokenId).baseAssetDecimals.native,
+    )
 
     const collateral = this.getCollateral(collateralTokenId)
     assert(collateral.originatingAppId.native === lstAppId, 'mismatched LST app')
@@ -1519,14 +1571,12 @@ export class OrbitalLending extends Contract {
     const seizedUnderlying: uint64 = divw(hUnderlying, lUnderlying, circ)
 
     const underlyingPrice = this.getOraclePrice(collateral.baseAssetId) // µUSD
-    const [hSeizeUSD, lSeizeUSD] = mulw(seizedUnderlying, underlyingPrice)
-    const seizeUSDActual: uint64 = divw(hSeizeUSD, lSeizeUSD, USD_MICRO_UNITS)
+    const seizeUSDActual: uint64 = this.amountToUsd(seizedUnderlying, underlyingPrice, collateral.baseAssetDecimals.native)
 
     const [hRepayUSD, lRepayUSD] = mulw(seizeUSDActual, BASIS_POINTS)
     const repayUSD: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps)
 
-    const [hRepayBase, lRepayBase] = mulw(repayUSD, USD_MICRO_UNITS)
-    const repayBase: uint64 = divw(hRepayBase, lRepayBase, basePrice)
+    const repayBase: uint64 = this.usdToAmount(repayUSD, basePrice, this.base_token_decimals.value)
 
     return repayBase
   }
@@ -1586,7 +1636,7 @@ export class OrbitalLending extends Contract {
     const repayUSDcandidate: uint64 =
       repayCandidate === 0
         ? 0
-        : divw(mulw(repayCandidate, basePrice)[0], mulw(repayCandidate, basePrice)[1], USD_MICRO_UNITS)
+        : this.amountToUsd(repayCandidate, basePrice, this.base_token_decimals.value)
     if (collateralUSD <= debtUSDv && !isFullRepayRequest) {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
@@ -1606,13 +1656,15 @@ export class OrbitalLending extends Contract {
     if (!isFullRepayRequest && bonusBps < BASIS_POINTS * 10) {
       const [hMaxUsd, lMaxUsd] = mulw(collateralUSD, BASIS_POINTS)
       const maxRepayUSDForCollateral: uint64 = divw(hMaxUsd, lMaxUsd, BASIS_POINTS + bonusBps)
-      const [hMaxBase, lMaxBase] = mulw(maxRepayUSDForCollateral, USD_MICRO_UNITS)
-      const maxRepayBaseForCollateral: uint64 = divw(hMaxBase, lMaxBase, basePrice)
+      const maxRepayBaseForCollateral: uint64 = this.usdToAmount(
+        maxRepayUSDForCollateral,
+        basePrice,
+        this.base_token_decimals.value,
+      )
       if (repayCandidate > maxRepayBaseForCollateral) repayCandidate = maxRepayBaseForCollateral
     }
 
-    const [hRU, lRU] = mulw(repayCandidate, basePrice)
-    const repayUSD: uint64 = divw(hRU, lRU, USD_MICRO_UNITS)
+    const repayUSD: uint64 = this.amountToUsd(repayCandidate, basePrice, this.base_token_decimals.value)
 
     const [hSZ, lSZ] = mulw(repayUSD, BASIS_POINTS + bonusBps)
     const seizeUSD: uint64 = divw(hSZ, lSZ, BASIS_POINTS)
@@ -1770,8 +1822,7 @@ export class OrbitalLending extends Contract {
     const baseTokenPrice = this.getOraclePrice(baseTokenId)
 
     // 3) Convert underlying collateral → USD
-    const [hU, lU] = mulw(underlyingCollateral, baseTokenPrice)
-    const collateralUSD = divw(hU, lU, USD_MICRO_UNITS)
+    const collateralUSD = this.amountToUsd(underlyingCollateral, baseTokenPrice, lstCollateral.baseAssetDecimals.native)
 
     return collateralUSD
   }
@@ -1786,8 +1837,7 @@ export class OrbitalLending extends Contract {
   private validateLoanAmount(requestedLoanAmount: uint64, maxBorrowUSD: uint64, baseTokenOraclePrice: uint64): uint64 {
     // Convert requested loan to USD
     assert(baseTokenOraclePrice > 0, 'invalid base token price')
-    const [rH, rL] = mulw(requestedLoanAmount, baseTokenOraclePrice)
-    const requestedLoanUSD = divw(rH, rL, USD_MICRO_UNITS)
+    const requestedLoanUSD = this.amountToUsd(requestedLoanAmount, baseTokenOraclePrice, this.base_token_decimals.value)
 
     assert(requestedLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
     const capBorrow = this.capBorrowLimit() // e.g., deposits * util_cap / 10_000
@@ -1841,8 +1891,7 @@ export class OrbitalLending extends Contract {
     const liveDebt: uint64 = this.syncBorrowerSnapshot(borrower)
 
     // 2) LTV check stays the same but use liveDebt instead of iar.totalDebt
-    const [h1, l1] = mulw(liveDebt, baseTokenOraclePrice)
-    const oldLoanUSD = divw(h1, l1, USD_MICRO_UNITS)
+    const oldLoanUSD = this.amountToUsd(liveDebt, baseTokenOraclePrice, this.base_token_decimals.value)
     // ... compute totalRequestedUSD etc (unchanged) ...
 
     // 3) Add new principal
