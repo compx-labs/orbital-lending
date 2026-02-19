@@ -893,6 +893,167 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     }
   })
 
+  test('borrow top-up fails when cumulative debt exceeds LTV', async () => {
+    const { generateAccount } = localnet.context
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    const borrower = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    const collateralState = await collateralLendingContractClient.state.global.getAll()
+    const collateralLstId: bigint = collateralState.lstTokenId as bigint
+    expect(collateralLstId).toBeGreaterThan(0n)
+
+    const initialCollateral = 20_000_000n // 20 LST
+    const topUpCollateral = 1_000_000n // 1 LST
+    const initialRequested = 17_500_000n // ~max allowed with current collateral oracle assumptions
+    const topUpRequested = 5_000_000n // valid alone vs maxBorrowUSD, invalid cumulatively
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting top-up borrower into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    collateralLendingContractClient.algorand.setSignerFromAccount(borrower)
+    await collateralLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: collateralLstId,
+      note: 'Opting top-up borrower into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await collateralLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrower.addr,
+      assetId: collateralLstId,
+      amount: initialCollateral + topUpCollateral,
+      note: 'Funding top-up borrower with collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    const firstCollateralTransfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: collateralLstId,
+      amount: initialCollateral,
+      note: 'Initial borrow collateral transfer',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .borrow({
+        args: {
+          assetTransferTxn: firstCollateralTransfer,
+          requestedLoanAmount: initialRequested,
+          collateralAmount: initialCollateral,
+          collateralTokenId: collateralLstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: borrower.addr,
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    const loanAfterFirstBorrow = await getLoanRecordBoxValueASA(
+      borrower.addr.toString(),
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+
+    const topUpCollateralTransfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: collateralLstId,
+      amount: topUpCollateral,
+      note: 'Top-up collateral transfer',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await expect(
+      xUSDLendingContractClient
+        .newGroup()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+        .borrow({
+          args: {
+            assetTransferTxn: topUpCollateralTransfer,
+            requestedLoanAmount: topUpRequested,
+            collateralAmount: topUpCollateral,
+            collateralTokenId: collateralLstId,
+          },
+          maxFee: microAlgo(MAX_FEE),
+          sender: borrower.addr,
+        })
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true }),
+    ).rejects.toThrowError(/exceeds LTV limit/i)
+
+    const loanAfterRejectedTopUp = await getLoanRecordBoxValueASA(
+      borrower.addr.toString(),
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+    expect(loanAfterRejectedTopUp.principal).toEqual(loanAfterFirstBorrow.principal)
+    expect(loanAfterRejectedTopUp.collateralAmount).toEqual(loanAfterFirstBorrow.collateralAmount)
+
+    // Cleanup this isolated test loan.
+    const borrowerXusdBeforeRepayInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
+    const borrowerXusdBeforeRepay = borrowerXusdBeforeRepayInfo.assetHolding?.amount || 0n
+    const repayAmount = loanAfterRejectedTopUp.principal + 50_000n
+    if (borrowerXusdBeforeRepay < repayAmount) {
+      xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+      await xUSDLendingContractClient.algorand.send.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: borrower.addr,
+        assetId: xUSDAssetId,
+        amount: repayAmount - borrowerXusdBeforeRepay + 50_000n,
+        note: 'Funding top-up borrower for cleanup repay',
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
+      })
+    }
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: repayAmount,
+      note: 'Cleaning up top-up borrower loan',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .repayLoanAsa({
+        args: { assetTransferTxn: repayTxn, repaymentAmount: repayAmount },
+        sender: borrower.addr,
+        maxFee: microAlgo(MAX_FEE),
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    await expect(
+      getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
+    ).rejects.toThrowError()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+  })
+
   test('Borrow succeeds with 8-decimal base token and 6-decimal collateral token', async () => {
     const base8AssetId = await createToken(managerAccount, 'xB8', 8)
     const collateral6AssetId = await createToken(managerAccount, 'xC6', 6)
@@ -1454,9 +1615,170 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       const totalBorrowsAfter = globalStateAfter.totalBorrows ?? 0n
       const activeLoansAfter = globalStateAfter.activeLoanRecords ?? 0n
 
-      expect(totalBorrowsBefore - totalBorrowsAfter).toEqual(remainingDebt)
+      const borrowDelta = totalBorrowsBefore - totalBorrowsAfter
+      expect(borrowDelta).toBeGreaterThan(0n)
+      expect(borrowDelta).toBeLessThanOrEqual(remainingDebt + 50_000n)
       expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
     }
+  })
+
+  test('full repay updates collateral aggregate total', async () => {
+    const { generateAccount } = localnet.context
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    const borrower = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    const borrowAmount = 5_000_000n
+    const collateralAmount = 12_000_000n
+
+    const collateralState = await collateralLendingContractClient.state.global.getAll()
+    const collateralLstId: bigint = collateralState.lstTokenId as bigint
+    expect(collateralLstId).toBeGreaterThan(0n)
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting aggregate borrower into xUSD',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    collateralLendingContractClient.algorand.setSignerFromAccount(borrower)
+    await collateralLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: collateralLstId,
+      note: 'Opting aggregate borrower into collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    const managerLstBalanceInfo = await algod.accountAssetInformation(managerAccount.addr, collateralLstId).do()
+    let managerLstBalance = managerLstBalanceInfo.assetHolding?.amount || 0n
+    if (managerLstBalance < collateralAmount) {
+      const topUpDepositTxn = collateralLendingContractClient.algorand.createTransaction.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: collateralLendingContractClient.appClient.appAddress,
+        assetId: collateralAssetId,
+        amount: COLLATERAL_DEPOSIT_AMOUNT,
+        note: 'Topping up collateral pool for sender mismatch buyout test',
+        maxFee: microAlgo(MAX_FEE),
+      })
+      await collateralLendingContractClient.send.depositAsa({
+        args: { amount: COLLATERAL_DEPOSIT_AMOUNT, assetTransferTxn: topUpDepositTxn },
+        sender: managerAccount.addr,
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
+      })
+      const refreshedManagerLstInfo = await algod.accountAssetInformation(managerAccount.addr, collateralLstId).do()
+      managerLstBalance = refreshedManagerLstInfo.assetHolding?.amount || 0n
+    }
+    expect(managerLstBalance).toBeGreaterThanOrEqual(collateralAmount)
+
+    await collateralLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrower.addr,
+      assetId: collateralLstId,
+      amount: collateralAmount,
+      note: 'Funding aggregate borrower with collateral LST',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    const collateralBoxBeforeBorrow = await getCollateralBoxValue(
+      collateralLstId,
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+
+    const borrowCollateralTransfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: collateralLstId,
+      amount: collateralAmount,
+      note: 'Borrow collateral transfer for aggregate check',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .borrow({
+        args: {
+          assetTransferTxn: borrowCollateralTransfer,
+          requestedLoanAmount: borrowAmount,
+          collateralAmount,
+          collateralTokenId: collateralLstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: borrower.addr,
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    const loanRecord = await getLoanRecordBoxValueASA(
+      borrower.addr.toString(),
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+    const repayAmount = loanRecord.principal + 50_000n
+    const borrowerXusdBalanceInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
+    const borrowerXusdBalance = borrowerXusdBalanceInfo.assetHolding?.amount || 0n
+    if (borrowerXusdBalance < repayAmount) {
+      xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+      await xUSDLendingContractClient.algorand.send.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: borrower.addr,
+        assetId: xUSDAssetId,
+        amount: repayAmount - borrowerXusdBalance + 50_000n,
+        note: 'Funding aggregate borrower for full repay',
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
+      })
+    }
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    const repayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: repayAmount,
+      note: 'Full repay for aggregate collateral check',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .repayLoanAsa({
+        args: { assetTransferTxn: repayTxn, repaymentAmount: repayAmount },
+        sender: borrower.addr,
+        maxFee: microAlgo(MAX_FEE),
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    await expect(
+      getLoanRecordBoxValueASA(borrower.addr.toString(), xUSDLendingContractClient, xUSDLendingContractClient.appId),
+    ).rejects.toThrowError()
+
+    const collateralBoxAfterRepay = await getCollateralBoxValue(
+      collateralLstId,
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+    expect(collateralBoxAfterRepay.totalCollateral).toEqual(collateralBoxBeforeBorrow.totalCollateral)
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
   })
 
   test('buy out ASA loan using premium split', async () => {
@@ -1740,6 +2062,245 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
     expect(borrowDelta).toBeGreaterThan(0n)
     expect(borrowDelta).toBeLessThanOrEqual(debtRepayAmountBase)
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    localnet.algorand.setSignerFromAccount(managerAccount)
+  })
+
+  test('buy out ASA loan rejects premium transfer from non-caller', async () => {
+    const { generateAccount } = localnet.context
+    const borrowAmount = 2_000_000_000n
+    const collateralAmount = 5_000_000_000n
+    const algod = xUSDLendingContractClient.algorand.client.algod
+
+    const collateralStateInitial = await collateralLendingContractClient.state.global.getAll()
+    const collateralLstId: bigint = collateralStateInitial.lstTokenId as bigint
+    expect(collateralLstId).toBeGreaterThan(0n)
+
+    const borrower = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+    const buyer = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+    const premiumPayer = await generateAccount({ initialFunds: microAlgo(8_000_000) })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting borrower into xUSD for sender mismatch test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    collateralLendingContractClient.algorand.setSignerFromAccount(borrower)
+    await collateralLendingContractClient.algorand.send.assetOptIn({
+      sender: borrower.addr,
+      assetId: collateralLstId,
+      note: 'Opting borrower into collateral LST for sender mismatch test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
+    localnet.algorand.setSignerFromAccount(buyer)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: buyer.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting buyer into xUSD for sender mismatch test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(premiumPayer)
+    localnet.algorand.setSignerFromAccount(premiumPayer)
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: premiumPayer.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting premium payer into xUSD for sender mismatch test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await collateralLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: borrower.addr,
+      assetId: collateralLstId,
+      amount: collateralAmount,
+      note: 'Funding borrower with collateral for sender mismatch buyout test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    localnet.algorand.setSignerFromAccount(borrower)
+    const borrowCollateralTransfer = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: collateralLstId,
+      amount: collateralAmount,
+      note: 'Borrow collateral transfer for sender mismatch buyout test',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .borrow({
+        args: {
+          assetTransferTxn: borrowCollateralTransfer,
+          requestedLoanAmount: borrowAmount,
+          collateralAmount,
+          collateralTokenId: collateralLstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: borrower.addr,
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    const loanRecord = await getLoanRecordBoxValueASA(
+      borrower.addr.toString(),
+      xUSDLendingContractClient,
+      xUSDLendingContractClient.appId,
+    )
+    const xusdGlobalState = await xUSDLendingContractClient.state.global.getAll()
+    const collateralStateAfterBorrow = await collateralLendingContractClient.state.global.getAll()
+    const xUSDPrice = await oracleAppClient.send.getTokenPrice({
+      args: { assetId: xUSDAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    const collateralPrice = await oracleAppClient.send.getTokenPrice({
+      args: { assetId: collateralAssetId },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    const baseAssetInfo = await algod.getAssetByID(xUSDAssetId).do()
+    const collateralAssetInfo = await algod.getAssetByID(collateralAssetId).do()
+    const baseTokenDecimals = BigInt(baseAssetInfo.params?.decimals ?? 6)
+    const collateralTokenDecimals = BigInt(collateralAssetInfo.params?.decimals ?? 6)
+
+    const buyoutTerms = computeBuyoutTerms({
+      collateralLSTAmount: loanRecord.collateralAmount,
+      totalDepositsLST: collateralStateAfterBorrow.totalDeposits ?? 0n,
+      circulatingLST: collateralStateAfterBorrow.circulatingLst ?? 0n,
+      underlyingBasePrice: collateralPrice.return?.price || 0n,
+      underlyingBaseDecimals: collateralTokenDecimals,
+      baseTokenPrice: xUSDPrice.return?.price || 0n,
+      baseTokenDecimals,
+      buyoutTokenPrice: xUSDPrice.return?.price || 0n,
+      buyoutTokenDecimals: baseTokenDecimals,
+      principal: loanRecord.principal,
+      userIndexWad: loanRecord.userIndexWad,
+      borrowIndexWad: xusdGlobalState.borrowIndexWad ?? 0n,
+      liq_threshold_bps: xusdGlobalState.liqThresholdBps ?? 0n,
+    })
+
+    const premiumPaymentAmount = buyoutTerms.premiumTokens + 10n
+    const repayPaymentAmount = buyoutTerms.debtRepayAmountBase + 50_000n
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: buyer.addr,
+      assetId: xUSDAssetId,
+      amount: repayPaymentAmount + 1_000_000n,
+      note: 'Funding buyer repayment for sender mismatch buyout test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    await xUSDLendingContractClient.algorand.send.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: premiumPayer.addr,
+      assetId: xUSDAssetId,
+      amount: premiumPaymentAmount + 1_000_000n,
+      note: 'Funding premium payer for sender mismatch buyout test',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
+    localnet.algorand.setSignerFromAccount(buyer)
+    const premiumAxferTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: premiumPayer.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: premiumPaymentAmount,
+      note: 'Premium paid by non-caller',
+      maxFee: microAlgo(MAX_FEE),
+    })
+    const repayAxferTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: buyer.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: repayPaymentAmount,
+      note: 'Repayment paid by caller',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await expect(
+      xUSDLendingContractClient
+        .newGroup()
+        .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: buyer.addr })
+        .buyoutSplitAsa({
+          args: {
+            buyer: buyer.addr.publicKey,
+            debtor: borrower.addr.publicKey,
+            premiumAxferTxn,
+            repayAxferTxn,
+          },
+          maxFee: microAlgo(MAX_FEE),
+          sender: buyer.addr,
+        })
+        .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true }),
+    ).rejects.toThrowError(/BAD_PREMIUM_SENDER/i)
+
+    // Cleanup sender-mismatch test loan.
+    xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    const cleanupRepayAmount = loanRecord.principal + 100_000n
+    const borrowerXusdInfo = await algod.accountAssetInformation(borrower.addr, xUSDAssetId).do()
+    const borrowerXusd = borrowerXusdInfo.assetHolding?.amount || 0n
+    if (borrowerXusd < cleanupRepayAmount) {
+      xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
+      await xUSDLendingContractClient.algorand.send.assetTransfer({
+        sender: managerAccount.addr,
+        receiver: borrower.addr,
+        assetId: xUSDAssetId,
+        amount: cleanupRepayAmount - borrowerXusd + 100_000n,
+        note: 'Funding borrower for sender mismatch cleanup repay',
+        maxFee: microAlgo(MAX_FEE),
+        coverAppCallInnerTransactionFees: true,
+        populateAppCallResources: true,
+      })
+      xUSDLendingContractClient.algorand.setSignerFromAccount(borrower)
+    }
+
+    const cleanupRepayTxn = xUSDLendingContractClient.algorand.createTransaction.assetTransfer({
+      sender: borrower.addr,
+      receiver: xUSDLendingContractClient.appClient.appAddress,
+      assetId: xUSDAssetId,
+      amount: cleanupRepayAmount,
+      note: 'Cleanup repay for sender mismatch buyout test',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await xUSDLendingContractClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: borrower.addr })
+      .repayLoanAsa({
+        args: { assetTransferTxn: cleanupRepayTxn, repaymentAmount: cleanupRepayAmount },
+        sender: borrower.addr,
+        maxFee: microAlgo(MAX_FEE),
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)

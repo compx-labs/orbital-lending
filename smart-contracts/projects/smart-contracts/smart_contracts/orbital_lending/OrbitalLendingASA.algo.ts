@@ -832,7 +832,7 @@ export class OrbitalLending extends Contract {
     const { disbursement } = this.calculateDisbursement(requestedLoanAmount, calculatedFee)
 
     if (hasLoan) {
-      this.processLoanTopUp(op.Txn.sender, disbursement, maxBorrowUSD, baseTokenOraclePrice, collateralTokenId)
+      this.processLoanTopUp(op.Txn.sender, collateralAmount, disbursement, maxBorrowUSD, baseTokenOraclePrice, collateralTokenId)
     } else {
       this.mintLoanRecord(disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
@@ -1154,6 +1154,7 @@ export class OrbitalLending extends Contract {
     }
 
     if (remainingDebt === 0) {
+      this.reduceCollateralTotal(rec.collateralTokenId, rec.collateralAmount.native)
       this.loan_record(op.Txn.sender).delete()
       this.active_loan_records.value -= 1
 
@@ -1269,6 +1270,7 @@ export class OrbitalLending extends Contract {
     const premiumTokens: uint64 =
       buyoutTokenPrice === 0 ? 0 : this.usdToAmount(premiumUSD, buyoutTokenPrice, this.buyout_token_decimals.value)
 
+    assert(premiumAxferTxn.sender === op.Txn.sender, 'BAD_PREMIUM_SENDER')
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')
     assert(premiumAxferTxn.assetAmount >= premiumTokens, 'INVALID_BUYOUT_AMOUNT')
@@ -1890,6 +1892,7 @@ export class OrbitalLending extends Contract {
     borrower: Account,
     collateralAmount: uint64,
     disbursement: uint64,
+    maxBorrowUSD: uint64,
     baseTokenOraclePrice: uint64,
     collateralTokenId: UintN64,
   ): void {
@@ -1897,9 +1900,11 @@ export class OrbitalLending extends Contract {
     // 1) Bring borrower snapshot current (uses global index)
     const liveDebt: uint64 = this.syncBorrowerSnapshot(borrower)
 
-    // 2) LTV check stays the same but use liveDebt instead of iar.totalDebt
+    // 2) Enforce cumulative LTV on the post-top-up debt.
     const oldLoanUSD = this.amountToUsd(liveDebt, baseTokenOraclePrice, this.base_token_decimals.value)
-    // ... compute totalRequestedUSD etc (unchanged) ...
+    const newLoanUSD = this.amountToUsd(disbursement, baseTokenOraclePrice, this.base_token_decimals.value)
+    const totalLoanUSD: uint64 = oldLoanUSD + newLoanUSD
+    assert(totalLoanUSD <= maxBorrowUSD, 'exceeds LTV limit')
 
     // 3) Add new principal
     const newDebt: uint64 = liveDebt + disbursement
