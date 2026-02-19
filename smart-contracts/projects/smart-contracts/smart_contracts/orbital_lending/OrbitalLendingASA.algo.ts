@@ -29,7 +29,7 @@ import {
   MINIMUM_ADDITIONAL_REWARD,
 } from './config.algo'
 import { TokenPrice } from '../Oracle/config.algo'
-import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, USD_MICRO_UNITS, SECONDS_PER_YEAR } from './config.algo'
+import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, SECONDS_PER_YEAR } from './config.algo'
 
 const CONTRACT_VERSION: uint64 = 4000
 
@@ -154,6 +154,9 @@ export class OrbitalLending extends Contract {
   /** Total number of active loans in the system */
   buyout_token_id = GlobalState<UintN64>()
 
+  /** Decimal precision for the buyout premium token (atomic units per token). */
+  buyout_token_decimals = GlobalState<uint64>()
+
   /** Liquidation bonus in bps (e.g., 500 = 5% bonus to liquidators) */
   liq_bonus_bps = GlobalState<uint64>()
 
@@ -257,6 +260,11 @@ export class OrbitalLending extends Contract {
       this.base_token_decimals.value = 6
     } else {
       this.base_token_decimals.value = Asset(this.base_token_id.value.native).decimals
+    }
+    if (this.buyout_token_id.value.native === 0) {
+      this.buyout_token_decimals.value = 6
+    } else {
+      this.buyout_token_decimals.value = Asset(this.buyout_token_id.value.native).decimals
     }
 
     if (this.base_token_id.value.native !== 0) {
@@ -1258,9 +1266,8 @@ export class OrbitalLending extends Contract {
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
     const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
 
-    // premiumTokens = premiumUSD * 1e6 / buyoutTokenPrice
-    const [hPT, lPT] = mulw(premiumUSD, USD_MICRO_UNITS)
-    const premiumTokens: uint64 = buyoutTokenPrice === 0 ? 0 : divw(hPT, lPT, buyoutTokenPrice)
+    const premiumTokens: uint64 =
+      buyoutTokenPrice === 0 ? 0 : this.usdToAmount(premiumUSD, buyoutTokenPrice, this.buyout_token_decimals.value)
 
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
     assert(premiumAxferTxn.xferAsset === Asset(buyoutTokenId), 'INVALID_XFER_ASSET')

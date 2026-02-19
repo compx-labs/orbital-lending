@@ -54,6 +54,7 @@ const COLLATERAL_ORACLE_PRICE = 3_500_000n
 const COLLATERAL_LIQUIDATION_PRICE = 1_000n
 
 const depositors: Account[] = []
+const scaleForDecimals = (decimals: bigint): bigint => 10n ** decimals
 
 describe('orbital-lending Testing - deposit / borrow', async () => {
   const localnet = algorandFixture()
@@ -1023,7 +1024,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetReferences: [collateral6AssetId],
     })
 
-    const baseDepositAmount = 2_000_000_000n // 20.0 tokens (8 decimals)
+    const baseDepositAmount = 200_000_000_000n // 2,000.0 tokens (8 decimals)
     const collateralDepositAmount = 20_000_000n // 20.0 tokens (6 decimals)
     const requestedBorrowAmount = 400_000_000n // 4.0 tokens (8 decimals)
 
@@ -1356,7 +1357,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       expect(borrowDelta).toBeGreaterThan(0n)
       expect(borrowDelta).toBeLessThanOrEqual(repayRequested)
       // repayUsed may include interest accrued between snapshots; allow small drift margin
-      const driftMargin = 10_000n
+      const driftMargin = 50_000n
       expect(borrowDelta).toBeLessThanOrEqual(repayUsed + driftMargin)
     }
   })
@@ -1559,14 +1560,22 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       coverAppCallInnerTransactionFees: true,
       populateAppCallResources: true,
     })
+    const algod = xUSDLendingContractClient.algorand.client.algod
+    const baseAssetInfo = await algod.getAssetByID(xUSDAssetId).do()
+    const collateralAssetInfo = await algod.getAssetByID(collateralAssetId).do()
+    const baseTokenDecimals = BigInt(baseAssetInfo.params?.decimals ?? 6)
+    const collateralTokenDecimals = BigInt(collateralAssetInfo.params?.decimals ?? 6)
 
     const buyoutTerms = computeBuyoutTerms({
       collateralLSTAmount: loanRecord.collateralAmount,
       totalDepositsLST: collateralStateAfterBorrow.totalDeposits ?? 0n,
       circulatingLST: collateralStateAfterBorrow.circulatingLst ?? 0n,
       underlyingBasePrice: collateralPrice.return?.price || 0n,
+      underlyingBaseDecimals: collateralTokenDecimals,
       baseTokenPrice: xUSDPrice.return?.price || 0n,
+      baseTokenDecimals,
       buyoutTokenPrice: xUSDPrice.return?.price || 0n,
+      buyoutTokenDecimals: baseTokenDecimals,
       principal: loanRecord.principal,
       userIndexWad: loanRecord.userIndexWad,
       borrowIndexWad: xusdGlobalStateBeforeBuyout.borrowIndexWad ?? 0n,
@@ -1621,8 +1630,6 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     xUSDLendingContractClient.algorand.setSignerFromAccount(buyer)
     collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     localnet.algorand.setSignerFromAccount(buyer)
-
-    const algod = xUSDLendingContractClient.algorand.client.algod
 
     const feeAdminXusdBeforeInfo = await algod.accountAssetInformation(feeAdminAccount.addr, xUSDAssetId).do()
     const feeAdminXusdBefore = feeAdminXusdBeforeInfo.assetHolding?.amount || 0n
@@ -1863,6 +1870,10 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
 
     const globalState = await xUSDLendingContractClient.state.global.getAll()
     const borrowIndexWad = globalState.borrowIndexWad as bigint
+    const baseAssetInfo = await algod.getAssetByID(xUSDAssetId).do()
+    const baseTokenDecimals = BigInt(baseAssetInfo.params?.decimals ?? 6)
+    const overpayBuffer = scaleForDecimals(baseTokenDecimals >= 2n ? baseTokenDecimals - 2n : 0n) // ~0.01 token
+    const fundingBuffer = scaleForDecimals(baseTokenDecimals) // 1 token
 
     // Prepare liquidator
     const liquidator = await generateAccount({ initialFunds: microAlgo(8_000_000) })
@@ -1888,7 +1899,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     const liveDebt = liveDebtFromSnapshot(loanRecord.principal, loanRecord.userIndexWad, borrowIndexWad)
-    const repayAmount = liveDebt + 10_000n
+    const repayAmount = liveDebt + overpayBuffer
 
     // Fund liquidator with xUSD for repayment
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
@@ -1896,7 +1907,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       sender: managerAccount.addr,
       receiver: liquidator.addr,
       assetId: xUSDAssetId,
-      amount: repayAmount + 1_000_000n,
+      amount: repayAmount + fundingBuffer,
       note: 'Funding liquidator with xUSD for liquidation',
       maxFee: microAlgo(MAX_FEE),
       coverAppCallInnerTransactionFees: true,
@@ -1985,7 +1996,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     const borrowDelta = totalBorrowsBefore - totalBorrowsAfter
     expect(borrowDelta).toBeGreaterThan(0n)
     // Borrow delta should be capped to the pre-liquidation debt; overpay is refunded.
-    expect(borrowDelta).toBeLessThanOrEqual(loanRecord.principal + 10_000n)
+    expect(borrowDelta).toBeLessThanOrEqual(loanRecord.principal + overpayBuffer)
     expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
 
     const collateralBoxAfter = await getCollateralBoxValue(

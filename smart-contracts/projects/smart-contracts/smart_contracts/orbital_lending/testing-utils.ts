@@ -8,10 +8,17 @@ export const USD_MICRO_UNITS: bigint = 1_000_000n
 
 export const SECONDS_PER_YEAR: bigint = 365n * 24n * 60n * 60n
 
+const scaleForDecimals = (decimals: bigint): bigint => {
+  if (decimals < 0n) throw new Error('Negative decimals are invalid')
+  return 10n ** decimals
+}
+
 export interface getBoxValueReturnType {
   assetId: bigint
   baseAssetId: bigint
+  baseAssetDecimals: bigint
   marketBaseAssetId: bigint
+  marketBaseAssetDecimals: bigint
   totalCollateral: bigint
   boxRef: algosdk.BoxReference
 }
@@ -24,7 +31,9 @@ export async function getCollateralBoxValue(
   const acceptedCollateralType = new algosdk.ABITupleType([
     new algosdk.ABIUintType(64), // assetId
     new algosdk.ABIUintType(64), // baseAssetId
+    new algosdk.ABIUintType(64), // baseAssetDecimals
     new algosdk.ABIUintType(64), // marketBaseAssetId
+    new algosdk.ABIUintType(64), // marketBaseAssetDecimals
     new algosdk.ABIUintType(64), // totalCollateral
     new algosdk.ABIUintType(64), // originatingAppId
   ])
@@ -40,11 +49,14 @@ export async function getCollateralBoxValue(
   boxName.set(prefix, 0)
   boxName.set(keyBytes, prefix.length)
   const collateral = await appClient.appClient.getBoxValueFromABIType(boxName, acceptedCollateralType)
-  const [assetId, baseAssetId, marketBaseAssetId, totalCollateral] = collateral as bigint[]
+  const [assetId, baseAssetId, baseAssetDecimals, marketBaseAssetId, marketBaseAssetDecimals, totalCollateral] =
+    collateral as bigint[]
   return {
     assetId,
     baseAssetId,
+    baseAssetDecimals,
     marketBaseAssetId,
+    marketBaseAssetDecimals,
     totalCollateral,
     boxRef: {
       appIndex: appId,
@@ -67,7 +79,9 @@ export interface PartialLiquidationParams {
   totalDeposits: bigint
   circulatingLst: bigint
   basePrice: bigint
+  baseTokenDecimals?: bigint
   collateralUnderlyingPrice: bigint
+  collateralUnderlyingDecimals?: bigint
   bonusBps: bigint
 }
 
@@ -85,7 +99,9 @@ export function computePartialLiquidationOutcome({
   totalDeposits,
   circulatingLst,
   basePrice,
+  baseTokenDecimals = 6n,
   collateralUnderlyingPrice,
+  collateralUnderlyingDecimals = 6n,
   bonusBps,
 }: PartialLiquidationParams): PartialLiquidationOutcome {
   if (repayBaseAmount === 0n || liveDebt === 0n || collateralLSTBalance === 0n) {
@@ -109,9 +125,9 @@ export function computePartialLiquidationOutcome({
     return { repayUsed: 0n, seizeLST: 0n, refundAmount: repayBaseAmount, fullRepayRequired: false }
   }
 
-  const repayUSD = (repayCandidate * basePrice) / USD_MICRO_UNITS
+  const repayUSD = (repayCandidate * basePrice) / scaleForDecimals(baseTokenDecimals)
   const seizeUSD = (repayUSD * (BASIS_POINTS + bonusBps)) / BASIS_POINTS
-  const seizeUnderlying = (seizeUSD * USD_MICRO_UNITS) / collateralUnderlyingPrice
+  const seizeUnderlying = (seizeUSD * scaleForDecimals(collateralUnderlyingDecimals)) / collateralUnderlyingPrice
   let seizeLST = (seizeUnderlying * safeCirculatingLst) / safeTotalDeposits
   if (seizeLST > collateralLSTBalance) {
     seizeLST = collateralLSTBalance
@@ -122,9 +138,9 @@ export function computePartialLiquidationOutcome({
   }
 
   const seizedUnderlying = (seizeLST * safeTotalDeposits) / safeCirculatingLst
-  const seizeUSDActual = (seizedUnderlying * collateralUnderlyingPrice) / USD_MICRO_UNITS
+  const seizeUSDActual = (seizedUnderlying * collateralUnderlyingPrice) / scaleForDecimals(collateralUnderlyingDecimals)
   const repayUSDActual = (seizeUSDActual * BASIS_POINTS) / (BASIS_POINTS + bonusBps)
-  let repaySupported = (repayUSDActual * USD_MICRO_UNITS) / basePrice
+  let repaySupported = (repayUSDActual * scaleForDecimals(baseTokenDecimals)) / basePrice
 
   if (repaySupported > liveDebt) {
     repaySupported = liveDebt
@@ -619,19 +635,21 @@ export function collateralUSDFromLST(
   totalDepositsLST: bigint,
   circulatingLST: bigint,
   underlyingBasePrice: bigint, // µUSD per 1 unit of the LST's underlying base asset
+  underlyingBaseDecimals: bigint = 6n,
 ): bigint {
   if (collateralLSTAmount === 0n || totalDepositsLST === 0n || circulatingLST === 0n) return 0n
   const underlying = (collateralLSTAmount * totalDepositsLST) / circulatingLST
-  return (underlying * underlyingBasePrice) / USD_MICRO_UNITS
+  return (underlying * underlyingBasePrice) / scaleForDecimals(underlyingBaseDecimals)
 }
 
 // Base-token-denominated debt → micro-USD
 export function debtUSD(
   debtBaseUnits: bigint,
   baseTokenPrice: bigint, // µUSD per 1 base token
+  baseTokenDecimals: bigint = 6n,
 ): bigint {
   if (debtBaseUnits === 0n) return 0n
-  return (debtBaseUnits * baseTokenPrice) / USD_MICRO_UNITS
+  return (debtBaseUnits * baseTokenPrice) / scaleForDecimals(baseTokenDecimals)
 }
 /**
  * Compute buyout premium and debt repayment amounts.
@@ -658,10 +676,13 @@ export function computeBuyoutTerms(params: {
   totalDepositsLST: bigint
   circulatingLST: bigint
   underlyingBasePrice: bigint // µUSD (oracle of LST's underlying base asset)
+  underlyingBaseDecimals?: bigint // default 6
   // Debt (market base)
   baseTokenPrice: bigint // µUSD (oracle of market base token)
+  baseTokenDecimals?: bigint // default 6
   // Premium payment token
   buyoutTokenPrice: bigint // µUSD (oracle of buyout token, e.g., xUSD = 1e6)
+  buyoutTokenDecimals?: bigint // default 6
   // Borrower snapshot + market index
   principal: bigint
   userIndexWad: bigint
@@ -674,8 +695,11 @@ export function computeBuyoutTerms(params: {
     totalDepositsLST,
     circulatingLST,
     underlyingBasePrice,
+    underlyingBaseDecimals = 6n,
     baseTokenPrice,
+    baseTokenDecimals = 6n,
     buyoutTokenPrice,
+    buyoutTokenDecimals = 6n,
     principal,
     userIndexWad,
     borrowIndexWad,
@@ -684,8 +708,14 @@ export function computeBuyoutTerms(params: {
 
   // 1) Live debt (base units) and USD legs
   const debtRepayAmountBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
-  const collateralUSD = collateralUSDFromLST(collateralLSTAmount, totalDepositsLST, circulatingLST, underlyingBasePrice)
-  const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice)
+  const collateralUSD = collateralUSDFromLST(
+    collateralLSTAmount,
+    totalDepositsLST,
+    circulatingLST,
+    underlyingBasePrice,
+    underlyingBaseDecimals,
+  )
+  const debtUSDv = debtUSD(debtRepayAmountBase, baseTokenPrice, baseTokenDecimals)
 
   // Edge cases (no debt → premium 0, repay 0)
   if (debtRepayAmountBase === 0n || debtUSDv === 0n || collateralUSD === 0n) {
@@ -715,7 +745,7 @@ export function computeBuyoutTerms(params: {
   // 4) Premium USD & buyout token amount
   const premiumUSD = (collateralUSD * premiumRateBps) / BASIS_POINTS
   console.log('premiumUSD:', premiumUSD)
-  const premiumTokens = buyoutTokenPrice === 0n ? 0n : (premiumUSD * USD_MICRO_UNITS) / buyoutTokenPrice
+  const premiumTokens = buyoutTokenPrice === 0n ? 0n : (premiumUSD * scaleForDecimals(buyoutTokenDecimals)) / buyoutTokenPrice
   console.log('premiumTokens:', premiumTokens)
 
   return {
@@ -750,7 +780,9 @@ export function maxRepayBaseForProfit(params: {
   borrowIndexWad: bigint
   // Prices
   baseTokenPrice: bigint // µUSD (market base token)
+  baseTokenDecimals?: bigint
   underlyingBasePrice: bigint // µUSD (LST's underlying)
+  underlyingBaseDecimals?: bigint
   // Collateral LST state
   collateralLSTAmount: bigint
   totalDepositsLST: bigint
@@ -763,7 +795,9 @@ export function maxRepayBaseForProfit(params: {
     userIndexWad,
     borrowIndexWad,
     baseTokenPrice,
+    baseTokenDecimals = 6n,
     underlyingBasePrice,
+    underlyingBaseDecimals = 6n,
     collateralLSTAmount,
     totalDepositsLST,
     circulatingLST,
@@ -787,8 +821,8 @@ export function maxRepayBaseForProfit(params: {
   // repayUSD_max = floor(collateralUSD * 10_000 / (10_000 + bonus))
   const repayUSD_max = (collateralUSD * BASIS_POINTS) / (BASIS_POINTS + liq_bonus_bps)
 
-  // base units = floor(repayUSD_max * 1e6 / baseTokenPrice)
-  const repayBaseByCollateral = (repayUSD_max * USD_MICRO_UNITS) / baseTokenPrice
+  // base units = floor(repayUSD_max * 10^baseTokenDecimals / baseTokenPrice)
+  const repayBaseByCollateral = (repayUSD_max * scaleForDecimals(baseTokenDecimals)) / baseTokenPrice
 
   // cannot exceed live debt
   const maxRepayBase = repayBaseByCollateral < liveDebtBase ? repayBaseByCollateral : liveDebtBase
@@ -813,7 +847,9 @@ export function simulatePartialLiquidation(params: {
   borrowIndexWad: bigint
   // Prices
   baseTokenPrice: bigint // µUSD of market base token
+  baseTokenDecimals?: bigint
   underlyingBasePrice: bigint // µUSD of LST underlying
+  underlyingBaseDecimals?: bigint
   // Collateral LST state
   collateralLSTAmount: bigint
   totalDepositsLST: bigint
@@ -827,7 +863,9 @@ export function simulatePartialLiquidation(params: {
     userIndexWad,
     borrowIndexWad,
     baseTokenPrice,
+    baseTokenDecimals = 6n,
     underlyingBasePrice,
+    underlyingBaseDecimals = 6n,
     collateralLSTAmount,
     totalDepositsLST,
     circulatingLST,
@@ -837,13 +875,13 @@ export function simulatePartialLiquidation(params: {
   const liveDebtBase = liveDebtFromSnapshot(principal, userIndexWad, borrowIndexWad)
   const repayBase = repayBaseAmount <= liveDebtBase ? repayBaseAmount : liveDebtBase
 
-  const repayUSD = amountUSD(repayBase, baseTokenPrice) // µUSD
+  const repayUSD = amountUSD(repayBase, baseTokenPrice, baseTokenDecimals) // µUSD
 
   // seizeUSD = repayUSD * (1 + bonus)
   const seizeUSD = (repayUSD * (BASIS_POINTS + liq_bonus_bps)) / BASIS_POINTS
 
   // Convert to LST and cap to available collateral
-  const seizeLST_raw = usdToLST(seizeUSD, underlyingBasePrice, totalDepositsLST, circulatingLST)
+  const seizeLST_raw = usdToLST(seizeUSD, underlyingBasePrice, totalDepositsLST, circulatingLST, underlyingBaseDecimals)
   const seizeLST = seizeLST_raw <= collateralLSTAmount ? seizeLST_raw : collateralLSTAmount
 
   // New debt and remaining collateral (if the protocol logic returns leftover on full repay, handle off-chain accordingly)
@@ -867,10 +905,11 @@ export function usdToLST(
   underlyingBasePrice: bigint, // µUSD
   totalDepositsLST: bigint,
   circulatingLST: bigint,
+  underlyingBaseDecimals: bigint = 6n,
 ): bigint {
   if (usdAmount === 0n || underlyingBasePrice === 0n || totalDepositsLST === 0n || circulatingLST === 0n) return 0n
   // USD -> underlying units
-  const underlying = (usdAmount * USD_MICRO_UNITS) / underlyingBasePrice
+  const underlying = (usdAmount * scaleForDecimals(underlyingBaseDecimals)) / underlyingBasePrice
   // underlying -> LST
   return (underlying * circulatingLST) / totalDepositsLST
 }
@@ -878,7 +917,8 @@ export function usdToLST(
 export function amountUSD(
   amountBaseUnits: bigint,
   baseTokenPrice: bigint, // µUSD per base token
+  baseTokenDecimals: bigint = 6n,
 ): bigint {
   if (amountBaseUnits === 0n) return 0n
-  return (amountBaseUnits * baseTokenPrice) / USD_MICRO_UNITS
+  return (amountBaseUnits * baseTokenPrice) / scaleForDecimals(baseTokenDecimals)
 }
