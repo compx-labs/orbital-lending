@@ -1969,6 +1969,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
       .do()
     const contractXusdBefore = contractXusdBeforeInfo.assetHolding?.amount || 0n
+    const cashOnHandBefore = (await xUSDLendingContractClient.state.global.cashOnHand()) ?? 0n
 
     const activeLoansBefore = xusdGlobalStateBeforeBuyout.activeLoanRecords ?? 0n
     const totalBorrowsBefore = xusdGlobalStateBeforeBuyout.totalBorrows ?? 0n
@@ -2032,6 +2033,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       .accountAssetInformation(xUSDLendingContractClient.appClient.appAddress, xUSDAssetId)
       .do()
     const contractXusdAfter = contractXusdAfterInfo.assetHolding?.amount || 0n
+    const cashOnHandAfter = (await xUSDLendingContractClient.state.global.cashOnHand()) ?? 0n
 
     const xusdGlobalStateAfterBuyout = await xUSDLendingContractClient.state.global.getAll()
     const activeLoansAfter = xusdGlobalStateAfterBuyout.activeLoanRecords ?? 0n
@@ -2062,6 +2064,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(activeLoansBefore - activeLoansAfter).toEqual(1n)
     expect(borrowDelta).toBeGreaterThan(0n)
     expect(borrowDelta).toBeLessThanOrEqual(debtRepayAmountBase)
+    expect(cashOnHandAfter - cashOnHandBefore).toEqual(contractXusdAfter - contractXusdBefore)
 
     xUSDLendingContractClient.algorand.setSignerFromAccount(managerAccount)
     collateralLendingContractClient.algorand.setSignerFromAccount(managerAccount)

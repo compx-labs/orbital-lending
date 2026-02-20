@@ -1317,6 +1317,10 @@ export class OrbitalLending extends Contract {
     const borrowDelta: uint64 = debtBase <= this.total_borrows.value ? debtBase : this.total_borrows.value
     this.total_borrows.value = this.total_borrows.value - borrowDelta
     this.addCash(repayAxferTxn.assetAmount)
+    if (buyoutTokenId === baseAssetId) {
+      // Track premium inflow when the premium token is also the market base token.
+      this.addCash(paidAmount)
+    }
 
     // 7) Split the received premium (in buyout token units)
     this.splitPremium(premiumTokens, buyoutTokenId, debtor)
@@ -1378,6 +1382,10 @@ export class OrbitalLending extends Contract {
         fee: 0,
       })
       .submit()
+
+    if (buyoutTokenId === this.base_token_id.value.native) {
+      this.removeCash(premiumTokens)
+    }
   }
 
   /**
