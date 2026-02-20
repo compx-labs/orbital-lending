@@ -223,6 +223,11 @@ export class OrbitalLending extends Contract {
   ): void {
     assert(op.Txn.sender === this.init_admin.value)
     assert(additional_rewards_commission_percentage <= 100, 'COMMISSION_TOO_HIGH')
+    assert(ltv_bps > 0 && ltv_bps <= BASIS_POINTS, 'BAD_LTV')
+    assert(liq_threshold_bps > 0 && liq_threshold_bps <= BASIS_POINTS, 'BAD_LIQ_THRESHOLD')
+    assert(ltv_bps <= liq_threshold_bps, 'BAD_LTV_LIQ_REL')
+    assert(origination_fee_bps <= BASIS_POINTS, 'BAD_ORIG_FEE')
+    assert(protocol_share_bps <= BASIS_POINTS, 'BAD_PROTOCOL_SHARE')
 
     this.ltv_bps.value = ltv_bps
     this.liq_bonus_bps.value = 800
@@ -324,9 +329,13 @@ export class OrbitalLending extends Contract {
     assert(op.Txn.sender === this.param_admin.value, 'UNAUTHORIZED')
 
     // Invariants
+    assert(ltv_bps > 0 && ltv_bps <= BASIS_POINTS, 'BAD_LTV')
+    assert(liq_threshold_bps > 0 && liq_threshold_bps <= BASIS_POINTS, 'BAD_LIQ_THRESHOLD')
+    assert(ltv_bps <= liq_threshold_bps, 'BAD_LTV_LIQ_REL')
     assert(util_cap_bps >= 1 && util_cap_bps <= 10_000, 'BAD_UTIL_CAP')
     assert(kink_norm_bps >= 1 && kink_norm_bps < 10_000, 'BAD_KINK')
     assert(slope1_bps >= 0 && slope2_bps >= 0, 'BAD_SLOPE')
+    assert(liq_bonus_bps <= BASIS_POINTS, 'BAD_LIQ_BONUS')
     if (max_apr_bps > 0) {
       assert(max_apr_bps >= base_bps, 'BAD_MAX_APR')
     }
@@ -1072,6 +1081,7 @@ export class OrbitalLending extends Contract {
 
     // 4) Split interest into depositor yield & protocol fee
     const protoBps: uint64 = this.protocol_share_bps.value
+    assert(protoBps <= BASIS_POINTS, 'BAD_PROTOCOL_SHARE')
     const deposBps: uint64 = BASIS_POINTS - protoBps
 
     // depositorInterest = interest * deposBps / 10_000

@@ -35,7 +35,7 @@ const INIT_CONTRACT_AMOUNT = 10_000_000n
 const MAX_FEE = 250_000n
 
 const ltv_bps = 2500n
-const liq_threshold_bps = 1000000n
+const liq_threshold_bps = 8000n
 const liq_bonus_bps = 500n
 const origination_fee_bps = 1000n
 const protocol_interest_fee_bps = 1000n
@@ -710,6 +710,62 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
         )
       }
     }
+  })
+
+  test('setRateParams rejects invalid bps bounds and LTV/liquidation relationship', async () => {
+    xUSDLendingContractClient.algorand.setSignerFromAccount(paramAdminAccount)
+    localnet.algorand.setSignerFromAccount(paramAdminAccount)
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    const baseBps = globalState.baseBps ?? 50n
+    const utilCapBps = globalState.utilCapBps ?? 8000n
+    const kinkNormBps = globalState.kinkNormBps ?? 5000n
+    const slope1Bps = globalState.slope1Bps ?? 1000n
+    const slope2Bps = globalState.slope2Bps ?? 2000n
+    const maxAprBps = globalState.maxAprBps ?? 8000n
+    const liqThresholdBps = globalState.liqThresholdBps ?? 8500n
+    const ltvBps = globalState.ltvBps ?? 7500n
+    const liqBonusBps = globalState.liqBonusBps ?? 800n
+
+    await expect(
+      xUSDLendingContractClient.send.setRateParams({
+        args: {
+          ltvBps: liqThresholdBps + 1n,
+          liqThresholdBps,
+          baseBps,
+          utilCapBps,
+          kinkNormBps,
+          slope1Bps,
+          slope2Bps,
+          maxAprBps,
+          emaAlphaBps: 0n,
+          rateModelType: 0n,
+          liqBonusBps,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: paramAdminAccount.addr,
+      }),
+    ).rejects.toThrowError(/BAD_LTV_LIQ_REL/)
+
+    await expect(
+      xUSDLendingContractClient.send.setRateParams({
+        args: {
+          ltvBps,
+          liqThresholdBps,
+          baseBps,
+          utilCapBps,
+          kinkNormBps,
+          slope1Bps,
+          slope2Bps,
+          maxAprBps,
+          emaAlphaBps: 0n,
+          rateModelType: 0n,
+          liqBonusBps: 10_001n,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: paramAdminAccount.addr,
+      }),
+    ).rejects.toThrowError(/BAD_LIQ_BONUS/)
   })
 
   test('Borrow fails when request exceeds LTV on ASA market', async () => {
