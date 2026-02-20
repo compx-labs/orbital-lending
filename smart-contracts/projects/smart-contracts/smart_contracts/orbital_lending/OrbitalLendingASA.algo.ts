@@ -813,8 +813,9 @@ export class OrbitalLending extends Contract {
     this.accrueMarket()
     let collateralToUse: uint64 = 0
     if (hasLoan) {
-      const existingCollateral = this.getLoanRecord(op.Txn.sender).collateralAmount
-      collateralToUse = existingCollateral.native + collateralAmount
+      const existingLoan = this.getLoanRecord(op.Txn.sender)
+      assert(collateralTokenId.native === existingLoan.collateralTokenId.native, 'WRONG_COLLATERAL')
+      collateralToUse = existingLoan.collateralAmount.native + collateralAmount
     } else {
       collateralToUse = collateralAmount
     }
@@ -1276,9 +1277,9 @@ export class OrbitalLending extends Contract {
     // 4) Convert premium USD → buyout token amount
     const buyoutTokenId: uint64 = this.buyout_token_id.value.native
     const buyoutTokenPrice: uint64 = this.getOraclePrice(this.buyout_token_id.value) // µUSD per token
+    assert(buyoutTokenPrice > 0, 'BAD_BUYOUT_PRICE')
 
-    const premiumTokens: uint64 =
-      buyoutTokenPrice === 0 ? 0 : this.usdToAmount(premiumUSD, buyoutTokenPrice, this.buyout_token_decimals.value)
+    const premiumTokens: uint64 = this.usdToAmount(premiumUSD, buyoutTokenPrice, this.buyout_token_decimals.value)
 
     assert(premiumAxferTxn.sender === op.Txn.sender, 'BAD_PREMIUM_SENDER')
     assert(premiumAxferTxn.assetReceiver === Global.currentApplicationAddress, 'INVALID_RECEIVER')
@@ -1915,6 +1916,7 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
   ): void {
     const existingLoan = this.getLoanRecord(borrower)
+    assert(collateralTokenId.native === existingLoan.collateralTokenId.native, 'WRONG_COLLATERAL')
     // 1) Bring borrower snapshot current (uses global index)
     const liveDebt: uint64 = this.syncBorrowerSnapshot(borrower)
 
