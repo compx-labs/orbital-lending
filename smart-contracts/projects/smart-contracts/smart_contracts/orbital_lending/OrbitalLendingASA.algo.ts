@@ -31,7 +31,7 @@ import {
 import { TokenPrice } from '../Oracle/config.algo'
 import { STANDARD_TXN_FEE, BASIS_POINTS, EXCHANGE_PRECISION, SECONDS_PER_YEAR } from './config.algo'
 
-const CONTRACT_VERSION: uint64 = 4000
+const CONTRACT_VERSION: uint64 = 4002
 
 @contract({ name: 'orbital-lending-asa', avmVersion: 11 })
 export class OrbitalLending extends Contract {

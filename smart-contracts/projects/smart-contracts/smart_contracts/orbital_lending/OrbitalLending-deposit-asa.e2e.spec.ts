@@ -1110,9 +1110,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     localnet.algorand.setSignerFromAccount(managerAccount)
   })
 
-  test('Borrow succeeds with 8-decimal base token and 6-decimal collateral token', async () => {
-    const base8AssetId = await createToken(managerAccount, 'xB8', 8)
-    const collateral6AssetId = await createToken(managerAccount, 'xC6', 6)
+  test('Borrow ETH-priced base token against USDC-priced collateral with mixed decimals', async () => {
+    const base8AssetId = await createToken(managerAccount, 'xETH', 8)
+    const collateral6AssetId = await createToken(managerAccount, 'xUSDC', 6)
 
     const base8LendingClient = await deployAsa(base8AssetId, managerAccount, {
       feeAdmin: feeAdminAccount,
@@ -1233,7 +1233,7 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     })
 
     await oracleAppClient.send.addTokenListing({
-      args: [base8AssetId, 1_000_000n],
+      args: [base8AssetId, 1_987_000_000n],
       assetReferences: [base8AssetId],
     })
     await oracleAppClient.send.addTokenListing({
@@ -1241,9 +1241,9 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
       assetReferences: [collateral6AssetId],
     })
 
-    const baseDepositAmount = 200_000_000_000n // 2,000.0 tokens (8 decimals)
-    const collateralDepositAmount = 20_000_000n // 20.0 tokens (6 decimals)
-    const requestedBorrowAmount = 400_000_000n // 4.0 tokens (8 decimals)
+    const baseDepositAmount = 1_000_000_000n // 10.0 ETH-equivalent liquidity (8 decimals)
+    const collateralDepositAmount = 1_999_000_000n // 1,999.0 USDC collateral (6 decimals)
+    const requestedBorrowAmount = 2_100_000n // 0.021 ETH (8 decimals) ~= $41.73 at $1,987
 
     const baseDepositTxn = base8LendingClient.algorand.createTransaction.assetTransfer({
       sender: managerAccount.addr,
@@ -1322,6 +1322,252 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     )
     expect(loanRecord).toBeDefined()
     expect(loanRecord.principal).toEqual(expectedDisbursement)
+  })
+
+  test('Borrow top-up succeeds for ETH-priced base token against USDC collateral within cumulative LTV', async () => {
+    const base8AssetId = await createToken(managerAccount, 'xETH', 8)
+    const collateral6AssetId = await createToken(managerAccount, 'xUSDC', 6)
+
+    const base8LendingClient = await deployAsa(base8AssetId, managerAccount, {
+      feeAdmin: feeAdminAccount,
+      paramAdmin: paramAdminAccount,
+    })
+    const collateral6LendingClient = await deployAsa(collateral6AssetId, managerAccount, {
+      feeAdmin: feeAdminAccount,
+      paramAdmin: paramAdminAccount,
+    })
+
+    await base8LendingClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      amount: microAlgo(INIT_CONTRACT_AMOUNT),
+      note: 'Funding 8-decimal base market for top-up scenario',
+    })
+    await collateral6LendingClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: collateral6LendingClient.appClient.appAddress,
+      amount: microAlgo(INIT_CONTRACT_AMOUNT),
+      note: 'Funding 6-decimal collateral market for top-up scenario',
+    })
+
+    await base8LendingClient.send.initApplication({
+      args: {
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: base8AssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    await collateral6LendingClient.send.initApplication({
+      args: {
+        ltvBps: ltv_bps,
+        liqThresholdBps: liq_threshold_bps,
+        originationFeeBps: origination_fee_bps,
+        protocolShareBps: protocol_interest_fee_bps,
+        oracleAppId: oracleAppClient.appId,
+        buyoutTokenId: base8AssetId,
+        additionalRewardsCommissionPercentage: additional_rewards_commission_percentage,
+        fluxOracleAppId: fluxOracleAppClient.appId,
+      },
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    await base8LendingClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      amount: microAlgo(102000n),
+      note: 'Funding 8-decimal base LST creation for top-up scenario',
+    })
+    await collateral6LendingClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: collateral6LendingClient.appClient.appAddress,
+      amount: microAlgo(102000n),
+      note: 'Funding 6-decimal collateral LST creation for top-up scenario',
+    })
+
+    await base8LendingClient.send.generateLstToken({
+      args: {},
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    await collateral6LendingClient.send.generateLstToken({
+      args: {},
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    await base8LendingClient.send.setContractState({ args: { state: 1n } })
+    await collateral6LendingClient.send.setContractState({ args: { state: 1n } })
+
+    const base8State = await base8LendingClient.state.global.getAll()
+    const collateral6State = await collateral6LendingClient.state.global.getAll()
+    const collateral6LstId = collateral6State.lstTokenId as bigint
+    expect(base8State.lstTokenId as bigint).toBeGreaterThan(0n)
+    expect(collateral6LstId).toBeGreaterThan(0n)
+
+    await base8LendingClient.algorand.send.assetOptIn({
+      sender: managerAccount.addr,
+      assetId: base8State.lstTokenId as bigint,
+      note: 'Opt manager into 8-decimal market LST for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+    await collateral6LendingClient.algorand.send.assetOptIn({
+      sender: managerAccount.addr,
+      assetId: collateral6LstId,
+      note: 'Opt manager into 6-decimal market LST for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    await base8LendingClient.algorand.send.payment({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      amount: microAlgo(101000n),
+      note: 'Funding collateral registration for top-up scenario',
+    })
+    await base8LendingClient.send.addNewCollateralType({
+      args: [collateral6LstId, collateral6AssetId, collateral6LendingClient.appId],
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    await oracleAppClient.send.addTokenListing({
+      args: [base8AssetId, 1_987_000_000n],
+      assetReferences: [base8AssetId],
+    })
+    await oracleAppClient.send.addTokenListing({
+      args: [collateral6AssetId, 1_000_000n],
+      assetReferences: [collateral6AssetId],
+    })
+
+    const baseDepositAmount = 1_000_000_000n // 10.0 ETH-equivalent liquidity (8 decimals)
+    const initialCollateral = 1_999_000_000n // 1,999.0 USDC collateral (6 decimals)
+    const topUpCollateral = 100_000_000n // 100.0 USDC collateral top-up (6 decimals)
+    const firstBorrowAmount = 20_000_000n // 0.20 ETH (8 decimals) ~= $397.40
+    const secondBorrowAmount = 5_000_000n // 0.05 ETH (8 decimals) ~= $99.35
+
+    const baseDepositTxn = base8LendingClient.algorand.createTransaction.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      assetId: base8AssetId,
+      amount: baseDepositAmount,
+      note: 'Provide liquidity to 8-decimal base market for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+    })
+    await base8LendingClient.send.depositAsa({
+      args: { assetTransferTxn: baseDepositTxn, amount: baseDepositAmount },
+      sender: managerAccount.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    const collateralMintTxn = collateral6LendingClient.algorand.createTransaction.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: collateral6LendingClient.appClient.appAddress,
+      assetId: collateral6AssetId,
+      amount: initialCollateral + topUpCollateral,
+      note: 'Mint 6-decimal collateral LST for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+    })
+    await collateral6LendingClient.send.depositAsa({
+      args: { assetTransferTxn: collateralMintTxn, amount: initialCollateral + topUpCollateral },
+      sender: managerAccount.addr,
+      maxFee: microAlgo(MAX_FEE),
+      coverAppCallInnerTransactionFees: true,
+      populateAppCallResources: true,
+    })
+
+    const firstCollateralTransfer = base8LendingClient.algorand.createTransaction.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      assetId: collateral6LstId,
+      amount: initialCollateral,
+      note: 'Initial borrow collateral transfer for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await base8LendingClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: managerAccount.addr })
+      .borrow({
+        args: {
+          assetTransferTxn: firstCollateralTransfer,
+          requestedLoanAmount: firstBorrowAmount,
+          collateralAmount: initialCollateral,
+          collateralTokenId: collateral6LstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: managerAccount.addr,
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    const loanAfterFirstBorrow = await getLoanRecordBoxValueASA(
+      managerAccount.addr.toString(),
+      base8LendingClient,
+      base8LendingClient.appId,
+    )
+
+    const baseBalanceBeforeTopUpInfo = await base8LendingClient.algorand.client.algod
+      .accountAssetInformation(managerAccount.addr, base8AssetId)
+      .do()
+    const baseBalanceBeforeTopUp = baseBalanceBeforeTopUpInfo.assetHolding?.amount || 0n
+
+    const topUpCollateralTransfer = base8LendingClient.algorand.createTransaction.assetTransfer({
+      sender: managerAccount.addr,
+      receiver: base8LendingClient.appClient.appAddress,
+      assetId: collateral6LstId,
+      amount: topUpCollateral,
+      note: 'Top-up collateral transfer for top-up scenario',
+      maxFee: microAlgo(MAX_FEE),
+    })
+
+    await base8LendingClient
+      .newGroup()
+      .gas({ args: {}, maxFee: microAlgo(MAX_FEE), sender: managerAccount.addr })
+      .borrow({
+        args: {
+          assetTransferTxn: topUpCollateralTransfer,
+          requestedLoanAmount: secondBorrowAmount,
+          collateralAmount: topUpCollateral,
+          collateralTokenId: collateral6LstId,
+        },
+        maxFee: microAlgo(MAX_FEE),
+        sender: managerAccount.addr,
+      })
+      .send({ populateAppCallResources: true, coverAppCallInnerTransactionFees: true })
+
+    const baseBalanceAfterTopUpInfo = await base8LendingClient.algorand.client.algod
+      .accountAssetInformation(managerAccount.addr, base8AssetId)
+      .do()
+    const baseBalanceAfterTopUp = baseBalanceAfterTopUpInfo.assetHolding?.amount || 0n
+
+    const secondBorrowFee = (secondBorrowAmount * origination_fee_bps) / 10_000n
+    const expectedSecondDisbursement = secondBorrowAmount - secondBorrowFee
+    expect(baseBalanceAfterTopUp - baseBalanceBeforeTopUp).toEqual(expectedSecondDisbursement)
+
+    const loanAfterTopUp = await getLoanRecordBoxValueASA(
+      managerAccount.addr.toString(),
+      base8LendingClient,
+      base8LendingClient.appId,
+    )
+    expect(loanAfterTopUp.collateralTokenId).toEqual(collateral6LstId)
+    expect(loanAfterTopUp.collateralAmount).toEqual(initialCollateral + topUpCollateral)
+    expect(loanAfterTopUp.principal).toBeGreaterThan(loanAfterFirstBorrow.principal)
   })
 
   test('Flux tier discount reduces origination fee for tiered borrower', async () => {
