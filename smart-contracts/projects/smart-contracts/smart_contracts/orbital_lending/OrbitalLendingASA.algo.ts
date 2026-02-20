@@ -373,7 +373,7 @@ export class OrbitalLending extends Contract {
   @abimethod({ allowActions: 'NoOp' })
   public generateLSTToken(): void {
     assert(op.Txn.sender === this.init_admin.value)
-    assert((this.lst_token_id.value === new UintN64(99)))
+    assert(this.lst_token_id.value === new UintN64(99))
     //Create LST token
     const baseToken = Asset(this.base_token_id.value.native)
     const result = itxn
@@ -390,7 +390,6 @@ export class OrbitalLending extends Contract {
       .submit()
     this.lst_token_id.value = new UintN64(result.createdAsset.id)
   }
-
 
   /**
    * Retrieves current price for a token from the configured oracle
@@ -806,7 +805,7 @@ export class OrbitalLending extends Contract {
     collateralTokenId: UintN64,
   ): void {
     assert(this.contract_state.value.native === 1, 'CONTRACT_NOT_ACTIVE')
-    assert(collateralAmount > 0, 'COLLATERAL_REQUIRED')
+
     assert(requestedLoanAmount > 0, 'LOAN_AMOUNT_REQUIRED')
     // ─── 0. Determine if this is a top-up or a brand-new loan ─────────────
     const hasLoan = this.loan_record(op.Txn.sender).exists
@@ -817,6 +816,7 @@ export class OrbitalLending extends Contract {
       assert(collateralTokenId.native === existingLoan.collateralTokenId.native, 'WRONG_COLLATERAL')
       collateralToUse = existingLoan.collateralAmount.native + collateralAmount
     } else {
+      assert(collateralAmount > 0, 'COLLATERAL_REQUIRED')
       collateralToUse = collateralAmount
     }
     this.validateBorrowRequest(assetTransferTxn, collateralAmount, collateralTokenId)
@@ -842,7 +842,14 @@ export class OrbitalLending extends Contract {
     const { disbursement } = this.calculateDisbursement(requestedLoanAmount, calculatedFee)
 
     if (hasLoan) {
-      this.processLoanTopUp(op.Txn.sender, collateralAmount, disbursement, maxBorrowUSD, baseTokenOraclePrice, collateralTokenId)
+      this.processLoanTopUp(
+        op.Txn.sender,
+        collateralAmount,
+        disbursement,
+        maxBorrowUSD,
+        baseTokenOraclePrice,
+        collateralTokenId,
+      )
     } else {
       this.mintLoanRecord(disbursement, collateralTokenId, op.Txn.sender, collateralAmount)
       this.updateCollateralTotal(collateralTokenId, collateralAmount)
@@ -1599,7 +1606,11 @@ export class OrbitalLending extends Contract {
     const seizedUnderlying: uint64 = divw(hUnderlying, lUnderlying, circ)
 
     const underlyingPrice = this.getOraclePrice(collateral.baseAssetId) // µUSD
-    const seizeUSDActual: uint64 = this.amountToUsd(seizedUnderlying, underlyingPrice, collateral.baseAssetDecimals.native)
+    const seizeUSDActual: uint64 = this.amountToUsd(
+      seizedUnderlying,
+      underlyingPrice,
+      collateral.baseAssetDecimals.native,
+    )
 
     const [hRepayUSD, lRepayUSD] = mulw(seizeUSDActual, BASIS_POINTS)
     const repayUSD: uint64 = divw(hRepayUSD, lRepayUSD, BASIS_POINTS + bonusBps)
@@ -1662,9 +1673,7 @@ export class OrbitalLending extends Contract {
     let repayCandidate: uint64 = repayRequested > liveDebt ? liveDebt : repayRequested
 
     const repayUSDcandidate: uint64 =
-      repayCandidate === 0
-        ? 0
-        : this.amountToUsd(repayCandidate, basePrice, this.base_token_decimals.value)
+      repayCandidate === 0 ? 0 : this.amountToUsd(repayCandidate, basePrice, this.base_token_decimals.value)
     if (collateralUSD <= debtUSDv && !isFullRepayRequest) {
       assert(false, 'FULL_REPAY_REQUIRED')
     }
