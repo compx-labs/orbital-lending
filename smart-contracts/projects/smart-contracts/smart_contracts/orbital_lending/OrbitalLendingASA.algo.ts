@@ -201,6 +201,26 @@ export class OrbitalLending extends Contract {
   }
 
   /**
+   * Updates the parameter administrator account.
+   * @param newParamAdmin The account authorized to manage protocol parameters
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  public setParamAdmin(newParamAdmin: Account): void {
+    assert(op.Txn.sender === this.param_admin.value, 'UNAUTHORIZED')
+    this.param_admin.value = newParamAdmin
+  }
+
+  /**
+   * Updates the fee administrator account.
+   * @param newFeeAdmin The account authorized to withdraw protocol fees/rewards
+   */
+  @abimethod({ allowActions: 'NoOp' })
+  public setFeeAdmin(newFeeAdmin: Account): void {
+    assert(op.Txn.sender === this.fee_admin.value, 'UNAUTHORIZED')
+    this.fee_admin.value = newFeeAdmin
+  }
+
+  /**
    * Initializes the lending protocol with core parameters and configurations
    * @param mbrTxn - Payment transaction covering minimum balance requirements
    * @param ltv_bps - Loan-to-Value ratio in basis points (e.g., 7500 = 75%)

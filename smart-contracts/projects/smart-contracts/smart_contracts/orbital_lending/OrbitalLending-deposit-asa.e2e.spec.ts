@@ -306,6 +306,79 @@ describe('orbital-lending Testing - deposit / borrow', async () => {
     expect(boxValue.totalCollateral).toEqual(0n)
   })
 
+  test('admin roles can be updated by their respective admins', async () => {
+    const { generateAccount } = localnet.context
+    const nextParamAdmin = await generateAccount({ initialFunds: microAlgo(5_000_000) })
+    const nextFeeAdmin = await generateAccount({ initialFunds: microAlgo(5_000_000) })
+
+    await xUSDLendingContractClient.algorand.send.assetOptIn({
+      sender: nextFeeAdmin.addr,
+      assetId: xUSDAssetId,
+      note: 'Opting next fee admin into xUSD asset',
+    })
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(paramAdminAccount)
+    localnet.algorand.setSignerFromAccount(paramAdminAccount)
+    await xUSDLendingContractClient.send.setParamAdmin({
+      args: {
+        newParamAdmin: nextParamAdmin.addr,
+      },
+      sender: paramAdminAccount.addr,
+    })
+
+    await expect(
+      xUSDLendingContractClient.send.setFeeAdmin({
+        args: {
+          newFeeAdmin: nextFeeAdmin.addr,
+        },
+        sender: paramAdminAccount.addr,
+      }),
+    ).rejects.toThrow()
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(feeAdminAccount)
+    localnet.algorand.setSignerFromAccount(feeAdminAccount)
+    await xUSDLendingContractClient.send.setFeeAdmin({
+      args: {
+        newFeeAdmin: nextFeeAdmin.addr,
+      },
+      sender: feeAdminAccount.addr,
+    })
+
+    await expect(
+      xUSDLendingContractClient.send.setParamAdmin({
+        args: {
+          newParamAdmin: paramAdminAccount.addr,
+        },
+        sender: feeAdminAccount.addr,
+      }),
+    ).rejects.toThrow()
+
+    const globalState = await xUSDLendingContractClient.state.global.getAll()
+    expect(globalState.paramAdmin).toEqual(nextParamAdmin.addr.toString())
+    expect(globalState.feeAdmin).toEqual(nextFeeAdmin.addr.toString())
+
+    xUSDLendingContractClient.algorand.setSignerFromAccount(nextParamAdmin)
+    localnet.algorand.setSignerFromAccount(nextParamAdmin)
+    await xUSDLendingContractClient.send.setParamAdmin({
+      args: {
+        newParamAdmin: paramAdminAccount.addr,
+      },
+      sender: nextParamAdmin.addr,
+    })
+    xUSDLendingContractClient.algorand.setSignerFromAccount(nextFeeAdmin)
+    localnet.algorand.setSignerFromAccount(nextFeeAdmin)
+    await xUSDLendingContractClient.send.setFeeAdmin({
+      args: {
+        newFeeAdmin: feeAdminAccount.addr,
+      },
+      sender: nextFeeAdmin.addr,
+    })
+
+    const restoredState = await xUSDLendingContractClient.state.global.getAll()
+    expect(restoredState.paramAdmin).toEqual(paramAdminAccount.addr.toString())
+    expect(restoredState.feeAdmin).toEqual(feeAdminAccount.addr.toString())
+  })
+
   test('Add collateral token price to oracle', async () => {
     await oracleAppClient.send.addTokenListing({
       args: [collateralAssetId, COLLATERAL_ORACLE_PRICE],
